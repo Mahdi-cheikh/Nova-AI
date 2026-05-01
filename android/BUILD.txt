@@ -1,0 +1,58 @@
+==================================================
+ Nova AI — Android WebView Wrapper · Build Guide
+==================================================
+
+This folder contains the source for a tiny Android app that loads
+the Nova AI web app inside a full-screen WebView. Total APK size:
+~ 4 MB. Free to build with Android Studio.
+
+----------------------------------------------------
+FILES
+----------------------------------------------------
+  AndroidManifest.xml      -> drop into app/src/main/
+  SplashActivity.kt        -> app/src/main/java/ai/nova/receptionist/
+  MainActivity.kt          -> app/src/main/java/ai/nova/receptionist/
+  activity_main.xml        -> app/src/main/res/layout/
+  splash_drawable.xml      -> app/src/main/res/drawable/
+  styles.xml               -> app/src/main/res/values/  (light theme)
+  styles-night.xml         -> app/src/main/res/values-night/styles.xml  (dark theme)
+  app-build.gradle.kts     -> rename to app/build.gradle.kts
+
+----------------------------------------------------
+STEP-BY-STEP
+----------------------------------------------------
+1.  Install Android Studio (free, https://developer.android.com/studio).
+
+2.  Create a new project: "Empty Activity", Kotlin, min SDK 24,
+    package name "ai.nova.receptionist".
+
+3.  Replace the generated files with the ones from this folder.
+    - Move .kt files to app/src/main/java/ai/nova/receptionist/
+    - Move .xml files to their matching res/ subfolders.
+    - Replace app/build.gradle.kts with app-build.gradle.kts.
+
+4.  Open MainActivity.kt and edit ONE line:
+        private val appUrl = "https://YOUR-VERCEL-URL.vercel.app"
+
+5.  Click "Run" in Android Studio. Pick a real device (USB debugging
+    enabled) or an emulator. The app installs and opens straight into
+    the live web UI - splash -> dashboard -> demo.
+
+----------------------------------------------------
+PRODUCING A SHARABLE APK
+----------------------------------------------------
+  Build  ->  Build Bundle(s) / APK(s)  ->  Build APK(s)
+  Output: app/build/outputs/apk/release/app-release-unsigned.apk
+
+For a Play Store upload you'll need to sign it (the IDE has a wizard
+under Build -> Generate Signed App Bundle / APK).
+
+----------------------------------------------------
+WHY WEBVIEW?
+----------------------------------------------------
+- Zero duplicate codebase: web app + Android share 100% of the UI.
+- Updates are instant - push a new Vercel deploy and Android sees it
+  on next launch. No store review.
+- Costs nothing to build or distribute.
+- For native push notifications later, layer Firebase Cloud Messaging
+  on top; the WebView already has full localStorage / cookie support.

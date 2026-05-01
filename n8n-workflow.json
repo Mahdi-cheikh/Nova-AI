@@ -1,0 +1,258 @@
+{
+  "name": "Nova AI – WhatsApp + Voice Receptionist",
+  "_comment": "Importable n8n workflow (v2). Pipeline: Webhook (text or transcribed voice) -> AI Classify -> Switch by intent -> DB write (Supabase) -> Google Calendar sync -> Notify -> WhatsApp reply. Voice calls hit the same webhook with channel='whatsapp_voice' after Twilio transcription.",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Webhook (WhatsApp + Voice inbound)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {"httpMethod": "POST", "path": "nova/whatsapp", "responseMode": "lastNode"},
+      "_doc": "Public URL: https://<your-render>.onrender.com/webhook/nova/whatsapp. Both Meta WhatsApp Cloud API and Twilio Voice (after transcription) POST here. Distinguish by body.channel ('whatsapp' | 'whatsapp_voice')."
+    },
+    {
+      "id": "2",
+      "name": "Lookup or create client",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [480, 300],
+      "parameters": {
+        "operation": "upsert",
+        "tableId": "clients",
+        "filters": {"conditions": [{"keyName": "phone", "condition": "eq", "keyValue": "={{$json.body.from}}"}]},
+        "fieldsUi": {"fieldValues": [
+          {"fieldId": "business_id", "fieldValue": "={{$env.NOVA_BUSINESS_ID}}"},
+          {"fieldId": "phone",       "fieldValue": "={{$json.body.from}}"},
+          {"fieldId": "name",        "fieldValue": "={{$json.body.profile_name || $json.body.from}}"}
+        ]}
+      }
+    },
+    {
+      "id": "3",
+      "name": "AI Classify (Anthropic Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [720, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [
+          {"name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}"},
+          {"name": "anthropic-version", "value": "2023-06-01"},
+          {"name": "content-type", "value": "application/json"}
+        ]},
+        "sendBody": true,
+        "bodyParameters": {"parameters": [
+          {"name": "model", "value": "claude-haiku-4-5-20251001"},
+          {"name": "max_tokens", "value": 400},
+          {"name": "system", "value": "You are an intent classifier for a virtual receptionist. Reply ONLY with JSON of the shape: {\"intent\":\"book|cancel|reschedule|faq\",\"language\":\"ar|fr|en\",\"service\":\"...\",\"date\":\"YYYY-MM-DD or null\",\"time_preference\":\"morning|afternoon|evening|HH:MM or null\",\"urgent\":true|false}. No prose."},
+          {"name": "messages", "value": "=[{\"role\":\"user\",\"content\":{{ JSON.stringify($node[\"Webhook (WhatsApp + Voice inbound)\"].json.body.text) }}}]"}
+        ]}
+      }
+    },
+    {
+      "id": "4",
+      "name": "Parse AI JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const txt = $json.content?.[0]?.text || '{}';\nlet payload = {};\ntry { payload = JSON.parse(txt); } catch(e){ payload = {intent:'faq',language:'en',urgent:false}; }\nreturn [{json: {payload, original: $node['Webhook (WhatsApp + Voice inbound)'].json.body, client: $node['Lookup or create client'].json}}];"
+      }
+    },
+    {
+      "id": "5",
+      "name": "Route by intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "parameters": {
+        "rules": {"values": [
+          {"conditions": {"any": [{"field": "={{$json.payload.urgent}}", "operation": "equals", "value": true}]}, "renameOutput": "urgent"},
+          {"conditions": {"any": [{"field": "={{$json.payload.intent}}", "operation": "equals", "value": "book"}]}, "renameOutput": "book"},
+          {"conditions": {"any": [{"field": "={{$json.payload.intent}}", "operation": "equals", "value": "cancel"}]}, "renameOutput": "cancel"},
+          {"conditions": {"any": [{"field": "={{$json.payload.intent}}", "operation": "equals", "value": "reschedule"}]}, "renameOutput": "reschedule"}
+        ]}
+      }
+    },
+    {
+      "id": "6a",
+      "name": "Insert appointment",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1440, 180],
+      "parameters": {
+        "operation": "create",
+        "tableId": "appointments",
+        "fieldsUi": {"fieldValues": [
+          {"fieldId": "business_id", "fieldValue": "={{$env.NOVA_BUSINESS_ID}}"},
+          {"fieldId": "client_id",   "fieldValue": "={{$json.client.id}}"},
+          {"fieldId": "date",        "fieldValue": "={{$json.payload.date}}"},
+          {"fieldId": "time",        "fieldValue": "={{$json.payload.time_preference || '10:00'}}"},
+          {"fieldId": "status",      "fieldValue": "confirmed"},
+          {"fieldId": "source",      "fieldValue": "={{$json.original.channel === 'whatsapp_voice' ? 'whatsapp_voice' : 'whatsapp_ai'}}"}
+        ]}
+      }
+    },
+    {
+      "id": "6b",
+      "name": "Cancel appointment",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1440, 300],
+      "parameters": {
+        "operation": "update",
+        "tableId": "appointments",
+        "filters": {"conditions": [
+          {"keyName": "client_id", "condition": "eq", "keyValue": "={{$json.client.id}}"},
+          {"keyName": "status",    "condition": "eq", "keyValue": "confirmed"}
+        ]},
+        "fieldsUi": {"fieldValues": [{"fieldId": "status", "fieldValue": "cancelled"}]}
+      }
+    },
+    {
+      "id": "6c",
+      "name": "Reschedule appointment",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1440, 420],
+      "parameters": {
+        "operation": "update",
+        "tableId": "appointments",
+        "filters": {"conditions": [{"keyName": "client_id", "condition": "eq", "keyValue": "={{$json.client.id}}"}]},
+        "fieldsUi": {"fieldValues": [
+          {"fieldId": "date", "fieldValue": "={{$json.payload.date}}"},
+          {"fieldId": "time", "fieldValue": "={{$json.payload.time_preference || '15:00'}}"}
+        ]}
+      }
+    },
+    {
+      "id": "7g",
+      "name": "Google Calendar — create event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [1680, 180],
+      "parameters": {
+        "operation": "create",
+        "calendar": "={{$env.GOOGLE_CALENDAR_ID || 'primary'}}",
+        "start": "={{$json.payload.date}}T{{$json.payload.time_preference || '10:00'}}:00",
+        "end":   "={{$json.payload.date}}T{{$json.payload.time_preference || '10:30'}}:00",
+        "additionalFields": {
+          "summary": "=Nova AI · {{$json.payload.service || 'Consultation'}}",
+          "description": "=Booked via Nova AI from {{$json.client.name}} ({{$json.client.phone}}). Source: {{$json.original.channel}}",
+          "attendees": "={{$json.client.email || ''}}"
+        }
+      },
+      "_doc": "Requires a Google Calendar credential connected to the doctor's calendar (per-business OAuth)."
+    },
+    {
+      "id": "7gd",
+      "name": "Google Calendar — delete event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [1680, 300],
+      "parameters": {
+        "operation": "delete",
+        "calendar": "={{$env.GOOGLE_CALENDAR_ID || 'primary'}}",
+        "eventId": "={{$json.google_calendar_event_id}}"
+      }
+    },
+    {
+      "id": "8",
+      "name": "Insert notification",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1920, 300],
+      "parameters": {
+        "operation": "create",
+        "tableId": "notifications",
+        "fieldsUi": {"fieldValues": [
+          {"fieldId": "business_id", "fieldValue": "={{$env.NOVA_BUSINESS_ID}}"},
+          {"fieldId": "type",        "fieldValue": "={{$json.payload.intent}}"},
+          {"fieldId": "title",       "fieldValue": "=AI: {{$json.payload.intent}}"},
+          {"fieldId": "message",     "fieldValue": "={{$json.client.name}} – \"{{$json.original.text}}\""},
+          {"fieldId": "urgent",      "fieldValue": "={{$json.payload.urgent}}"}
+        ]}
+      }
+    },
+    {
+      "id": "9",
+      "name": "Build reply text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2160, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const p = $json.payload || {};\nlet reply = 'Thanks, we got your message.';\nif (p.urgent) reply = \"I've flagged this as urgent. A staff member will call you shortly.\";\nelse if (p.intent==='book')      reply = `Your appointment for ${p.service||'a consultation'} on ${p.date} is confirmed and added to the doctor's calendar.`;\nelse if (p.intent==='cancel')    reply = 'Your appointment has been cancelled and removed from the calendar.';\nelse if (p.intent==='reschedule')reply = `Done — your appointment is moved to ${p.date}.`;\nelse                              reply = \"Hi! I'm Nova. I can help you book, cancel or reschedule. What would you like to do?\";\nreturn [{json:{reply}}];"
+      }
+    },
+    {
+      "id": "10",
+      "name": "Send WhatsApp reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2400, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v20.0/{{$env.WA_PHONE_ID}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [
+          {"name": "Authorization", "value": "=Bearer {{$env.WA_ACCESS_TOKEN}}"},
+          {"name": "Content-Type",  "value": "application/json"}
+        ]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"messaging_product\":\"whatsapp\",\"to\":\"{{$node['Webhook (WhatsApp + Voice inbound)'].json.body.from}}\",\"type\":\"text\",\"text\":{\"body\":\"{{$json.reply}}\"}}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (WhatsApp + Voice inbound)": {"main": [[{"node":"Lookup or create client","type":"main","index":0}]]},
+    "Lookup or create client":            {"main": [[{"node":"AI Classify (Anthropic Claude)","type":"main","index":0}]]},
+    "AI Classify (Anthropic Claude)":     {"main": [[{"node":"Parse AI JSON","type":"main","index":0}]]},
+    "Parse AI JSON":                      {"main": [[{"node":"Route by intent","type":"main","index":0}]]},
+    "Route by intent": {"main": [
+      [{"node":"Insert notification","type":"main","index":0}],
+      [{"node":"Insert appointment","type":"main","index":0}],
+      [{"node":"Cancel appointment","type":"main","index":0}],
+      [{"node":"Reschedule appointment","type":"main","index":0}]
+    ]},
+    "Insert appointment":   {"main": [[{"node":"Google Calendar — create event","type":"main","index":0}]]},
+    "Cancel appointment":   {"main": [[{"node":"Google Calendar — delete event","type":"main","index":0}]]},
+    "Reschedule appointment":{"main":[[{"node":"Insert notification","type":"main","index":0}]]},
+    "Google Calendar — create event":{"main":[[{"node":"Insert notification","type":"main","index":0}]]},
+    "Google Calendar — delete event":{"main":[[{"node":"Insert notification","type":"main","index":0}]]},
+    "Insert notification":  {"main": [[{"node":"Build reply text","type":"main","index":0}]]},
+    "Build reply text":     {"main": [[{"node":"Send WhatsApp reply","type":"main","index":0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "_environment_variables_required": {
+    "ANTHROPIC_API_KEY":  "Your Anthropic API key (sk-ant-…)",
+    "NOVA_BUSINESS_ID":   "UUID of the business this n8n instance serves",
+    "WA_PHONE_ID":        "WhatsApp Business phone number ID",
+    "WA_ACCESS_TOKEN":    "WhatsApp Business permanent access token",
+    "GOOGLE_CALENDAR_ID": "Calendar to sync (default: 'primary')",
+    "SUPABASE_URL":       "https://<project>.supabase.co",
+    "SUPABASE_SERVICE_KEY":"Service role key (server-side only)",
+    "TWILIO_ACCOUNT_SID": "Twilio SID — for inbound voice calls",
+    "TWILIO_AUTH_TOKEN":  "Twilio auth token"
+  },
+  "_voice_call_routing": "Voice calls require a separate front door because Meta's WhatsApp API doesn't expose call audio. Recommended setup: 1) Connect a Twilio number that forwards to/captures voice. 2) Use Twilio <Gather input='speech'> verb to transcribe the caller's speech. 3) Twilio webhook posts {channel:'whatsapp_voice', from:caller, text:transcribed_text} to this same n8n endpoint — the rest of the pipeline is identical. 4) Reply via Twilio <Say> using the same response Build reply text generated.",
+  "_example_inbound_text": {
+    "channel": "whatsapp",
+    "from": "+212655555555",
+    "profile_name": "Mohamed Tazi",
+    "text": "Hi, I'd like to book a cardiology appointment tomorrow morning"
+  },
+  "_example_inbound_voice": {
+    "channel": "whatsapp_voice",
+    "from": "+212655555555",
+    "text": "I want to book a cardio appointment for tomorrow morning",
+    "twilio_call_sid": "CA…",
+    "transcription_confidence": 0.92
+  }
+}

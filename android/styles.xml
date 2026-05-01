@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/values/styles.xml — DAY (light) theme -->
+<resources>
+    <color name="nova_bg">#ffffff</color>
+
+    <style name="Theme.NovaAI" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@color/nova_bg</item>
+        <item name="android:navigationBarColor">@color/nova_bg</item>
+        <item name="android:windowBackground">@color/nova_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.NovaAI.Splash" parent="Theme.NovaAI">
+        <item name="android:windowBackground">@drawable/splash_drawable</item>
+    </style>
+</resources>
