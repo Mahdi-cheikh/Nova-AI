@@ -1298,56 +1298,87 @@ async function renderDoctors(){
 }
 async function bindDoctors(){ $('#add-doc').onclick = ()=>openModal(addDoctorModal()); }
 
-/* ---------- LAB PIPELINE (worker-friendly kanban) ---------- */
+/* ---------- LAB PIPELINE (worker-friendly, grouped by patient) ---------- */
 const LAB_NEXT  = {requested:'sample_collected', sample_collected:'in_analysis', in_analysis:'ready', ready:'delivered'};
 const LAB_PREV  = {sample_collected:'requested', in_analysis:'sample_collected', ready:'in_analysis'};
 const LAB_NLBL  = {requested:'Mark collected', sample_collected:'Start analysis', in_analysis:'Mark ready', ready:'Notify patient'};
 const LAB_NICE  = {requested:'Requested', sample_collected:'Sample collected', in_analysis:'In analysis', ready:'Ready to send', delivered:'Delivered'};
+const LAB_RANK  = {requested:0, sample_collected:1, in_analysis:2, ready:3, delivered:4};
 
 async function renderLabPipeline(){
   const bizId = SESSION.business.id;
   const [{data:orders=[]}, {data:kpi}] = await Promise.all([
     sb.from('lab_orders').select(`
-      id, status, created_at, collected_at, ready_at, notes, price_charged,
+      id, status, created_at, collected_at, ready_at, notes, price_charged, appointment_id,
       lab_tests(id, name, code, sample_type, fasting_required, category, reference_range),
       lab_results(id, numeric_value, text_value, unit, is_critical, pdf_path),
       appointments(id, date, time, clients(id, name, phone))
-    `).eq('business_id', bizId).order('created_at',{ascending:false}).limit(200),
+    `).eq('business_id', bizId).order('created_at',{ascending:false}).limit(500),
     sb.from('v_lab_kpis').select('*').eq('business_id', bizId).maybeSingle()
   ]);
-  const byStatus = {requested:[], sample_collected:[], in_analysis:[], ready:[]};
-  (orders||[]).forEach(o=>{ if(byStatus[o.status]) byStatus[o.status].push(o); });
 
-  const card = (o)=>{
-    const t = o.lab_tests || {}; const c = o.appointments?.clients || {};
-    const hasResult = (o.lab_results||[]).length > 0;
-    const critical  = (o.lab_results||[]).some(r => r.is_critical);
-    const borderColor = critical ? '#ef4444' : t.fasting_required ? '#eab308' : '#6366f1';
+  // Group orders by appointment — same patient + same booking time = one batch card
+  const groups = {};
+  (orders||[]).forEach(o => {
+    const k = o.appointment_id || ('orphan_'+o.id);
+    if (!groups[k]) groups[k] = {appointment_id:o.appointment_id, tests:[], appointment:o.appointments};
+    groups[k].tests.push(o);
+  });
+  // Each group lives in the column matching its MOST-BEHIND test, so a partly-collected
+  // batch stays in "Requested" until every test in it is collected.
+  Object.values(groups).forEach(g => {
+    g.minRank   = Math.min(...g.tests.map(t => LAB_RANK[t.status] ?? 99));
+    g.minStatus = Object.keys(LAB_RANK).find(k => LAB_RANK[k] === g.minRank) || 'requested';
+    g.hasFasting  = g.tests.some(t => t.lab_tests?.fasting_required);
+    g.hasCritical = g.tests.some(t => (t.lab_results||[]).some(r => r.is_critical));
+    g.hasResults  = g.tests.some(t => (t.lab_results||[]).some(r => r.pdf_path || r.numeric_value!==null || (r.text_value && r.text_value.length)));
+    g.testIds     = g.tests.map(t => t.id);
+  });
+
+  const byStatus = {requested:[], sample_collected:[], in_analysis:[], ready:[]};
+  Object.values(groups).forEach(g => {
+    if (g.minStatus === 'delivered') return;
+    if (byStatus[g.minStatus]) byStatus[g.minStatus].push(g);
+  });
+
+  const groupCard = (g) => {
+    const c = g.appointment?.clients || {};
+    const sampleTypes = [...new Set(g.tests.map(t => t.lab_tests?.sample_type).filter(Boolean))];
+    const total = g.tests.reduce((a,t) => a + Number(t.price_charged||0), 0);
     const flags = [];
-    if (t.fasting_required) flags.push('<span class="pill" style="background:#eab308;color:#000">FASTING</span>');
-    if (critical)           flags.push('<span class="pill" style="background:#ef4444">CRITICAL</span>');
-    if (hasResult)          flags.push('<span class="pill green">📄 PDF</span>');
-    return `<div class="apt-row lab-card" data-id="${o.id}" style="margin:8px 0;padding:10px;background:rgba(99,102,241,0.06);border-radius:8px;border-left:3px solid ${borderColor};cursor:pointer">
+    if (g.hasFasting)  flags.push('<span class="pill" style="background:#eab308;color:#000">FASTING</span>');
+    if (g.hasCritical) flags.push('<span class="pill" style="background:#ef4444">CRITICAL</span>');
+    if (g.hasResults)  flags.push('<span class="pill green">📄 results uploaded</span>');
+    const borderColor = g.hasCritical ? '#ef4444' : g.hasFasting ? '#eab308' : '#6366f1';
+    const nextStatus  = LAB_NEXT[g.minStatus];
+    const prevStatus  = LAB_PREV[g.minStatus];
+    const testList = g.tests.map(t => {
+      const dot = LAB_RANK[t.status] > LAB_RANK[g.minStatus] ? '<span style="color:#22c55e">✓</span>' : '<span style="opacity:.5">○</span>';
+      return `${dot} ${escapeHtml(t.lab_tests?.name||'Test')}${t.lab_tests?.code?` <span style="opacity:.6;font-size:.85em">[${escapeHtml(t.lab_tests.code)}]</span>`:''}`;
+    }).join('<br>');
+    return `<div class="apt-row lab-group" data-aptid="${g.appointment_id||''}" data-ids="${g.testIds.join(',')}" data-status="${g.minStatus}" style="margin:8px 0;padding:12px;background:rgba(99,102,241,0.06);border-radius:8px;border-left:4px solid ${borderColor};cursor:pointer">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:start">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:.95em">${escapeHtml(t.name||'Test')} ${t.code?`<span class="pill blue" style="font-size:.65em;margin-left:4px">${escapeHtml(t.code)}</span>`:''}</div>
-          <div class="sub" style="font-size:.82em;margin-top:4px"><b>${escapeHtml(c.name||'—')}</b> · ${escapeHtml(c.phone||'')}</div>
-          <div class="sub" style="font-size:.78em;opacity:.75;margin-top:2px">${o.appointments?.date||''} ${(o.appointments?.time||'').slice(0,5)} · ${t.sample_type||'—'}</div>
-          ${flags.length?`<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">${flags.join('')}</div>`:''}
+          <div style="font-weight:600;font-size:.95em">${escapeHtml(c.name||'—')} <span class="pill blue" style="font-size:.65em;margin-left:4px">${g.tests.length} test${g.tests.length===1?'':'s'}</span></div>
+          <div class="sub" style="font-size:.82em;margin-top:3px">📞 ${escapeHtml(c.phone||'—')}</div>
+          <div class="sub" style="font-size:.78em;opacity:.75;margin-top:2px">📅 ${g.appointment?.date||''} ${(g.appointment?.time||'').slice(0,5)} · 🧪 ${sampleTypes.join(', ')||'—'} · ${total||0} TND</div>
+          <div class="sub" style="font-size:.8em;margin-top:8px;line-height:1.6">${testList}</div>
+          ${flags.length?`<div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">${flags.join('')}</div>`:''}
         </div>
       </div>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        ${LAB_NEXT[o.status] ? `<button class="btn-primary lab-advance" data-id="${o.id}" data-to="${LAB_NEXT[o.status]}" style="font-size:.78em;padding:5px 8px;flex:1">${LAB_NLBL[o.status]} →</button>` : ''}
-        ${LAB_PREV[o.status] ? `<button class="btn-ghost lab-revert" data-id="${o.id}" data-to="${LAB_PREV[o.status]}" style="font-size:.72em;padding:5px 8px" title="Move back">←</button>` : ''}
+      <div style="display:flex;gap:6px;margin-top:10px">
+        ${nextStatus ? `<button class="btn-primary lab-group-advance" data-ids="${g.testIds.join(',')}" data-aptid="${g.appointment_id||''}" data-to="${nextStatus}" style="font-size:.8em;padding:6px 10px;flex:1">${LAB_NLBL[g.minStatus]} all →</button>` : ''}
+        ${prevStatus ? `<button class="btn-ghost lab-group-revert" data-ids="${g.testIds.join(',')}" data-to="${prevStatus}" style="font-size:.74em;padding:6px 8px" title="Revert all">← undo</button>` : ''}
       </div>
     </div>`;
   };
 
   const col = (title, list, status)=>{
+    const totalTests = list.reduce((a,g)=>a+g.tests.length, 0);
     const bulkBtn = LAB_NEXT[status] && list.length
-      ? `<button class="btn-primary lab-bulk" data-from="${status}" data-to="${LAB_NEXT[status]}" style="width:100%;margin-top:10px;font-size:.82em">⚡ ${LAB_NLBL[status]} all (${list.length})</button>` : '';
-    return `<div class="panel"><div class="panel-head"><h3>${title} <span class="pill ${list.length?'blue':'gray'}">${list.length}</span></h3></div>
-      <div class="panel-body" style="max-height:65vh;overflow:auto">${list.length?list.map(card).join(''):'<div class="empty"><div class="ic">⌀</div>Empty</div>'}${bulkBtn}</div></div>`;
+      ? `<button class="btn-primary lab-bulk" data-from="${status}" data-to="${LAB_NEXT[status]}" style="width:100%;margin-top:10px;font-size:.82em">⚡ ${LAB_NLBL[status]} all (${totalTests} test${totalTests===1?'':'s'} across ${list.length} patient${list.length===1?'':'s'})</button>` : '';
+    return `<div class="panel"><div class="panel-head"><h3>${title} <span class="pill ${list.length?'blue':'gray'}">${list.length} patient${list.length===1?'':'s'}</span></h3></div>
+      <div class="panel-body" style="max-height:65vh;overflow:auto">${list.length?list.map(groupCard).join(''):'<div class="empty"><div class="ic">⌀</div>Empty</div>'}${bulkBtn}</div></div>`;
   };
 
   return `<div class="panel" style="margin-bottom:14px"><div class="panel-body" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
@@ -1384,30 +1415,43 @@ async function bindLabPipeline(){
     return sb.from('lab_orders').update(upd).eq('id', id);
   };
 
-  /* Per-card advance button (the one-click action) */
-  document.querySelectorAll('.lab-advance').forEach(b => b.onclick = async (e) => {
+  const setStatusBatch = async (ids, to) => {
+    const upd = {status: to};
+    if (to === 'sample_collected') upd.collected_at = new Date().toISOString();
+    if (to === 'in_analysis')      upd.analysed_at  = new Date().toISOString();
+    if (to === 'ready')             upd.ready_at     = new Date().toISOString();
+    if (to === 'delivered')         upd.delivered_at = new Date().toISOString();
+    return sb.from('lab_orders').update(upd).in('id', ids);
+  };
+
+  /* Group advance — moves ALL tests for one patient batch forward together */
+  document.querySelectorAll('.lab-group-advance').forEach(b => b.onclick = async (e) => {
     e.stopPropagation();
-    const id = b.getAttribute('data-id');
-    const to = b.getAttribute('data-to');
+    const ids   = b.getAttribute('data-ids').split(',').filter(Boolean);
+    const aptId = b.getAttribute('data-aptid');
+    const to    = b.getAttribute('data-to');
     b.disabled = true; b.textContent = '...';
     if (to === 'delivered') {
-      const r = await sb.functions.invoke('lab-results-notify', {body:{}});
-      toast({title:'Patient notified', message: r.error ? String(r.error) : `Sent ${r.data?.sent||0} result(s) on WhatsApp`, type:'info'});
+      // Notify the patient (includes results PDF if uploaded, otherwise plain "ready" text)
+      const r = await sb.functions.invoke('lab-results-notify', {body:{appointment_id: aptId}});
+      await setStatusBatch(ids, to);
+      const sent = r.data?.sent || 0;
+      toast({title:'Patient notified', message: sent>0 ? `Sent ${sent} result(s) on WhatsApp` : 'Sent ready-for-pickup notice', type:'info'});
     } else {
-      await setStatus(id, to);
-      toast({title:'Moved', message:`Order → ${LAB_NICE[to]||to}`, type:'info'});
+      await setStatusBatch(ids, to);
+      toast({title:'Group advanced', message:`${ids.length} test${ids.length===1?'':'s'} → ${LAB_NICE[to]}`, type:'info'});
     }
     await render();
   });
 
-  /* Per-card undo button */
-  document.querySelectorAll('.lab-revert').forEach(b => b.onclick = async (e) => {
+  /* Group revert */
+  document.querySelectorAll('.lab-group-revert').forEach(b => b.onclick = async (e) => {
     e.stopPropagation();
-    const id = b.getAttribute('data-id');
-    const to = b.getAttribute('data-to');
+    const ids = b.getAttribute('data-ids').split(',').filter(Boolean);
+    const to  = b.getAttribute('data-to');
     b.disabled = true;
-    await sb.from('lab_orders').update({status: to}).eq('id', id);
-    toast({title:'Reverted', message:`Order back to ${LAB_NICE[to]||to}`, type:'info'});
+    await sb.from('lab_orders').update({status: to}).in('id', ids);
+    toast({title:'Reverted', message:`${ids.length} test${ids.length===1?'':'s'} back to ${LAB_NICE[to]}`, type:'info'});
     await render();
   });
 
@@ -1431,15 +1475,100 @@ async function bindLabPipeline(){
     await render();
   });
 
-  /* Click anywhere on a card → detail modal with full info + result-upload form */
-  document.querySelectorAll('.lab-card').forEach(r => r.onclick = async (e) => {
-    if (e.target.closest('button')) return;   // don't open modal when clicking action buttons
-    const id = r.getAttribute('data-id');
-    const {data:o} = await sb.from('lab_orders').select(`
+  /* Click on a group card → open a per-patient modal showing every test with
+     individual result-upload forms. Lab tech can fill in numeric values per test. */
+  document.querySelectorAll('.lab-group').forEach(r => r.onclick = async (e) => {
+    if (e.target.closest('button')) return;
+    const ids = (r.getAttribute('data-ids')||'').split(',').filter(Boolean);
+    if (!ids.length) return;
+    const {data:rows = []} = await sb.from('lab_orders').select(`
       *, lab_tests(*), appointments(*, clients(*)), lab_results(*)
-    `).eq('id', id).single();
-    if (!o) return;
-    const t = o.lab_tests || {}; const c = o.appointments?.clients || {};
+    `).in('id', ids);
+    if (!rows.length) return;
+    const apt = rows[0].appointments;
+    const cli = apt?.clients || {};
+    const perTest = rows.map(o => {
+      const tt = o.lab_tests || {};
+      const existing = (o.lab_results||[]).map(rr => `<div style="font-size:.85em;padding:6px;background:rgba(34,197,94,0.08);border-radius:4px;margin-top:4px">
+        ${rr.numeric_value!==null && rr.numeric_value!==undefined?`<b>${rr.numeric_value} ${escapeHtml(rr.unit||'')}</b>`:''}
+        ${rr.text_value?` ${escapeHtml(rr.text_value)}`:''}
+        ${rr.is_critical?' <span class="pill" style="background:#ef4444">CRITICAL</span>':''}
+        ${rr.pdf_path?` <a href="#" data-pdf="${escapeHtml(rr.pdf_path)}">📄 PDF</a>`:''}
+      </div>`).join('');
+      return `<div style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px;margin:8px 0">
+        <div style="font-weight:600">${escapeHtml(tt.name||'Test')} ${tt.code?`<span class="pill blue" style="font-size:.65em">${escapeHtml(tt.code)}</span>`:''}<span class="pill ${o.status==='ready'?'green':'gray'}" style="float:right;font-size:.7em">${LAB_NICE[o.status]||o.status}</span></div>
+        <div class="sub" style="font-size:.75em;margin:3px 0">Reference: ${escapeHtml(tt.reference_range||'—')}</div>
+        ${existing}
+        <form data-result-form="${o.id}" style="margin-top:8px">
+          <div class="row">
+            <div class="field grow"><label>Value</label><input name="numeric_value" type="number" step="0.01" placeholder="e.g. 95" /></div>
+            <div class="field"><label>Unit</label><input name="unit" placeholder="${escapeHtml(tt.reference_range && tt.reference_range.match(/[a-zA-Z%/]+/g)?.slice(-1)[0] || 'mg/dL')}" /></div>
+          </div>
+          <div class="field"><label>Text value (qualitative)</label><input name="text_value" placeholder="Negative / Normal / Positive..." /></div>
+          <div class="row">
+            <div class="field"><label>PDF (optional)</label><input type="file" name="pdf" accept="application/pdf" /></div>
+            <div class="field"><label><input type="checkbox" name="is_critical" /> Critical</label></div>
+          </div>
+          <button type="button" class="btn-primary lab-save-result" data-id="${o.id}" style="margin-top:6px;font-size:.85em">Save result for ${escapeHtml(tt.code||tt.name||'this test')}</button>
+        </form>
+      </div>`;
+    }).join('');
+
+    openModal(`<div style="max-width:700px"><h3>${escapeHtml(cli.name||'Patient')} — ${rows.length} test${rows.length===1?'':'s'}</h3>
+      <div class="sub" style="margin:6px 0">📞 ${escapeHtml(cli.phone||'—')} · 📅 ${apt?.date||''} ${(apt?.time||'').slice(0,5)}</div>
+      ${perTest}
+      <div class="modal-actions" style="margin-top:14px">
+        <button type="button" class="btn-ghost" id="m-cancel">Close</button>
+        <button type="button" class="btn-primary" id="lab-mark-all-ready">Mark all Ready</button>
+      </div>
+    </div>`, () => {/* save callback unused — buttons inside handle their own saves */});
+
+    /* Per-test save handler */
+    setTimeout(() => {
+      document.querySelectorAll('.lab-save-result').forEach(btn => btn.onclick = async () => {
+        const orderId = btn.getAttribute('data-id');
+        const form = document.querySelector(`form[data-result-form="${orderId}"]`);
+        if (!form) return;
+        btn.disabled = true; btn.textContent = 'Saving...';
+        const fd = new FormData(form);
+        let pdfPath = null;
+        const file = fd.get('pdf');
+        if (file && file.size && file.size > 0) {
+          const path = `${SESSION.business.id}/${orderId}_${Date.now()}.pdf`;
+          const {error} = await sb.storage.from('lab-results').upload(path, file, {contentType:'application/pdf'});
+          if (!error) pdfPath = path;
+        }
+        const numeric = fd.get('numeric_value');
+        await sb.from('lab_results').insert({
+          business_id:   SESSION.business.id,
+          lab_order_id:  orderId,
+          numeric_value: numeric ? parseFloat(numeric) : null,
+          text_value:    fd.get('text_value') || null,
+          unit:          fd.get('unit') || null,
+          is_critical:   !!fd.get('is_critical'),
+          pdf_path:      pdfPath,
+        });
+        await sb.from('lab_orders').update({status:'ready', ready_at: new Date().toISOString()}).eq('id', orderId);
+        toast({title:'Saved', message:'Result recorded, test moved to Ready', type:'info'});
+        btn.textContent = '✓ Saved'; btn.disabled = true;
+      });
+
+      const allReady = $('#lab-mark-all-ready');
+      if (allReady) allReady.onclick = async () => {
+        await setStatusBatch(ids, 'ready');
+        toast({title:'All marked Ready', message:`${ids.length} test${ids.length===1?'':'s'} ready to send`, type:'info'});
+        closeModal(); await render();
+      };
+
+      document.querySelectorAll('[data-pdf]').forEach(a => a.onclick = async (ev) => {
+        ev.preventDefault();
+        const path = a.getAttribute('data-pdf');
+        const {data:signed} = await sb.storage.from('lab-results').createSignedUrl(path, 60*60);
+        if (signed?.signedUrl) window.open(signed.signedUrl, '_blank');
+      });
+    }, 100);
+    return; // skip the rest of the old per-card modal code below
+    const t = {}; const c = {};
     const existingResults = (o.lab_results||[]).map(rr => `<div style="padding:8px;background:rgba(99,102,241,0.05);border-radius:6px;margin:6px 0;font-size:.9em">
       ${rr.numeric_value!==null && rr.numeric_value!==undefined ? `<b>${rr.numeric_value} ${escapeHtml(rr.unit||'')}</b>` : ''}
       ${rr.text_value ? `${escapeHtml(rr.text_value)}` : ''}
@@ -1517,7 +1646,7 @@ async function bindLabPipeline(){
   const search = $('#lab-search');
   if (search) search.oninput = () => {
     const q = search.value.toLowerCase().trim();
-    document.querySelectorAll('.lab-card').forEach(r => {
+    document.querySelectorAll('.lab-group').forEach(r => {
       r.style.display = !q || r.textContent.toLowerCase().includes(q) ? '' : 'none';
     });
   };
@@ -1526,7 +1655,7 @@ async function bindLabPipeline(){
     const filter = dateF.value;
     const today   = new Date().toISOString().slice(0,10);
     const weekAgo = new Date(Date.now() - 7*86400*1000).toISOString().slice(0,10);
-    document.querySelectorAll('.lab-card').forEach(r => {
+    document.querySelectorAll('.lab-group').forEach(r => {
       const m = r.textContent.match(/(\d{4}-\d{2}-\d{2})/);
       if (!m) return;
       let show = true;

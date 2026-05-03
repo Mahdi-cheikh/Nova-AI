@@ -56,9 +56,16 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_KEY);
+    let scopedAptId: string | null = null;
+    try {
+      if (req.method === "POST") {
+        const body = await req.json().catch(()=>null);
+        if (body?.appointment_id) scopedAptId = body.appointment_id;
+      }
+    } catch (_e) { /* no body */ }
 
     // Group ready-but-unsent results by appointment so we send one message per visit.
-    const { data: orders = [] } = await sb.from("lab_orders")
+    let q = sb.from("lab_orders")
       .select(`
         id, business_id, appointment_id, status, ready_at,
         lab_tests(name),
@@ -66,19 +73,22 @@ serve(async (req) => {
         appointments(client_id, results_sent_at, clients(name, phone, profile), businesses(name))
       `)
       .eq("status", "ready");
+    if (scopedAptId) q = q.eq("appointment_id", scopedAptId);
+    const { data: orders = [] } = await q;
 
+    // Two buckets: ones with actual results uploaded (send PDF/values), and ones
+    // marked ready but no content yet (send a generic "tests are ready, come pick
+    // them up" message). Both count as a successful notification.
     const byApt: Record<string, any[]> = {};
+    const byAptNoContent: Record<string, any[]> = {};
     for (const o of (orders as any[])) {
-      if (o.appointments?.results_sent_at) continue;                       // already notified
-      // Don't notify until at least one result row exists for this order with
-      // either a numeric value, a text value, or a PDF. Prevents premature pings
-      // when an order is marked 'ready' but no result has actually been recorded.
+      if (o.appointments?.results_sent_at) continue;
       const hasContent = (o.lab_results || []).some((r: any) =>
         r.pdf_path || r.numeric_value !== null || (r.text_value && r.text_value.length > 0)
       );
-      if (!hasContent) continue;
       const k = o.appointment_id;
-      (byApt[k] = byApt[k] || []).push(o);
+      if (hasContent) (byApt[k] = byApt[k] || []).push(o);
+      else            (byAptNoContent[k] = byAptNoContent[k] || []).push(o);
     }
 
     let sent = 0;
@@ -125,6 +135,41 @@ serve(async (req) => {
           title: "Lab results sent",
           message: `Sent ${tests.length} result(s) to ${cName} (${phone}).`,
           urgent: critical,
+        });
+        sent++;
+      }
+    }
+
+    // Second pass: appointments marked ready but no result content yet — send a
+    // simple "your tests are ready, come pick them up" message in patient's language.
+    for (const aptId of Object.keys(byAptNoContent)) {
+      const group = byAptNoContent[aptId];
+      const first = group[0];
+      const phone = first.appointments?.clients?.phone;
+      const cName = (first.appointments?.clients?.name || "").split(" ")[0] || "there";
+      const bName = first.appointments?.businesses?.name || "the lab";
+      const lang  = first.appointments?.clients?.profile?.language || "en";
+      const tests = group.map((g: any) => g.lab_tests?.name).filter(Boolean);
+      const list  = tests.map((t: string) => `• ${t}`).join("\n");
+      const body  = lang === "fr"
+        ? `Bonjour ${cName}, vos analyses chez ${bName} sont prêtes :\n${list}\n\nVous pouvez passer récupérer le rapport.`
+        : lang === "ar"
+        ? `مرحبا ${cName}، تحاليلك من ${bName} جاهزة:\n${list}\n\nيمكنك المرور لاستلام التقرير.`
+        : `Hi ${cName}, your tests at ${bName} are ready:\n${list}\n\nYou can come pick up the report.`;
+      const ok = !!(await fetch(`https://graph.facebook.com/v20.0/${WA_PHONE_ID}/messages`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: phone.replace(/^\+/, ""), type: "text", text: { body } }),
+      }).catch(() => null))?.ok;
+      if (ok) {
+        await sb.from("appointments").update({
+          results_sent_at: new Date().toISOString(),
+          results_ready_at: first.ready_at || new Date().toISOString(),
+        }).eq("id", aptId);
+        await sb.from("notifications").insert({
+          business_id: first.business_id, type: "info",
+          title: "Patient pinged — pickup notice",
+          message: `${cName} (${phone}) was told ${tests.length} test(s) are ready (no PDF uploaded).`,
         });
         sent++;
       }
