@@ -48,7 +48,7 @@ ${bizLine}
 <tr><td align="center" style="padding:18px 32px 24px">
 <table role="presentation" cellspacing="0" cellpadding="0" border="0">
 <tr><td style="border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 16px rgba(99,102,241,0.35)">
-<a href="${dashboardUrl}" target="_blank" style="display:inline-block;padding:14px 36px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;letter-spacing:0.3px">Continue to dashboard →</a>
+<a href="${dashboardUrl}" style="display:inline-block;padding:14px 36px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;letter-spacing:0.3px">Continue to dashboard →</a>
 </td></tr>
 </table>
 </td></tr>
