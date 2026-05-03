@@ -579,8 +579,8 @@ function renderAuth(){
 
     <h2 style="text-align:center;margin:0 0 6px;font-size:20px">${isSignup ? 'Get Nova running for your business' : 'Welcome back'}</h2>
     <p style="text-align:center;color:var(--text-dim);font-size:13.5px;margin:0 0 18px;line-height:1.5">${isSignup
-      ? 'Free 14-day trial · no card required · cancel any time. We\\'ll send a magic link to confirm your email.'
-      : 'Enter the email you signed up with. We\\'ll send a one-time magic link — no passwords to remember.'}</p>
+      ? "Free 14-day trial · no card required · cancel any time. We'll send a magic link to confirm your email."
+      : "Enter the email you signed up with. We'll send a one-time magic link — no passwords to remember."}</p>
 
     <button class="btn btn-google btn-block" id="google-btn">
       <span style="display:inline-block;width:18px;height:18px;background:conic-gradient(from 0deg,#ea4335 0 25%,#fbbc04 25% 50%,#34a853 50% 75%,#4285f4 75% 100%);border-radius:50%"></span>
@@ -633,10 +633,10 @@ function bindAuth(){
     if (!v) { hint.style.display = 'none'; return; }
     hint.style.display = 'block';
     if (valid) {
-      hint.textContent = '✓ Looks good — we\\'ll send the magic link there.';
+      hint.textContent = "✓ Looks good — we'll send the magic link there.";
       hint.style.color = '#22c55e';
     } else {
-      hint.textContent = 'That doesn\\'t look like a valid email yet.';
+      hint.textContent = "That doesn't look like a valid email yet.";
       hint.style.color = '#eab308';
     }
   };
