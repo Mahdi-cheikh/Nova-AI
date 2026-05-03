@@ -203,6 +203,17 @@ drop policy if exists "biz_self_insert" on public.businesses;
 create policy "biz_self_insert" on public.businesses
   for insert with check (owner_user_id = auth.uid());
 
+-- Bootstrap: allow a freshly-signed-up user to create their first users row
+-- linking themselves as owner of a business they just created. Without this,
+-- the chicken-and-egg blocks onboarding because current_business_id() needs
+-- a users row that doesn't exist yet.
+drop policy if exists "users_self_bootstrap" on public.users;
+create policy "users_self_bootstrap" on public.users
+  for insert with check (
+    auth_uid = auth.uid()
+    and business_id in (select id from public.businesses where owner_user_id = auth.uid())
+  );
+
 -- ---------- 12. REALTIME ----------
 -- Run after the tables exist:
 -- alter publication supabase_realtime add table public.notifications;

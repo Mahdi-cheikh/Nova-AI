@@ -137,6 +137,28 @@
   .bell{position:relative}
   .bell .dot{position:absolute;top:6px;right:6px;min-width:18px;height:18px;border-radius:999px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;padding:0 4px}
 
+  .user-pill{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;background:var(--card);border:1px solid var(--border);border-radius:999px;cursor:pointer;font-size:13px;font-weight:500}
+  .user-pill img,.user-pill .initials{width:30px;height:30px;border-radius:50%;object-fit:cover;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
+  .user-pill .name{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .user-pill:hover{background:var(--card-2)}
+
+  .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;text-align:center;font-weight:600}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-cell{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;min-height:96px;padding:6px;font-size:11.5px;display:flex;flex-direction:column;gap:3px}
+  .cal-cell.empty{background:transparent;border:none;visibility:hidden}
+  .cal-cell.today{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,var(--card))}
+  .cal-day{font-weight:700;color:var(--text-dim);font-size:12px}
+  .cal-cell.today .cal-day{color:var(--primary-2)}
+  .cal-evs{display:flex;flex-direction:column;gap:2px;overflow:hidden}
+  .cal-cell.has-events{cursor:pointer}
+  .cal-cell.has-events:hover{background:color-mix(in srgb,var(--primary) 6%,var(--bg-2))}
+  .cal-ev{background:var(--accent);color:#fff;padding:2px 5px;border-radius:4px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+  .cal-more{cursor:pointer;font-weight:500}
+  .cal-more:hover{color:var(--primary-2);text-decoration:underline}
+  .day-list-row:hover{background:var(--card)!important;border-color:var(--primary)!important}
+  .cal-ev.cancelled{background:var(--text-faint);text-decoration:line-through}
+  .cal-more{font-size:10px;color:var(--text-faint)}
+
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px}
   .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
   .stat .lbl{color:var(--text-dim);font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
@@ -238,11 +260,26 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
-/* ---------- 1. CONFIG (loaded from localStorage; first-run sets it) ---------- */
-const CFG_KEY = 'nova_config_v1';
+/* ============================================================================
+   1.  NOVA AI — BAKED-IN SUPABASE CREDENTIALS
+   ----------------------------------------------------------------------------
+   Paste your project URL + anon key here ONCE. Every visitor to your live
+   site uses these — no setup screen, no per-user config. Your clinics sign
+   up against THIS Supabase project; they never see Supabase themselves.
+   Find both at  Supabase → Project Settings → API.
+   The anon key is safe to expose in the browser; RLS is what protects you.
+   ============================================================================ */
+const NOVA_CONFIG = {
+  supabaseUrl:     'https://blhvzuhufygdcnxpcwqx.supabase.co',
+  supabaseAnonKey: 'sb_publishable_B07mS2iUZWuFEygDZIyhVg_KW86VgKh'
+};
+
+const CFG_KEY   = 'nova_config_v1';
 const THEME_KEY = 'nova_theme_v1';
-let CFG = null;
-try { CFG = JSON.parse(localStorage.getItem(CFG_KEY)) || null; } catch { CFG = null; }
+const _isPlaceholder = NOVA_CONFIG.supabaseUrl.includes('YOUR-REF') || NOVA_CONFIG.supabaseAnonKey.startsWith('PASTE');
+let CFG = _isPlaceholder ? null : NOVA_CONFIG;
+/* Dev override: localStorage wins only when hard-coded is still placeholder. */
+if (!CFG) { try { const s = JSON.parse(localStorage.getItem(CFG_KEY)); if (s?.supabaseUrl) CFG = s; } catch {} }
 
 const PLANS = {
   starter:  {name:'Starter',  price:0,  msgs:100,  desc:'100 messages / month'},
@@ -303,6 +340,7 @@ async function bootSupabase(){
     sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
     /* Validate by getting auth session */
     await sb.auth.getSession();
+    setupAuthListener();
     return true;
   } catch (e){
     console.error('Supabase init failed', e);
@@ -317,8 +355,22 @@ async function loadSession(){
   if (!session) return null;
   /* Look up business through users table */
   const {data:member} = await sb.from('users').select('*, businesses(*)').eq('auth_uid', session.user.id).maybeSingle();
-  if (!member) return {user: session.user, business: null, member: null};
-  return {user: session.user, business: member.businesses, member};
+  const result = member ? {user: session.user, business: member.businesses, member} : {user: session.user, business: null, member: null};
+  return result;
+}
+
+/* Global auth-state listener: catches the moment Supabase finishes processing
+   an OAuth callback. provider_refresh_token is only present in this brief
+   window, so we persist it to the business row immediately. */
+function setupAuthListener(){
+  if (window.__novaAuthListener) return;
+  window.__novaAuthListener = true;
+  sb.auth.onAuthStateChange(async (event, session)=>{
+    if (event === 'SIGNED_IN' && session && !SESSION){
+      SESSION = await loadSession();
+      render();
+    }
+  });
 }
 
 /* Realtime: subscribe to notifications + appointments for current business */
@@ -365,6 +417,24 @@ async function render(){
 
   if (!SESSION) SESSION = await loadSession();
 
+  /* If signed in as a non-owner doctor, force the doctor-specific view */
+  if (SESSION?.member?.role === 'doctor' && SESSION.member.id) {
+    sessionStorage.setItem('view_doctor_id', SESSION.member.id);
+    if (!route.startsWith('/doctor') && !route.startsWith('/auth') && route !== '/') {
+      navigate('#/doctor'); return;
+    }
+  }
+
+  /* If a signed-in user lands on the public landing or /auth pages, send them onward. */
+  if (SESSION && (route==='/' || route===''|| route.startsWith('/auth'))){
+    if (SESSION.business){
+      navigate(SESSION.business.onboarding_complete ? '#/dashboard' : '#/onboard');
+    } else {
+      navigate('#/create-business');
+    }
+    return;
+  }
+
   if (route==='/' || route===''){ $('#app').innerHTML = renderLanding(); return bindLanding(); }
   if (route.startsWith('/auth')){ $('#app').innerHTML = renderAuth(); return bindAuth(); }
 
@@ -377,12 +447,11 @@ async function render(){
     $('#app').innerHTML = renderCreateBusiness(); return bindCreateBusiness();
   }
 
-  /* Onboarding gate */
-  if (!SESSION.business.onboarding_complete && !route.startsWith('/onboard')){ navigate('#/onboard'); return; }
-  if (route.startsWith('/onboard')){ $('#app').innerHTML = renderOnboarding(); return bindOnboarding(); }
+  /* Onboarding wizard removed - all setup is captured in the create-business form */
 
   /* Doctor view */
   if (route.startsWith('/doctor')){ $('#app').innerHTML = await renderDoctorView(); return bindDoctorView(); }
+  if (route.startsWith('/profile')){ $('#app').innerHTML = await renderProfile(); return bindProfile(); }
 
   /* Dashboard */
   $('#app').innerHTML = await renderDashboard(route);
@@ -468,7 +537,7 @@ function renderLanding(){
     <section class="features">
       <div class="feature"><div class="feature-icon">🌐</div><h3>Trilingual AI</h3><p>Claude understands and replies in Arabic, French and English. Auto-detects the patient's language.</p></div>
       <div class="feature"><div class="feature-icon">📞</div><h3>Voice + text</h3><p>Patients can call or text the same number. Voice is transcribed by Whisper and runs through the same pipeline.</p></div>
-      <div class="feature"><div class="feature-icon">📅</div><h3>Google Calendar</h3><p>Bookings sync straight into the doctor's calendar. Cancellations remove the event.</p></div>
+      <div class="feature"><div class="feature-icon">📅</div><h3>Built-in Calendar</h3><p>All appointments live on a single calendar in the dashboard. AI checks availability before booking.</p></div>
       <div class="feature"><div class="feature-icon">🔔</div><h3>Real-time alerts</h3><p>Supabase Realtime pushes new bookings and urgent messages instantly to staff dashboards.</p></div>
     </section>
 
@@ -490,68 +559,44 @@ function cycleTheme(){
 
 /* ---------- 9. AUTH ---------- */
 function renderAuth(){
-  const params = new URLSearchParams((window.location.hash.split('?')[1])||'');
-  const mode = params.get('mode')==='signup'?'signup':'login';
   return `<div class="auth-wrap"><div class="auth-card">
     <div class="logo" style="justify-content:center;margin-bottom:18px"><div class="logo-mark">N</div> Nova AI</div>
-    <div class="auth-tabs">
-      <button class="auth-tab ${mode==='login'?'active':''}" data-tab="login">Sign in</button>
-      <button class="auth-tab ${mode==='signup'?'active':''}" data-tab="signup">Sign up</button>
-    </div>
+    <h2 style="text-align:center;margin:0 0 8px;font-size:20px">Sign in to Nova AI</h2>
+    <p style="text-align:center;color:var(--text-dim);font-size:13.5px;margin:0 0 22px">Enter your email and we send a magic link. New email creates a new account.</p>
 
     <button class="btn btn-google btn-block" id="google-btn">
       <span style="display:inline-block;width:18px;height:18px;background:conic-gradient(from 0deg,#ea4335 0 25%,#fbbc04 25% 50%,#34a853 50% 75%,#4285f4 75% 100%);border-radius:50%"></span>
       Continue with Google
     </button>
-    <div class="auth-divider">or with email</div>
+    <div class="auth-divider">or</div>
 
     <form id="auth-form">
-      <div class="field"><label>Email</label><input name="email" type="email" required /></div>
-      <div class="field"><label>Password</label><input name="password" type="password" required minlength="6" /></div>
-      <button class="btn btn-primary btn-block" type="submit"><span id="auth-btn-label">${mode==='login'?'Sign in':'Sign up'}</span><span class="loading hidden" id="auth-spin"></span></button>
+      <div class="field"><label>Email</label><input name="email" type="email" required placeholder="you@business.com" /></div>
+      <button class="btn btn-primary btn-block" type="submit"><span id="auth-btn-label">Send me a magic link</span><span class="loading hidden" id="auth-spin"></span></button>
     </form>
-    <div class="auth-foot">
-      ${mode==='login' ? '<a href="#" id="magic-link">Email me a magic link instead</a>' : ''}
-      <div style="margin-top:10px"><a href="#/">← back</a></div>
-    </div>
+    <div class="auth-foot"><div style="margin-top:10px"><a href="#/">back</a></div></div>
   </div></div>`;
 }
 function bindAuth(){
-  $$('.auth-tab').forEach(t=>t.onclick=()=>navigate('#/auth?mode='+t.dataset.tab));
   $('#google-btn').onclick = async ()=>{
-    const {error} = await sb.auth.signInWithOAuth({provider:'google', options:{redirectTo: window.location.origin+window.location.pathname+'#/dashboard'}});
+    const {error} = await sb.auth.signInWithOAuth({
+      provider:'google',
+      options:{
+        redirectTo: window.location.origin+window.location.pathname,
+        queryParams:{prompt:'select_account'}
+      }
+    });
     if (error) toast({title:'Google sign-in failed', message:error.message, urgent:true});
   };
   $('#auth-form').onsubmit = async (e)=>{
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target).entries());
-    const mode = $('.auth-tab.active').dataset.tab;
     $('#auth-spin').classList.remove('hidden');
-    try {
-      let res;
-      if (mode==='signup') res = await sb.auth.signUp({email:fd.email, password:fd.password});
-      else res = await sb.auth.signInWithPassword({email:fd.email, password:fd.password});
-      if (res.error) throw res.error;
-      if (mode==='signup' && !res.data.session){
-        toast({title:'Check your email', message:'We sent you a confirmation link.', type:'info'});
-      } else {
-        SESSION = await loadSession();
-        navigate(SESSION?.business ? (SESSION.business.onboarding_complete?'#/dashboard':'#/onboard') : '#/create-business');
-      }
-    } catch (err){
-      toast({title:'Auth failed', message:err.message, urgent:true});
-    } finally {
-      $('#auth-spin')?.classList.add('hidden');
-    }
+    const {error} = await sb.auth.signInWithOtp({email:fd.email, options:{emailRedirectTo: window.location.origin+window.location.pathname}});
+    $('#auth-spin')?.classList.add('hidden');
+    if (error) toast({title:'Failed to send', message:error.message, urgent:true});
+    else toast({title:'Check your email', message:'We sent a magic link to '+fd.email, type:'info'});
   };
-  if ($('#magic-link')) $('#magic-link').onclick = async (e)=>{
-    e.preventDefault();
-    const email = $('input[name=email]').value;
-    if (!email){alert('Enter your email first');return;}
-    const {error} = await sb.auth.signInWithOtp({email, options:{emailRedirectTo: window.location.origin+window.location.pathname+'#/dashboard'}});
-    toast({title: error?'Failed':'Check your email', message:error?error.message:'Magic link sent to '+email, urgent:!!error});
-  };
-  /* Handle returning OAuth session */
   sb.auth.onAuthStateChange(async (_event, session)=>{
     if (session && !SESSION){ SESSION = await loadSession(); render(); }
   });
@@ -561,12 +606,12 @@ function bindAuth(){
 function renderCreateBusiness(){
   return `<div class="wizard-wrap"><div class="wizard">
     <div class="logo" style="justify-content:center;margin-bottom:18px"><div class="logo-mark">N</div> Nova AI</div>
-    <h2>Tell us about your business</h2>
-    <p class="lede">Just a few details so we can set up your tenant. You can change everything later.</p>
+    <h2>Set up your business</h2>
+    <p class="lede">A few details so Nova can route messages and book appointments. You can change everything later in Settings.</p>
     <form id="cb-form">
-      <div class="field"><label>Business name</label><input name="name" placeholder="e.g. Sunrise Medical Clinic" required /></div>
-      <div class="field"><label>Type</label>
-        <select name="type">
+      <div class="field"><label>Business name *</label><input name="name" placeholder="e.g. Sunrise Medical Clinic" required /></div>
+      <div class="field"><label>Type *</label>
+        <select name="type" required>
           <option value="clinic">Clinic</option>
           <option value="laboratoire">Laboratoire</option>
           <option value="doctor">Independent doctor</option>
@@ -574,32 +619,128 @@ function renderCreateBusiness(){
           <option value="salon">Salon / Spa</option>
         </select>
       </div>
-      <div class="field"><label>WhatsApp phone (international format)</label><input name="phone" placeholder="+212600000000" required /></div>
-      <button class="btn btn-primary btn-block" type="submit">Create my business →</button>
+
+      <div class="field">
+        <label>WhatsApp phone (international format) *</label>
+        <div class="row" style="gap:6px">
+          <input id="cb-phone" name="phone" placeholder="+212600000000" required style="flex:1" />
+          <button type="button" class="btn btn-ghost btn-sm" id="send-code-btn">Send code</button>
+        </div>
+        <div id="otp-row" class="hidden" style="margin-top:10px">
+          <div class="row" style="gap:6px">
+            <input id="cb-otp" maxlength="6" placeholder="6-digit code" style="flex:1;text-align:center;letter-spacing:.4em;font-family:'JetBrains Mono',monospace" />
+            <button type="button" class="btn btn-primary btn-sm" id="verify-code-btn">Verify</button>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-faint);margin-top:6px">Code is sent via WhatsApp to the number above. Expires in 10 min.</div>
+        </div>
+        <div id="phone-status" style="font-size:12px;margin-top:6px;color:var(--text-faint)">Verify your number before creating the business.</div>
+      </div>
+
+      <div class="field"><label>Short description</label><textarea name="description" rows="2" placeholder="e.g. General medicine clinic open 9-18, multi-doctor team"></textarea></div>
+
+      <div class="field"><label>Pick a plan</label>
+        <div class="plans" id="plans">
+          ${Object.entries(PLANS).map(([k,p])=>`<div class="plan ${k==='starter'?'selected':''}" data-plan="${k}"><div class="name">${p.name}</div><div class="price">$${p.price}<small>/mo</small></div><div class="desc">${p.desc}</div></div>`).join('')}
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" type="submit" id="cb-submit" disabled>Create my business</button>
+      <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-faint)">Add doctors, services and more later in Settings.</div>
     </form>
   </div></div>`;
 }
 function bindCreateBusiness(){
+  let chosenPlan='starter';
+  let phoneVerified=false;
+  let bizIdPending=null;  // we create a row first so the OTP function has a business_id; OR we can call OTP without business and create after.
+
+  setTimeout(()=>{
+    $$('#plans .plan').forEach(p=>p.onclick=()=>{chosenPlan=p.dataset.plan;$$('#plans .plan').forEach(x=>x.classList.remove('selected'));p.classList.add('selected');});
+  },0);
+
+  const setStatus = (msg, color)=>{
+    const el = $('#phone-status');
+    if (el){ el.textContent = msg; el.style.color = color || 'var(--text-faint)'; }
+  };
+
+  $('#send-code-btn').onclick = async ()=>{
+    const phone = $('#cb-phone').value.trim();
+    if (!phone || !phone.startsWith('+')) { setStatus('Enter phone in international format starting with +', 'var(--danger)'); return; }
+    $('#send-code-btn').disabled = true; $('#send-code-btn').textContent = 'Sending...';
+    try {
+      // Need a business row to attach OTP to (the verify function references business_id).
+      // Create a draft business row if not exists yet.
+      if (!bizIdPending){
+        const {data:existing} = await sb.from('businesses').select('id').eq('owner_user_id', SESSION.user.id).maybeSingle();
+        if (existing){ bizIdPending = existing.id; }
+        else {
+          const {data:draft, error} = await sb.from('businesses').insert({
+            name: ($('input[name=name]').value||'Pending'),
+            type: ($('select[name=type]').value||'clinic'),
+            phone: phone, email: SESSION.user.email,
+            owner_user_id: SESSION.user.id,
+            subscription_status: 'trialing', subscription_plan: 'starter',
+            whatsapp_verified: false, onboarding_complete: false, ai_receptionist_enabled: true
+          }).select().single();
+          if (error){ setStatus('Could not save phone: '+error.message, 'var(--danger)'); return; }
+          bizIdPending = draft.id;
+        }
+      } else {
+        // Update phone on existing draft
+        await sb.from('businesses').update({phone}).eq('id', bizIdPending);
+      }
+      const {error} = await sb.functions.invoke('send-whatsapp-otp', {body:{phone, business_id: bizIdPending}});
+      if (error) throw error;
+      $('#otp-row').classList.remove('hidden');
+      setStatus('Code sent — check WhatsApp on '+phone, 'var(--accent)');
+    } catch (err){
+      setStatus('Could not send code: '+err.message, 'var(--danger)');
+    } finally {
+      $('#send-code-btn').disabled = false; $('#send-code-btn').textContent = 'Resend';
+    }
+  };
+
+  $('#verify-code-btn').onclick = async ()=>{
+    const code = $('#cb-otp').value.trim();
+    if (code.length<4) { setStatus('Enter the 6-digit code', 'var(--danger)'); return; }
+    $('#verify-code-btn').disabled = true; $('#verify-code-btn').textContent = 'Verifying...';
+    const {error} = await sb.functions.invoke('verify-whatsapp-otp', {body:{code, business_id: bizIdPending}});
+    $('#verify-code-btn').disabled = false; $('#verify-code-btn').textContent = 'Verify';
+    if (error){ setStatus('Wrong code: '+error.message, 'var(--danger)'); return; }
+    phoneVerified = true;
+    setStatus('Phone verified', 'var(--accent)');
+    $('#cb-phone').readOnly = true;
+    $('#send-code-btn').classList.add('hidden');
+    $('#otp-row').classList.add('hidden');
+    $('#cb-submit').disabled = false;
+  };
+
   $('#cb-form').onsubmit = async (e)=>{
     e.preventDefault();
+    if (!phoneVerified){ setStatus('Verify your WhatsApp number first', 'var(--danger)'); return; }
     const fd = Object.fromEntries(new FormData(e.target).entries());
-    /* Insert business */
-    const {data:biz, error} = await sb.from('businesses').insert({
-      name: fd.name, type: fd.type, phone: fd.phone, email: SESSION.user.email,
-      owner_user_id: SESSION.user.id,
-      subscription_status:'trialing',
-      whatsapp_verified:false, google_calendar_connected:false, onboarding_complete:false
-    }).select().single();
-    if (error){ toast({title:'Could not create business', message:error.message, urgent:true}); return; }
-    /* Insert owner record in users table */
-    const {error:err2} = await sb.from('users').insert({
-      business_id: biz.id, auth_uid: SESSION.user.id,
-      name: SESSION.user.user_metadata?.full_name || SESSION.user.email.split('@')[0],
-      role:'owner', email: SESSION.user.email, phone: fd.phone
-    });
-    if (err2){ toast({title:'Could not create owner', message:err2.message, urgent:true}); return; }
+    // Update the draft business with final values + flip onboarding_complete
+    const {error} = await sb.from('businesses').update({
+      name: fd.name, type: fd.type, phone: fd.phone,
+      description: fd.description||null,
+      subscription_plan: chosenPlan,
+      subscription_status: PLANS[chosenPlan].price===0 ? 'active' : 'trialing',
+      whatsapp_verified: true, whatsapp_verified_at: new Date().toISOString(),
+      onboarding_complete: true
+    }).eq('id', bizIdPending);
+    if (error){ toast({title:'Could not save', message:error.message, urgent:true}); return; }
+
+    const {data:hasMember} = await sb.from('users').select('id').eq('auth_uid', SESSION.user.id).maybeSingle();
+    if (!hasMember){
+      const userName = SESSION.user.user_metadata?.full_name || SESSION.user.email.split('@')[0];
+      await sb.from('users').insert({
+        business_id: bizIdPending, auth_uid: SESSION.user.id,
+        name: userName, role:'owner', email: SESSION.user.email, phone: fd.phone
+      });
+    }
     SESSION = await loadSession();
-    navigate('#/onboard');
+    toast({title:'Welcome to Nova AI', message:'You are on the '+PLANS[chosenPlan].name+' plan', type:'booking'});
+    navigate('#/dashboard');
   };
 }
 
@@ -663,12 +804,11 @@ function bindOnboarding(){
   }
   if ($('#g-cal')){
     $('#g-cal').onclick = async ()=>{
-      /* Re-OAuth specifically for Calendar scope */
       const {error} = await sb.auth.signInWithOAuth({
         provider:'google',
         options:{
           scopes:'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email',
-          redirectTo: window.location.origin+window.location.pathname+'#/onboard',
+          redirectTo: window.location.origin+window.location.pathname,
           queryParams:{access_type:'offline', prompt:'consent'}
         }
       });
@@ -699,6 +839,24 @@ function bindOnboarding(){
   }
 }
 
+
+// Adaptive labels based on the business type set during signup.
+function bizLabels(type){
+  switch (type) {
+    case 'clinic':
+    case 'laboratoire':
+      return { team: 'Doctors', single: 'doctor', viewSelf: true };
+    case 'doctor':
+      return { team: null, single: 'doctor', viewSelf: false };
+    case 'salon':
+      return { team: 'Stylists', single: 'stylist', viewSelf: false };
+    case 'company':
+      return { team: 'Team', single: 'team member', viewSelf: false };
+    default:
+      return { team: 'Team', single: 'staff', viewSelf: false };
+  }
+}
+
 /* ---------- 12. DASHBOARD ---------- */
 async function renderDashboard(route){
   const biz = SESSION.business;
@@ -709,6 +867,7 @@ async function renderDashboard(route){
   };
   await updateBellBadge();
   const planName = biz.subscription_plan ? PLANS[biz.subscription_plan]?.name : 'Trial';
+  const L = bizLabels(biz.type);
 
   return `<div class="app">
     <aside class="sidebar">
@@ -720,15 +879,19 @@ async function renderDashboard(route){
       </div>
       ${navItem('overview','Overview','▦')}
       ${navItem('appointments','Appointments','◷')}
+      ${navItem('calendar','Calendar','⌗')}
       ${navItem('clients','Clients','◉')}
-      ${navItem('doctors','Team','◊')}
+      ${L.team ? navItem('doctors', L.team, '◊') : ''}
+      ${biz.type==='laboratoire' ? navItem('lab','Lab pipeline','⚗') : ''}
+      ${biz.type==='laboratoire' ? navItem('tests','Test catalog','✚') : ''}
+      ${navItem('services','Services','★')}
       ${navItem('messages','Messages','✉')}
       ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
       ${navItem('test','Test assistant','▶')}
       ${navItem('activity','Activity','≡')}
       ${navItem('settings','Settings','⚙')}
       <div class="sidebar-foot">
-        <button class="nav-item" id="view-doctor"><span class="ic">→</span>Doctor view</button>
+        ${L.viewSelf ? `<button class="nav-item" id="view-doctor"><span class="ic">→</span>${escapeHtml(L.single.charAt(0).toUpperCase()+L.single.slice(1))} view</button>` : ''}
         <button class="nav-item" id="logout"><span class="ic">⎋</span>Sign out</button>
       </div>
     </aside>
@@ -741,18 +904,23 @@ async function renderDashboard(route){
         <div class="topbar-actions">
           <button class="icon-btn" id="theme-btn" title="Toggle theme">${currentThemeIcon()}</button>
           <button class="icon-btn bell" id="bell-btn" title="Notifications">♪<span class="dot" id="bell-dot" style="display:none">0</span></button>
+          ${userPill()}
         </div>
       </div>
       <div id="page-body">${await renderPage(sub)}</div>
     </main>
   </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',clients:'Clients',doctors:'Team',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
   overview:"Today's snapshot of your business",
-  appointments:'All bookings — synced to Google Calendar',
+  appointments:'List view of every booking',
+  calendar:'Month view of all your appointments',
   clients:'Everyone who has contacted your business',
-  doctors:'Staff and providers',
+  doctors:'Team members and providers',
+  lab:'Sample-collection and analysis pipeline',
+  tests:'Curate the tests you offer with prices, fasting and turnaround',
+  services:'Services or products you offer',
   messages:'WhatsApp conversation history',
   notifications:'Real-time alerts triggered by AI actions',
   test:'Send a real message to verify your AI pipeline works end-to-end',
@@ -760,31 +928,78 @@ function pageSub(s){return ({
   settings:'Subscription, integrations, theme, business profile'
 })[s]||''}
 
+function userPill(){
+  if (!SESSION || !SESSION.user) return '';
+  const user = SESSION.user;
+  const name = user.user_metadata?.full_name || user.email.split('@')[0];
+  const avatar = user.user_metadata?.avatar_url;
+  const initials = name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+  return `<div class="user-pill" id="user-pill" onclick="location.hash='#/profile'" title="${escapeHtml(user.email)}">
+    ${avatar ? `<img src="${escapeHtml(avatar)}" alt="" />` : `<span class="initials">${initials}</span>`}
+    <span class="name">${escapeHtml(name)}</span>
+  </div>`;
+}
+
 async function bindDashboard(route){
   $$('.nav-item[data-go]').forEach(b=>b.onclick=()=>navigate('#'+b.dataset.go));
   $('#logout').onclick = async ()=>{ await sb.auth.signOut(); SESSION=null; navigate('#/'); };
-  $('#view-doctor').onclick = async ()=>{
-    const {data:docs} = await sb.from('users').select('id').eq('business_id', SESSION.business.id).eq('role','doctor').limit(1);
-    if (!docs?.length){ alert('No doctors yet — add one in Team first'); return; }
-    sessionStorage.setItem('view_doctor_id', docs[0].id); navigate('#/doctor');
-  };
+  const viewDocBtn = $('#view-doctor');
+  if (viewDocBtn){
+    viewDocBtn.onclick = async ()=>{
+      const {data:docs} = await sb.from('users').select('id').eq('business_id', SESSION.business.id).eq('role','doctor').limit(1);
+      if (!docs?.length){ alert('No team members yet — add one in the team page first'); return; }
+      sessionStorage.setItem('view_doctor_id', docs[0].id); navigate('#/doctor');
+    };
+  }
   $('#theme-btn').onclick = ()=>{ cycleTheme(); $('#theme-btn').innerHTML = currentThemeIcon(); };
   $('#bell-btn').onclick = ()=>navigate('#/dashboard/notifications');
 
   const sub=route.replace('/dashboard','').replace(/^\//,'')||'overview';
+  if (sub==='overview') bindOverview();
   if (sub==='appointments') await bindAppointments();
+  if (sub==='calendar') await bindCalendar();
   if (sub==='clients') await bindClients();
   if (sub==='doctors') await bindDoctors();
+  if (sub==='lab') await bindLabPipeline();
+  if (sub==='tests') await bindTestCatalog();
+  if (sub==='services') await bindServices();
   if (sub==='notifications') await bindNotifications();
   if (sub==='test') await bindTest();
   if (sub==='settings') await bindSettings();
 }
 
+/* ===== AI receptionist on/off toggle (Overview banner) ===== */
+function bindOverview(){
+  const btn = $('#ai-receptionist-switch');
+  if (!btn) return;
+  btn.onclick = async ()=>{
+    btn.disabled = true;
+    const next = !SESSION.business.ai_receptionist_enabled;
+    const {error} = await sb.from('businesses').update({ai_receptionist_enabled: next}).eq('id', SESSION.business.id);
+    btn.disabled = false;
+    if (error){
+      toast({title:'Could not update', message:error.message, urgent:true});
+      return;
+    }
+    SESSION.business.ai_receptionist_enabled = next;
+    toast({
+      title: next ? 'AI Receptionist ON' : 'AI Receptionist paused',
+      message: next ? 'Nova will reply automatically to new WhatsApp messages.' : 'New messages will arrive in your dashboard for you to reply manually.',
+      type: next?'booking':'info'
+    });
+    render();
+  };
+}
+
 async function renderPage(sub){
   if (sub==='overview') return await renderOverview();
   if (sub==='appointments') return await renderAppointments();
+  if (sub==='calendar') return await renderCalendar();
   if (sub==='clients') return await renderClients();
   if (sub==='doctors') return await renderDoctors();
+  if (sub==='lab') return await renderLabPipeline();
+  if (sub==='tests') return await renderTestCatalog();
+  if (sub==='services') return await renderServices();
   if (sub==='messages') return await renderMessages();
   if (sub==='notifications') return await renderNotifications();
   if (sub==='test') return renderTest();
@@ -805,16 +1020,36 @@ async function renderOverview(){
     sb.from('notifications').select('*, users:doctor_id(name)').eq('business_id',biz.id).order('created_at',{ascending:false}).limit(5)
   ]);
 
+  const aiOn = biz.ai_receptionist_enabled !== false;
+  const aiBanner = `
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;margin-bottom:14px;
+                background:${aiOn ? 'color-mix(in srgb,var(--accent) 12%,var(--card))' : 'color-mix(in srgb,var(--warn) 12%,var(--card))'};
+                border:1px solid ${aiOn ? 'var(--accent)' : 'var(--warn)'}">
+      <div style="font-size:22px">${aiOn ? '🟢' : '⏸️'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px">AI Receptionist · ${aiOn ? 'ACTIVE' : 'PAUSED'}</div>
+        <div style="font-size:12.5px;color:var(--text-dim);margin-top:2px">
+          ${aiOn
+            ? 'Nova replies automatically to every WhatsApp message and books appointments.'
+            : 'You are replying manually. New messages still arrive here, but Nova will not auto-reply.'}
+        </div>
+      </div>
+      <button id="ai-receptionist-switch" class="btn btn-sm"
+              style="background:${aiOn ? 'var(--danger)' : 'var(--accent)'};color:#fff;font-weight:700;padding:8px 18px;flex-shrink:0">
+        ${aiOn ? '⏸ Pause AI' : '▶ Activate AI'}
+      </button>
+    </div>`;
+
   const integ = `<div class="row" style="gap:8px;margin-bottom:14px">
     <span class="pill ${biz.whatsapp_verified?'green':'amber'}">WhatsApp ${biz.whatsapp_verified?'verified':'not verified'}</span>
-    <span class="pill ${biz.google_calendar_connected?'green':'amber'}">Google Calendar ${biz.google_calendar_connected?'connected':'not connected'}</span>
+
     <span class="pill blue">Plan: ${PLANS[biz.subscription_plan]?.name||'Trial'}</span>
   </div>`;
 
   const apts = upcoming.data||[];
   const ns = recentNotif.data||[];
 
-  return `${integ}
+  return `${aiBanner}${integ}
     <div class="stats">
       <div class="stat"><div class="lbl">Today's appointments</div><div class="val">${aptToday.count||0}</div><div class="delta">scheduled</div></div>
       <div class="stat"><div class="lbl">Total clients</div><div class="val">${clients.count||0}</div><div class="delta">all-time</div></div>
@@ -842,19 +1077,21 @@ async function renderOverview(){
 }
 
 async function renderAppointments(){
-  const {data:apts=[]} = await sb.from('appointments').select('*, clients(name,phone), users:doctor_id(name), services(name)').eq('business_id', SESSION.business.id).order('date',{ascending:false}).order('time',{ascending:false});
+  const {data:apts=[]} = await sb.from('appointments').select('*, clients(id,name,phone,age,email), users:doctor_id(name,specialty), services(name,duration_min)').eq('business_id', SESSION.business.id).order('date',{ascending:false}).order('time',{ascending:false});
+  // stash for the modal opener
+  window.__apts = Object.fromEntries((apts||[]).map(a=>[a.id, a]));
   return `<div class="panel">
     <div class="panel-head"><h3>All appointments (${apts.length})</h3><button class="btn btn-primary btn-sm" id="add-apt">+ New</button></div>
     <div class="panel-body no-pad">${apts.length===0?`<div class="empty"><div class="ic">◷</div>No appointments yet</div>`:`
     <table><thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Doctor</th><th>Service</th><th>Status</th><th>Source</th><th></th></tr></thead>
-    <tbody>${apts.map(a=>`<tr>
+    <tbody>${apts.map(a=>`<tr data-apt="${a.id}" style="cursor:pointer">
       <td>${a.date}</td><td>${a.time}</td>
       <td>${escapeHtml(a.clients?.name||'—')}</td>
       <td>${escapeHtml(a.users?.name||'—')}</td>
       <td>${escapeHtml(a.services?.name||'—')}</td>
       <td><span class="pill ${a.status==='confirmed'?'green':a.status==='pending'?'amber':'red'}">${a.status}</span></td>
       <td><span class="pill ${a.source==='whatsapp_ai'?'blue':a.source==='whatsapp_voice'?'green':'gray'}">${a.source||'manual'}</span></td>
-      <td class="text-right"><button class="btn btn-danger btn-sm" data-cancel="${a.id}">Cancel</button></td>
+      <td class="text-right" onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm" data-cancel="${a.id}">Cancel</button></td>
     </tr>`).join('')}</tbody></table>`}</div></div>`;
 }
 async function bindAppointments(){
@@ -862,11 +1099,186 @@ async function bindAppointments(){
     if (!confirm('Cancel this appointment?')) return;
     const {error} = await sb.from('appointments').update({status:'cancelled'}).eq('id', b.dataset.cancel);
     if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
-    /* Trigger Edge Function to remove Google Calendar event */
-    sb.functions.invoke('google-calendar-delete', {body:{appointment_id: b.dataset.cancel}}).catch(()=>{});
     render();
   });
+  $$('tr[data-apt]').forEach(r => r.onclick = ()=>{
+    const apt = window.__apts?.[r.dataset.apt];
+    if (apt) openModal(apptDetailModal(apt));
+  });
   $('#add-apt').onclick = ()=>openModal(addAppointmentModal());
+}
+
+function apptDetailModal(a){
+  const c = a.clients||{}, d = a.users||{}, s = a.services||{};
+  const detailRows = [];
+  // Client lines — only render fields that actually have a value
+  const clientLines = [];
+  if (c.age != null && c.age !== "") clientLines.push(`<div><b style="color:var(--text)">Age:</b> ${escapeHtml(String(c.age))}</div>`);
+  if (c.phone) clientLines.push(`<div><b style="color:var(--text)">Phone:</b> ${escapeHtml(c.phone)}</div>`);
+  if (c.email) clientLines.push(`<div style="grid-column:1/-1"><b style="color:var(--text)">Email:</b> ${escapeHtml(c.email)}</div>`);
+
+  if (c.name || clientLines.length){
+    detailRows.push(`<div style="background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Client</div>
+      ${c.name?`<div style="font-size:16px;font-weight:600">${escapeHtml(c.name)}</div>`:''}
+      ${clientLines.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:13px;color:var(--text-dim)">${clientLines.join('')}</div>`:''}
+    </div>`);
+  }
+
+  // Service / provider — only if at least one is set
+  if (s.name || d.name){
+    detailRows.push(`<div style="background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Service${d.name?' & provider':''}</div>
+      ${s.name?`<div style="font-weight:600">${escapeHtml(s.name)}${s.duration_min?` <span style="color:var(--text-faint);font-weight:400">· ${s.duration_min} min</span>`:''}</div>`:''}
+      ${d.name?`<div style="margin-top:6px;font-size:13px;color:var(--text-dim)">${s.name?'with ':''}${escapeHtml(d.name)}${d.specialty?` <span style="color:var(--text-faint)">· ${escapeHtml(d.specialty)}</span>`:''}</div>`:''}
+    </div>`);
+  }
+
+  if (a.notes){
+    detailRows.push(`<div style="background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Notes</div>
+      <div style="font-size:13.5px">${escapeHtml(a.notes)}</div>
+    </div>`);
+  }
+
+  return `<h3>Appointment details</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div>
+        <div style="font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em">When</div>
+        <div style="font-size:15px;font-weight:600;margin-top:2px">${a.date} · ${(a.time||'').slice(0,5)}</div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em">Status</div>
+        <div style="margin-top:4px"><span class="pill ${a.status==='confirmed'?'green':a.status==='pending'?'amber':'red'}">${a.status}</span></div>
+      </div>
+    </div>
+
+    ${detailRows.join('')}
+
+    <div style="font-size:11.5px;color:var(--text-faint);margin-bottom:14px">
+      Source: <span class="pill ${a.source==='whatsapp_ai'?'blue':a.source==='whatsapp_voice'?'green':'gray'}">${a.source||'manual'}</span>
+      &nbsp;·&nbsp; Created: ${new Date(a.created_at).toLocaleString()}
+    </div>
+
+    <div class="row mt-2" style="justify-content:space-between">
+      <button class="btn btn-danger btn-sm" id="apt-cancel-modal" data-id="${a.id}">Cancel appointment</button>
+      <button class="btn btn-primary btn-sm" onclick="closeModal()">Close</button>
+    </div>`;
+}
+
+async function renderCalendar(){
+  const params = new URLSearchParams((window.location.hash.split('?')[1])||'');
+  const offset = parseInt(params.get('m')||'0',10);
+  const today = new Date(); today.setMonth(today.getMonth()+offset);
+  const year = today.getFullYear(), month = today.getMonth();
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month+1, 0);
+  const startWeek = first.getDay();
+  const daysInMonth = last.getDate();
+  const monthLabel = today.toLocaleString('en-GB',{month:'long',year:'numeric'});
+  const isoStart = `${year}-${String(month+1).padStart(2,'0')}-01`;
+  const isoEnd   = `${year}-${String(month+1).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
+
+  const filterDoc = params.get('doctor') || '';
+  const {data:doctorList=[]} = await sb.from('users').select('id,name').eq('business_id', SESSION.business.id).eq('role','doctor').order('name');
+  let q = sb.from('appointments')
+    .select('*, clients(id,name,phone,age,email), users:doctor_id(name,specialty), services(name,duration_min)')
+    .eq('business_id', SESSION.business.id)
+    .gte('date', isoStart).lte('date', isoEnd)
+    .order('time');
+  if (filterDoc) q = q.eq('doctor_id', filterDoc);
+  const {data:apts=[]} = await q;
+
+  // stash for click handler
+  window.__apts = window.__apts || {};
+  for (const a of apts){ window.__apts[a.id] = a; }
+
+  const byDay = {};
+  for (const a of apts){
+    const d = a.date.slice(8,10);
+    (byDay[d] = byDay[d]||[]).push(a);
+  }
+
+  let cells = '';
+  for (let i=0;i<startWeek;i++) cells += `<div class="cal-cell empty"></div>`;
+  for (let d=1; d<=daysInMonth; d++){
+    const dStr = String(d).padStart(2,'0');
+    const evs = byDay[dStr]||[];
+    const isToday = (year===new Date().getFullYear() && month===new Date().getMonth() && d===new Date().getDate());
+    const dayKey = `${year}-${String(month+1).padStart(2,'0')}-${dStr}`;
+    cells += `<div class="cal-cell ${isToday?'today':''}${evs.length?' has-events':''}" data-day="${dayKey}">
+      <div class="cal-day">${d}</div>
+      <div class="cal-evs">${evs.slice(0,3).map(a=>`<div class="cal-ev ${a.status==='cancelled'?'cancelled':''}" data-apt="${a.id}" title="${escapeHtml((a.clients?.name||'')+' · '+(a.services?.name||''))}">${a.time.slice(0,5)} ${escapeHtml((a.clients?.name||'—').slice(0,12))}</div>`).join('')}${evs.length>3?`<div class="cal-more" data-day-more="${dayKey}">+${evs.length-3} more</div>`:''}</div>
+    </div>`;
+  }
+
+  return `<div class="panel">
+    <div class="panel-head">
+      <h3>${escapeHtml(monthLabel)}</h3>
+      <div class="row" style="gap:8px">
+        ${doctorList.length > 1 ? `<select id="cal-doctor-filter" style="padding:7px 10px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:13px">
+          <option value="">All doctors</option>
+          ${doctorList.map(d=>`<option value="${d.id}" ${filterDoc===d.id?'selected':''}>${escapeHtml(d.name)}</option>`).join('')}
+        </select>` : ''}
+        <a class="btn btn-ghost btn-sm" href="#/dashboard/calendar?m=${offset-1}${filterDoc?'&doctor='+filterDoc:''}">&larr;</a>
+        <a class="btn btn-ghost btn-sm" href="#/dashboard/calendar${filterDoc?'?doctor='+filterDoc:''}">Today</a>
+        <a class="btn btn-ghost btn-sm" href="#/dashboard/calendar?m=${offset+1}${filterDoc?'&doctor='+filterDoc:''}">&rarr;</a>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="cal-head">
+        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+      </div>
+      <div class="cal-grid">${cells}</div>
+    </div>
+  </div>`;
+}
+async function bindCalendar(){
+  // Doctor filter dropdown
+  const sel = $('#cal-doctor-filter');
+  if (sel) sel.onchange = ()=>{
+    const docId = sel.value;
+    location.hash = '#/dashboard/calendar' + (docId?'?doctor='+docId:'');
+  };
+  // Click on individual event → appointment detail
+  $$('.cal-ev[data-apt]').forEach(el => el.onclick = (ev)=>{
+    ev.stopPropagation();
+    const apt = window.__apts?.[el.dataset.apt];
+    if (apt) openModal(apptDetailModal(apt));
+  });
+  // Click on +N more → list popup for that day
+  $$('.cal-more[data-day-more]').forEach(el => el.onclick = (ev)=>{
+    ev.stopPropagation();
+    openModal(dayListModal(el.dataset.dayMore));
+  });
+  // Click anywhere on a day with events (not on an individual event) → also show list popup
+  $$('.cal-cell.has-events[data-day]').forEach(el => el.onclick = ()=>{
+    openModal(dayListModal(el.dataset.day));
+  });
+}
+
+function dayListModal(dayKey){
+  const all = Object.values(window.__apts || {}).filter((a)=>a.date === dayKey).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
+  const dateLabel = new Date(dayKey+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  return `<h3>${escapeHtml(dateLabel)}</h3>
+    <p style="color:var(--text-dim);font-size:13px;margin:0 0 14px">${all.length} appointment${all.length===1?'':'s'} on this day</p>
+    ${all.length===0?`<div class="empty"><div class="ic">◷</div>No appointments</div>`:`
+    <div style="max-height:50vh;overflow-y:auto">
+      ${all.map(a=>{
+        const c=a.clients||{}, s=a.services||{}, d=a.users||{};
+        return `<div class="day-list-row" data-id="${a.id}" style="display:flex;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;align-items:center;background:var(--bg-2)">
+          <div style="font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;min-width:52px">${(a.time||'').slice(0,5)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600">${escapeHtml(c.name||'—')}${c.age!=null?` <span style="color:var(--text-faint);font-weight:400">· ${c.age}</span>`:''}</div>
+            <div style="font-size:12.5px;color:var(--text-dim);margin-top:2px">${escapeHtml(s.name||'—')}${d.name?` · ${escapeHtml(d.name)}`:''}</div>
+          </div>
+          <span class="pill ${a.status==='confirmed'?'green':a.status==='pending'?'amber':'red'}">${a.status}</span>
+        </div>`;
+      }).join('')}
+    </div>`}
+    <div class="row mt-2" style="justify-content:flex-end">
+      <button class="btn btn-primary btn-sm" onclick="closeModal()">Close</button>
+    </div>`;
 }
 
 async function renderClients(){
@@ -885,6 +1297,187 @@ async function renderDoctors(){
   <tbody>${team.map(u=>`<tr><td>${escapeHtml(u.name)}</td><td><span class="pill ${u.role==='doctor'?'blue':'gray'}">${u.role}</span></td><td>${escapeHtml(u.specialty||'—')}</td><td>${escapeHtml(u.phone||'—')}</td><td>${escapeHtml(u.email||'—')}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 async function bindDoctors(){ $('#add-doc').onclick = ()=>openModal(addDoctorModal()); }
+
+/* ---------- LAB PIPELINE (kanban view of lab_orders) ---------- */
+async function renderLabPipeline(){
+  const bizId = SESSION.business.id;
+  const [{data:orders=[]}, {data:kpi}] = await Promise.all([
+    sb.from('lab_orders').select(`
+      id, status, created_at, collected_at, ready_at,
+      lab_tests(name, sample_type, fasting_required),
+      appointments(date, time, clients(name, phone))
+    `).eq('business_id', bizId).order('created_at',{ascending:false}).limit(200),
+    sb.from('v_lab_kpis').select('*').eq('business_id', bizId).maybeSingle()
+  ]);
+  const byStatus = {requested:[], sample_collected:[], in_analysis:[], ready:[]};
+  (orders||[]).forEach(o=>{ if(byStatus[o.status]) byStatus[o.status].push(o); });
+  const card = (o)=>`<div class="apt-row" data-id="${o.id}" style="margin:6px 0;cursor:pointer">
+    <div style="font-weight:600">${escapeHtml(o.lab_tests?.name||'Test')}</div>
+    <div class="sub" style="font-size:.85em">${escapeHtml(o.appointments?.clients?.name||'—')} · ${o.appointments?.date||''} ${(o.appointments?.time||'').slice(0,5)}</div>
+    <div class="sub" style="font-size:.8em;opacity:.7">${o.lab_tests?.sample_type||''}${o.lab_tests?.fasting_required?' · à jeun':''}</div>
+  </div>`;
+  const col = (title, list, action)=>`<div class="panel"><div class="panel-head"><h3>${title} <span class="pill gray">${list.length}</span></h3></div>
+    <div class="panel-body" style="max-height:60vh;overflow:auto">${list.length?list.map(card).join(''):'<div class="empty"><div class="ic">⌀</div>Empty</div>'}
+    ${action?`<button class="btn-primary" data-bulk="${action}" style="width:100%;margin-top:10px">${action==='collect'?'Mark all collected':action==='analyse'?'Mark all in analysis':'Notify all'}</button>`:''}</div></div>`;
+  return `<div class="panel" style="margin-bottom:14px"><div class="panel-body" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
+    <div><div class="sub">Awaiting collection</div><div style="font-size:1.6em;font-weight:600">${kpi?.awaiting_collection||0}</div></div>
+    <div><div class="sub">Awaiting analysis</div><div style="font-size:1.6em;font-weight:600">${kpi?.awaiting_analysis||0}</div></div>
+    <div><div class="sub">In analysis</div><div style="font-size:1.6em;font-weight:600">${kpi?.in_analysis||0}</div></div>
+    <div><div class="sub">Ready to send</div><div style="font-size:1.6em;font-weight:600">${kpi?.ready_to_send||0}</div></div>
+    <div><div class="sub">Avg turnaround (h)</div><div style="font-size:1.6em;font-weight:600">${kpi?.avg_tat_hours||0}</div></div>
+  </div></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+    ${col('1. Requested', byStatus.requested, 'collect')}
+    ${col('2. Sample collected', byStatus.sample_collected, 'analyse')}
+    ${col('3. In analysis', byStatus.in_analysis, 'ready')}
+    ${col('4. Ready to send', byStatus.ready, 'notify')}
+  </div>`;
+}
+async function bindLabPipeline(){
+  document.querySelectorAll('[data-bulk]').forEach(b=>b.onclick=async ()=>{
+    const action = b.getAttribute('data-bulk');
+    const map = {collect:{from:'requested',to:'sample_collected',col:'collected_at'},
+                 analyse:{from:'sample_collected',to:'in_analysis',col:'analysed_at'},
+                 ready:  {from:'in_analysis',to:'ready',col:'ready_at'}};
+    if (action==='notify'){
+      const r = await sb.functions.invoke('lab-results-notify', {body:{}});
+      toast({title:'Notify triggered', message: r.error ? String(r.error) : `Sent ${r.data?.sent||0} result(s)`, type:'info'});
+      navigate('#/dashboard/lab'); return;
+    }
+    const m = map[action];
+    if (!m) return;
+    const upd = {status: m.to}; upd[m.col] = new Date().toISOString();
+    await sb.from('lab_orders').update(upd).eq('business_id', SESSION.business.id).eq('status', m.from);
+    toast({title:'Updated', message:`Moved ${m.from} → ${m.to}`, type:'info'});
+    navigate('#/dashboard/lab');
+  });
+  document.querySelectorAll('.apt-row[data-id]').forEach(r=>r.onclick=async ()=>{
+    const id = r.getAttribute('data-id');
+    const next = prompt('Set status to (requested / sample_collected / in_analysis / ready / delivered):');
+    if (!next) return;
+    const upd = {status: next};
+    if (next==='sample_collected') upd.collected_at = new Date().toISOString();
+    if (next==='in_analysis')      upd.analysed_at  = new Date().toISOString();
+    if (next==='ready')             upd.ready_at     = new Date().toISOString();
+    await sb.from('lab_orders').update(upd).eq('id', id);
+    navigate('#/dashboard/lab');
+  });
+}
+
+/* ---------- TEST CATALOG (CRUD over lab_tests) ---------- */
+async function renderTestCatalog(){
+  const {data:tests=[]} = await sb.from('lab_tests').select('*').eq('business_id', SESSION.business.id).order('category').order('name');
+  return `<div class="panel"><div class="panel-head"><h3>Test catalog (${tests.length})</h3>
+    <button class="btn-primary" id="add-test">+ Add test</button></div>
+    <div class="panel-body no-pad"><table class="data">
+    <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Sample</th><th>Fasting</th><th>TAT (h)</th><th>Price</th><th>Active</th></tr></thead>
+    <tbody>${tests.map(t=>`<tr data-id="${t.id}">
+      <td>${escapeHtml(t.code||'—')}</td>
+      <td>${escapeHtml(t.name)}</td>
+      <td><span class="pill blue">${escapeHtml(t.category||'')}</span></td>
+      <td>${escapeHtml(t.sample_type||'')}</td>
+      <td>${t.fasting_required?`${t.fasting_hours||12}h`:'—'}</td>
+      <td>${t.turnaround_hours||24}</td>
+      <td>${t.price} TND</td>
+      <td>${t.active?'<span class="pill green">yes</span>':'<span class="pill gray">no</span>'}</td>
+    </tr>`).join('')}</tbody></table></div></div>`;
+}
+async function bindTestCatalog(){
+  const open = (t)=>openModal(`<form id="test-form"><h3>${t?'Edit':'Add'} test</h3>
+    <div class="row"><div class="field"><label>Code</label><input name="code" value="${t?.code||''}" placeholder="e.g. CBC" /></div>
+      <div class="field grow"><label>Name *</label><input name="name" value="${t?.name||''}" required /></div></div>
+    <div class="row"><div class="field"><label>Category</label><select name="category">${['hematology','biochemistry','hormones','infection','urine','stool','genetic','allergy','tumor_markers','vitamin','other'].map(c=>`<option ${t?.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label>Sample</label><select name="sample_type">${['blood','urine','stool','swab','saliva','tissue','other'].map(s=>`<option ${t?.sample_type===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
+    <div class="row"><div class="field"><label><input type="checkbox" name="fasting_required" ${t?.fasting_required?'checked':''} /> Fasting required</label></div>
+      <div class="field"><label>Fasting hours</label><input name="fasting_hours" type="number" value="${t?.fasting_hours||0}" /></div>
+      <div class="field"><label>Turnaround (h)</label><input name="turnaround_hours" type="number" value="${t?.turnaround_hours||24}" /></div></div>
+    <div class="row"><div class="field grow"><label>Price (TND) *</label><input name="price" type="number" step="0.01" value="${t?.price||0}" required /></div>
+      <div class="field"><label>Reference range</label><input name="reference_range" value="${t?.reference_range||''}" placeholder="e.g. 70-110 mg/dL" /></div></div>
+    <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Cancel</button>
+      ${t?`<button type="button" class="btn-ghost" id="m-del" style="color:#ef4444">Delete</button>`:''}
+      <button class="btn-primary">Save</button></div></form>`,async ()=>{
+        const fd = Object.fromEntries(new FormData($('#test-form')).entries());
+        const row = {business_id: SESSION.business.id, code: fd.code||null, name: fd.name, category: fd.category, sample_type: fd.sample_type, fasting_required: !!fd.fasting_required, fasting_hours: parseInt(fd.fasting_hours||'0',10), turnaround_hours: parseInt(fd.turnaround_hours||'24',10), price: parseFloat(fd.price||'0'), reference_range: fd.reference_range||null, active:true};
+        if (t) await sb.from('lab_tests').update(row).eq('id', t.id);
+        else  await sb.from('lab_tests').insert(row);
+        navigate('#/dashboard/tests');
+      });
+  $('#add-test').onclick = ()=>open(null);
+  document.querySelectorAll('tr[data-id]').forEach(r=>r.onclick=async ()=>{
+    const id = r.getAttribute('data-id');
+    const {data:t} = await sb.from('lab_tests').select('*').eq('id', id).maybeSingle();
+    open(t);
+    setTimeout(()=>{ const del = $('#m-del'); if (del) del.onclick = async()=>{ await sb.from('lab_tests').delete().eq('id', id); closeModal(); navigate('#/dashboard/tests'); }; }, 50);
+  });
+}
+
+async function renderServices(){
+  const [{data:svcs=[]}, {data:docs=[]}] = await Promise.all([
+    sb.from('services').select('*, users:doctor_id(name)').eq('business_id', SESSION.business.id).order('name'),
+    sb.from('users').select('id,name').eq('business_id', SESSION.business.id),
+  ]);
+  return `<div class="panel">
+    <div class="panel-head"><h3>Services (${svcs.length})</h3><button class="btn btn-primary btn-sm" id="add-svc">+ New service</button></div>
+    <div class="panel-body no-pad">${svcs.length===0?`<div class="empty"><div class="ic">★</div>No services yet — Nova will auto-create them as customers ask, or add one manually.</div>`:`
+    <table>
+      <thead><tr><th>Name</th><th>Duration</th><th>Assigned to</th><th>Price</th><th></th></tr></thead>
+      <tbody>${svcs.map(s=>`<tr>
+        <td>${escapeHtml(s.name)}</td>
+        <td>${s.duration_min||30} min</td>
+        <td>${escapeHtml(s.users?.name||'—')}</td>
+        <td>${s.price?'$'+s.price:'—'}</td>
+        <td class="text-right">
+          <button class="btn btn-ghost btn-sm" data-edit-svc="${s.id}">Edit</button>
+          <button class="btn btn-danger btn-sm" data-del-svc="${s.id}">Delete</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table>`}</div></div>`;
+}
+
+async function bindServices(){
+  const {data:docs=[]} = await sb.from('users').select('id,name').eq('business_id', SESSION.business.id);
+  const {data:svcs=[]} = await sb.from('services').select('*').eq('business_id', SESSION.business.id);
+
+  $('#add-svc').onclick = ()=> openModal(serviceModal(null, docs));
+
+  $$('[data-edit-svc]').forEach(b => b.onclick = ()=>{
+    const s = svcs.find(x => x.id === b.dataset.editSvc);
+    if (s) openModal(serviceModal(s, docs));
+  });
+
+  $$('[data-del-svc]').forEach(b => b.onclick = async ()=>{
+    if (!confirm('Delete this service?')) return;
+    const {error} = await sb.from('services').delete().eq('id', b.dataset.delSvc);
+    if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+    render();
+  });
+}
+
+function serviceModal(svc, docs){
+  const isEdit = !!svc;
+  window.__modalSubmit = async (d)=>{
+    if (!d.name){alert('Name required');return;}
+    const row = {
+      business_id: SESSION.business.id,
+      name: d.name,
+      duration_min: parseInt(d.duration_min||'30',10),
+      doctor_id: d.doctor_id || null,
+      price: d.price ? parseFloat(d.price) : null,
+    };
+    const q = isEdit
+      ? sb.from('services').update(row).eq('id', svc.id)
+      : sb.from('services').insert(row);
+    const {error} = await q;
+    if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+    closeModal(); render();
+  };
+  const docOpts = `<option value="">— none —</option>${docs.map(d=>`<option value="${d.id}" ${svc?.doctor_id===d.id?'selected':''}>${escapeHtml(d.name)}</option>`).join('')}`;
+  return modalShell(isEdit?'Edit service':'Add service',
+    `<div class="field"><label>Name *</label><input name="name" value="${escapeHtml(svc?.name||'')}" required /></div>
+     <div class="row"><div class="field grow"><label>Duration (min)</label><input name="duration_min" type="number" value="${svc?.duration_min||30}" min="5" max="480" /></div>
+     <div class="field grow"><label>Price (optional)</label><input name="price" type="number" step="0.01" value="${svc?.price??''}" /></div></div>
+     <div class="field"><label>Assigned to (optional)</label><select name="doctor_id">${docOpts}</select></div>`);
+}
 
 async function renderMessages(){
   const {data:msgs=[]} = await sb.from('messages').select('*, clients(name,phone)').eq('business_id', SESSION.business.id).order('created_at',{ascending:false}).limit(100);
@@ -975,11 +1568,7 @@ function renderSettings(){
           <div class="body"><div class="t">WhatsApp · ${escapeHtml(biz.phone||'—')}</div><div class="d">${biz.whatsapp_verified?'Verified':'Not verified'}</div></div>
           <span class="pill ${biz.whatsapp_verified?'green':'amber'}">${biz.whatsapp_verified?'OK':'Verify'}</span>
         </div>
-        <div class="integration-card">
-          <div class="logo-sq" style="color:#1a73e8">G</div>
-          <div class="body"><div class="t">Google Calendar</div><div class="d">${biz.google_calendar_connected?escapeHtml(biz.google_email||'connected'):'Not connected'}</div></div>
-          <button class="btn btn-google btn-sm" id="g-toggle">${biz.google_calendar_connected?'Reconnect':'Connect'}</button>
-        </div>
+
       </div>
     </div>
 
@@ -1012,14 +1601,69 @@ function bindSettings(){
     if (error){ toast({title:'Failed',message:error.message,urgent:true}); return; }
     SESSION = await loadSession(); render();
   });
-  $('#g-toggle').onclick = async ()=>{
-    await sb.auth.signInWithOAuth({provider:'google',options:{scopes:'https://www.googleapis.com/auth/calendar.events',redirectTo:window.location.origin+window.location.pathname+'#/dashboard/settings',queryParams:{access_type:'offline',prompt:'consent'}}});
-  };
+
   $$('[data-theme-pref]').forEach(b=>b.onclick = ()=>{ setThemePref(b.dataset.themePref); render(); });
   $('#reset-cfg').onclick = ()=>{
     if (!confirm('Disconnect from Supabase and return to setup screen?')) return;
     localStorage.removeItem(CFG_KEY); CFG=null; sb=null; SESSION=null; location.reload();
   };
+}
+
+/* ---------- PROFILE PAGE ---------- */
+async function renderProfile(){
+  const biz = SESSION.business;
+  const user = SESSION.user;
+  const name = user.user_metadata?.full_name || user.email.split('@')[0];
+  const avatar = user.user_metadata?.avatar_url;
+  const initials = name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+  const created = new Date(user.created_at || Date.now()).toLocaleDateString();
+
+  return `<div class="app">
+    <aside class="sidebar">
+      <div class="logo"><div class="logo-mark">N</div> Nova AI</div>
+      <button class="nav-item" id="back-dash"><span class="ic">←</span>Back to dashboard</button>
+    </aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Your profile</h1><div class="sub">Account, business and sign-in</div></div></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
+        <div class="panel">
+          <div class="panel-head"><h3>You</h3></div>
+          <div class="panel-body">
+            <div style="display:flex;gap:14px;align-items:center;margin-bottom:18px">
+              ${avatar ? `<img src="${escapeHtml(avatar)}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover" />` : `<div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;display:grid;place-items:center;font-size:22px;font-weight:700">${initials}</div>`}
+              <div>
+                <div style="font-size:18px;font-weight:700">${escapeHtml(name)}</div>
+                <div style="color:var(--text-dim);font-size:13px">${escapeHtml(user.email)}</div>
+                <div style="color:var(--text-faint);font-size:12px;margin-top:4px">Account created: ${created}</div>
+              </div>
+            </div>
+            <button class="btn btn-danger btn-sm" id="signout-btn">Sign out</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Your business</h3></div>
+          <div class="panel-body">
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Name</div>
+            <div style="font-weight:600;margin-bottom:14px">${escapeHtml(biz.name)}</div>
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Type</div>
+            <div style="margin-bottom:14px">${escapeHtml(biz.type)}</div>
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">WhatsApp phone</div>
+            <div style="margin-bottom:14px">${escapeHtml(biz.phone||'—')} ${biz.whatsapp_verified ? '<span class="pill green">verified</span>' : '<span class="pill amber">unverified</span>'}</div>
+            ${biz.description ? `<div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Description</div><div style="margin-bottom:14px">${escapeHtml(biz.description)}</div>` : ''}
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Plan</div>
+            <div style="margin-bottom:14px"><span class="pill blue">${escapeHtml(PLANS[biz.subscription_plan]?.name||'Trial')}</span></div>
+            <a class="btn btn-ghost btn-sm" href="#/dashboard/settings">Edit in settings</a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>`;
+}
+function bindProfile(){
+  $('#back-dash').onclick = ()=>navigate('#/dashboard');
+  $('#signout-btn').onclick = async ()=>{ await sb.auth.signOut(); SESSION=null; navigate('#/'); };
 }
 
 /* ---------- DOCTOR VIEW ---------- */
@@ -1071,6 +1715,22 @@ function openModal(html){
   if (f) f.onsubmit = (e)=>{e.preventDefault();window.__modalSubmit && window.__modalSubmit(Object.fromEntries(new FormData(f).entries()));};
 }
 window.closeModal = ()=>{ $('#modal-root').innerHTML=''; window.__modalSubmit=null; };
+document.addEventListener('click', async (e)=>{
+  // Click a row in the day-list popup → open the detail modal for that appointment
+  const row = e.target.closest('.day-list-row[data-id]');
+  if (row){
+    const apt = window.__apts?.[row.dataset.id];
+    if (apt){ closeModal(); setTimeout(()=>openModal(apptDetailModal(apt)),10); }
+    return;
+  }
+  // Cancel button inside detail modal
+  const t = e.target.closest('#apt-cancel-modal');
+  if (!t) return;
+  if (!confirm('Cancel this appointment?')) return;
+  const {error} = await sb.from('appointments').update({status:'cancelled'}).eq('id', t.dataset.id);
+  if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+  closeModal(); render();
+});
 function modalShell(title, body, submit='Save'){
   return `<h3>${title}</h3><form>${body}<div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">${submit}</button></div></form>`;
 }
@@ -1110,8 +1770,6 @@ async function addAppointmentModal(){
     if (!d.client_id||!d.doctor_id||!d.date||!d.time){alert('Fill all fields');return;}
     const {data:apt, error} = await sb.from('appointments').insert({business_id:SESSION.business.id, client_id:d.client_id, doctor_id:d.doctor_id, service_id:d.service_id||null, date:d.date, time:d.time, status:'confirmed', source:'manual'}).select().single();
     if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
-    /* Create Google Calendar event via Edge Function */
-    sb.functions.invoke('google-calendar-create', {body:{appointment_id: apt.id}}).catch(()=>{});
     closeModal(); render();
   };
   /* Trick: addAppointmentModal is async, but openModal expects sync html. We'll just openModal here. */
@@ -1134,8 +1792,4 @@ window.NOVA = {
 </script>
 </body>
 </html>
-N
-};
-</script>
-</body>
-</html>
+

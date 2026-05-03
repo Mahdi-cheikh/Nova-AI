@@ -1,1 +1,7 @@
 .vercel
+index.html.bak
+supabase/.temp/
+index.html.bak
+.env
+.env.local
+node_modules/
