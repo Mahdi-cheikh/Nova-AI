@@ -750,12 +750,32 @@ serve(async (req) => {
           collected.doctor_id = (doctors as any[])[0].id;
         }
       }
-      // For laboratoire we deliberately DON'T accept Claude's `payload.service` because
-      // sentences like "I want to book some tests" produce service="tests" which would
-      // skip the lab-specific service question (and thus the catalog match + price total).
       if (payload.service && bizRow?.type !== "laboratoire"){
         const svcMatch = (services as any[]).find(s => lower(s.name).includes(lower(String(payload.service).split(" ")[0])));
         collected.service = svcMatch?.name || payload.service;
+      }
+      // For laboratoire: try to match the inbound text (not just Claude's service extraction)
+      // against the test catalog. If we get ≥1 matches, pre-fill them so the service
+      // question is skipped and we go straight to date. This makes prescription-image
+      // bookings flow without re-asking. If nothing matches, fall through to the
+      // catalog-list service question as before.
+      if (bizRow?.type === "laboratoire" && Array.isArray(collected.lab_tests_catalog)) {
+        const txt = String(text || "").toLowerCase();
+        const catalog = collected.lab_tests_catalog as any[];
+        const matched = catalog.filter((t: any) => {
+          const n = String(t.name || "").toLowerCase();
+          const c = String(t.code || "").toLowerCase();
+          if (!n) return false;
+          if (c && c.length >= 2 && new RegExp(`\\b${c}\\b`, "i").test(text || "")) return true;
+          const words = n.split(/[\s()/-]+/).filter((w:string) => w.length >= 3);
+          return words.some((w:string) => txt.includes(w));
+        });
+        // Only pre-fill if we matched something genuinely test-like (≥1 match AND
+        // the matched tests cover most of the message). Otherwise stay open-ended.
+        if (matched.length >= 1) {
+          collected.lab_matched_tests = matched;
+          collected.service = matched.map((t:any) => t.name).join(", ");
+        }
       }
       if (payload.date) collected.date = payload.date;
       if (payload.time_preference){

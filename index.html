@@ -1389,15 +1389,15 @@ async function bindLabPipeline(){
     e.stopPropagation();
     const id = b.getAttribute('data-id');
     const to = b.getAttribute('data-to');
+    b.disabled = true; b.textContent = '...';
     if (to === 'delivered') {
-      // Notify patient via WhatsApp + advance
       const r = await sb.functions.invoke('lab-results-notify', {body:{}});
       toast({title:'Patient notified', message: r.error ? String(r.error) : `Sent ${r.data?.sent||0} result(s) on WhatsApp`, type:'info'});
     } else {
       await setStatus(id, to);
       toast({title:'Moved', message:`Order → ${LAB_NICE[to]||to}`, type:'info'});
     }
-    navigate('#/dashboard/lab');
+    await render();
   });
 
   /* Per-card undo button */
@@ -1405,9 +1405,10 @@ async function bindLabPipeline(){
     e.stopPropagation();
     const id = b.getAttribute('data-id');
     const to = b.getAttribute('data-to');
+    b.disabled = true;
     await sb.from('lab_orders').update({status: to}).eq('id', id);
     toast({title:'Reverted', message:`Order back to ${LAB_NICE[to]||to}`, type:'info'});
-    navigate('#/dashboard/lab');
+    await render();
   });
 
   /* Bulk advance for whole column */
@@ -1415,6 +1416,7 @@ async function bindLabPipeline(){
     e.stopPropagation();
     const from = b.getAttribute('data-from');
     const to   = b.getAttribute('data-to');
+    b.disabled = true; b.textContent = '...';
     if (to === 'delivered') {
       const r = await sb.functions.invoke('lab-results-notify', {body:{}});
       toast({title:'Notify all', message: r.error ? String(r.error) : `Sent ${r.data?.sent||0} result(s)`, type:'info'});
@@ -1426,7 +1428,7 @@ async function bindLabPipeline(){
       await sb.from('lab_orders').update(upd).eq('business_id', SESSION.business.id).eq('status', from);
       toast({title:'Bulk update', message:`All ${LAB_NICE[from]} → ${LAB_NICE[to]}`, type:'info'});
     }
-    navigate('#/dashboard/lab');
+    await render();
   });
 
   /* Click anywhere on a card → detail modal with full info + result-upload form */
@@ -1497,7 +1499,7 @@ async function bindLabPipeline(){
       });
       await setStatus(id, 'ready');
       toast({title:'Result saved', message:'Order moved to Ready to send', type:'info'});
-      navigate('#/dashboard/lab');
+      await render();
     });
 
     /* PDF download links inside the modal */
@@ -1534,7 +1536,7 @@ async function bindLabPipeline(){
     });
   };
   const refresh = $('#lab-refresh');
-  if (refresh) refresh.onclick = () => navigate('#/dashboard/lab');
+  if (refresh) refresh.onclick = async () => { await render(); };
 }
 
 /* ---------- TEST CATALOG (CRUD over lab_tests) ---------- */
@@ -1573,14 +1575,14 @@ async function bindTestCatalog(){
         const row = {business_id: SESSION.business.id, code: fd.code||null, name: fd.name, category: fd.category, sample_type: fd.sample_type, fasting_required: !!fd.fasting_required, fasting_hours: parseInt(fd.fasting_hours||'0',10), turnaround_hours: parseInt(fd.turnaround_hours||'24',10), price: parseFloat(fd.price||'0'), reference_range: fd.reference_range||null, active:true};
         if (t) await sb.from('lab_tests').update(row).eq('id', t.id);
         else  await sb.from('lab_tests').insert(row);
-        navigate('#/dashboard/tests');
+        await render();
       });
   $('#add-test').onclick = ()=>open(null);
   document.querySelectorAll('tr[data-id]').forEach(r=>r.onclick=async ()=>{
     const id = r.getAttribute('data-id');
     const {data:t} = await sb.from('lab_tests').select('*').eq('id', id).maybeSingle();
     open(t);
-    setTimeout(()=>{ const del = $('#m-del'); if (del) del.onclick = async()=>{ await sb.from('lab_tests').delete().eq('id', id); closeModal(); navigate('#/dashboard/tests'); }; }, 50);
+    setTimeout(()=>{ const del = $('#m-del'); if (del) del.onclick = async()=>{ await sb.from('lab_tests').delete().eq('id', id); closeModal(); await render(); }; }, 50);
   });
 }
 

@@ -69,7 +69,14 @@ serve(async (req) => {
 
     const byApt: Record<string, any[]> = {};
     for (const o of (orders as any[])) {
-      if (o.appointments?.results_sent_at) continue;          // already notified
+      if (o.appointments?.results_sent_at) continue;                       // already notified
+      // Don't notify until at least one result row exists for this order with
+      // either a numeric value, a text value, or a PDF. Prevents premature pings
+      // when an order is marked 'ready' but no result has actually been recorded.
+      const hasContent = (o.lab_results || []).some((r: any) =>
+        r.pdf_path || r.numeric_value !== null || (r.text_value && r.text_value.length > 0)
+      );
+      if (!hasContent) continue;
       const k = o.appointment_id;
       (byApt[k] = byApt[k] || []).push(o);
     }
