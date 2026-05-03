@@ -1282,13 +1282,203 @@ function dayListModal(dayKey){
 }
 
 async function renderClients(){
-  const {data:cls=[]} = await sb.from('clients').select('*').eq('business_id', SESSION.business.id).order('created_at',{ascending:false});
-  return `<div class="panel"><div class="panel-head"><h3>Clients (${cls.length})</h3><button class="btn btn-primary btn-sm" id="add-cli">+ New client</button></div>
-  <div class="panel-body no-pad">${cls.length===0?`<div class="empty"><div class="ic">◉</div>No clients yet</div>`:`
-  <table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Joined</th></tr></thead>
-  <tbody>${cls.map(c=>`<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.phone)}</td><td>${escapeHtml(c.email||'—')}</td><td>${new Date(c.created_at).toLocaleDateString()}</td></tr>`).join('')}</tbody></table>`}</div></div>`;
+  const bizId = SESSION.business.id;
+  // Pull every client + aggregate counts/totals so the table can show real stats
+  const [{data:cls=[]}, {data:apts=[]}, {data:msgs=[]}] = await Promise.all([
+    sb.from('clients').select('*').eq('business_id', bizId).order('created_at',{ascending:false}),
+    sb.from('appointments').select('id, client_id, date, status, total_amount').eq('business_id', bizId),
+    sb.from('messages').select('id, client_id, created_at').eq('business_id', bizId)
+  ]);
+  // Index aggregates per client_id
+  const stat = {};
+  cls.forEach(c => stat[c.id] = {visits:0, last:null, spent:0, msgs:0, upcoming:0});
+  const today = new Date().toISOString().slice(0,10);
+  (apts||[]).forEach(a => {
+    const s = stat[a.client_id]; if (!s) return;
+    if (a.status !== 'cancelled') {
+      s.visits++;
+      if (!s.last || a.date > s.last) s.last = a.date;
+      if (a.total_amount) s.spent += Number(a.total_amount);
+      if (a.date >= today && a.status !== 'cancelled') s.upcoming++;
+    }
+  });
+  (msgs||[]).forEach(m => { const s = stat[m.client_id]; if (s) s.msgs++; });
+
+  const search = `<input id="cli-search" placeholder="🔍 Search by name, phone or email..." style="width:100%;padding:8px 10px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:inherit;margin:8px 0" />`;
+
+  const rows = cls.map(c => {
+    const s = stat[c.id] || {visits:0, last:null, spent:0, msgs:0, upcoming:0};
+    const lang = (c.profile && c.profile.language) ? c.profile.language : '—';
+    return `<tr class="cli-row" data-id="${c.id}" style="cursor:pointer">
+      <td><b>${escapeHtml(c.name||'—')}</b>${c.age?` <span class="sub">(${c.age})</span>`:''}</td>
+      <td>${escapeHtml(c.phone||'—')}</td>
+      <td>${escapeHtml(c.email||'—')}</td>
+      <td><span class="pill blue">${s.visits}</span>${s.upcoming?` <span class="pill green">${s.upcoming} upcoming</span>`:''}</td>
+      <td>${s.last||'—'}</td>
+      <td>${s.spent>0?`${s.spent.toFixed(0)} TND`:'—'}</td>
+      <td>${s.msgs}</td>
+      <td><span class="pill gray">${lang}</span></td>
+      <td>${new Date(c.created_at).toLocaleDateString()}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="panel"><div class="panel-head"><h3>Patients (${cls.length})</h3><button class="btn btn-primary btn-sm" id="add-cli">+ New client</button></div>
+    <div class="panel-body">${search}</div>
+    <div class="panel-body no-pad">${cls.length===0?`<div class="empty"><div class="ic">◉</div>No patients yet</div>`:`
+    <table class="data"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Visits</th><th>Last visit</th><th>Total spent</th><th>Messages</th><th>Lang</th><th>Joined</th></tr></thead>
+    <tbody>${rows}</tbody></table>`}</div></div>`;
 }
-async function bindClients(){ $('#add-cli').onclick = ()=>openModal(addClientModal()); }
+
+async function bindClients(){
+  $('#add-cli').onclick = ()=>openModal(addClientModal());
+
+  /* Live search filter */
+  const search = $('#cli-search');
+  if (search) search.oninput = () => {
+    const q = search.value.toLowerCase().trim();
+    document.querySelectorAll('.cli-row').forEach(r => {
+      r.style.display = !q || r.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
+
+  /* Click a row → open the full history panel */
+  document.querySelectorAll('.cli-row').forEach(r => r.onclick = async () => {
+    const id = r.getAttribute('data-id');
+    await openPatientHistory(id);
+  });
+}
+
+/* ---------- PATIENT HISTORY PANEL ---------- */
+async function openPatientHistory(clientId){
+  const bizId = SESSION.business.id;
+  const isLab = SESSION.business.type === 'laboratoire';
+  const [{data:client}, {data:apts=[]}, {data:msgs=[]}, {data:labOrders=[]}, {data:reviews=[]}, {data:notifs=[]}] = await Promise.all([
+    sb.from('clients').select('*').eq('id', clientId).single(),
+    sb.from('appointments').select('*, services(name), users:doctor_id(name)').eq('business_id', bizId).eq('client_id', clientId).order('date',{ascending:false}).order('time',{ascending:false}),
+    sb.from('messages').select('*').eq('business_id', bizId).eq('client_id', clientId).order('created_at',{ascending:false}).limit(50),
+    isLab ? sb.from('lab_orders').select('*, lab_tests(name, code), lab_results(numeric_value, text_value, unit, is_critical, pdf_path), appointments(date, time)').eq('business_id', bizId).order('created_at',{ascending:false}) : Promise.resolve({data:[]}),
+    sb.from('appointment_reviews').select('*').eq('business_id', bizId).eq('client_id', clientId).order('prompted_at',{ascending:false}),
+    sb.from('notifications').select('*').eq('business_id', bizId).order('created_at',{ascending:false}).limit(200)
+  ]);
+  const filteredOrders = (labOrders||[]).filter(o => apts.find(a => a.id === o.appointment_id));
+  const myNotifs = (notifs||[]).filter(n => (n.message||'').includes(client?.phone||'_zzz_'));
+
+  const totalSpent = apts.filter(a=>a.status!=='cancelled').reduce((a,b)=>a+Number(b.total_amount||0), 0);
+  const today = new Date().toISOString().slice(0,10);
+  const upcoming = apts.filter(a => a.date >= today && a.status !== 'cancelled');
+  const past     = apts.filter(a => a.date <  today || a.status === 'cancelled');
+  const avgRating = (reviews||[]).filter(r => r.rating).reduce((s,r,_,arr)=>s + r.rating/arr.length, 0);
+  const profile = client?.profile || {};
+
+  const aptRow = a => `<tr>
+    <td>${a.date}</td>
+    <td>${(a.time||'').slice(0,5)}</td>
+    <td>${escapeHtml(a.services?.name || '—')}</td>
+    <td>${escapeHtml(a.users?.name || '—')}</td>
+    <td><span class="pill ${a.status==='confirmed'?'green':a.status==='cancelled'?'gray':a.status==='completed'?'blue':'gray'}">${a.status}</span></td>
+    <td>${a.total_amount?`${a.total_amount} TND`:'—'}</td>
+    <td>${a.triage_level==='urgent'?'<span class="pill" style="background:#ef4444">URGENT</span>':a.triage_level||''}</td>
+  </tr>`;
+
+  const labRow = o => {
+    const r = (o.lab_results||[])[0];
+    return `<tr>
+      <td>${o.appointments?.date||''}</td>
+      <td><b>${escapeHtml(o.lab_tests?.name||'—')}</b>${o.lab_tests?.code?` <span class="sub">[${escapeHtml(o.lab_tests.code)}]</span>`:''}</td>
+      <td><span class="pill ${o.status==='delivered'?'green':o.status==='ready'?'blue':'gray'}">${o.status}</span></td>
+      <td>${r?.numeric_value!==null && r?.numeric_value!==undefined ? `<b>${r.numeric_value} ${escapeHtml(r.unit||'')}</b>` : (r?.text_value || '—')}${r?.is_critical?' <span class="pill" style="background:#ef4444">CRITICAL</span>':''}</td>
+      <td>${r?.pdf_path?`<a href="#" data-pdf-path="${escapeHtml(r.pdf_path)}">📄 PDF</a>`:'—'}</td>
+      <td>${o.price_charged||0} TND</td>
+    </tr>`;
+  };
+
+  const msgRow = m => `<tr>
+    <td>${new Date(m.created_at).toLocaleString()}</td>
+    <td><span class="pill ${m.direction==='in'?'blue':'gray'}">${m.direction==='in'?'patient':'Nova'}</span></td>
+    <td style="max-width:400px;word-break:break-word">${escapeHtml((m.text||'').slice(0,300))}${(m.text||'').length>300?'…':''}</td>
+    <td><span class="pill gray">${m.intent||'—'}</span></td>
+  </tr>`;
+
+  openModal(`<div style="max-width:980px;max-height:80vh;overflow:auto">
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap">
+      <div>
+        <h3 style="margin:0">${escapeHtml(client?.name||'Patient')}</h3>
+        <div class="sub" style="margin-top:4px">📞 ${escapeHtml(client?.phone||'—')} ${client?.email?` · ✉ ${escapeHtml(client.email)}`:''}${client?.age?` · 🎂 ${client.age} y/o`:''}${profile.language?` · 🌐 ${profile.language}`:''}</div>
+        ${client?.last_visit_at?`<div class="sub">Last visit: ${new Date(client.last_visit_at).toLocaleDateString()}</div>`:''}
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div style="text-align:center"><div class="sub">Visits</div><div style="font-size:1.4em;font-weight:600">${apts.filter(a=>a.status!=='cancelled').length}</div></div>
+        <div style="text-align:center"><div class="sub">Upcoming</div><div style="font-size:1.4em;font-weight:600">${upcoming.length}</div></div>
+        <div style="text-align:center"><div class="sub">Spent</div><div style="font-size:1.4em;font-weight:600">${totalSpent.toFixed(0)} TND</div></div>
+        ${avgRating ? `<div style="text-align:center"><div class="sub">Rating</div><div style="font-size:1.4em;font-weight:600">${avgRating.toFixed(1)}★</div></div>` : ''}
+      </div>
+    </div>
+
+    ${profile.allergies || profile.notes || profile.preferred_doctor || profile.preferred_service ? `
+    <div style="background:rgba(99,102,241,0.06);padding:10px;border-radius:8px;margin:12px 0;font-size:.9em">
+      ${profile.preferred_service?`<div><b>Preferred service:</b> ${escapeHtml(profile.preferred_service)}</div>`:''}
+      ${profile.preferred_doctor?`<div><b>Preferred doctor:</b> ${escapeHtml(profile.preferred_doctor)}</div>`:''}
+      ${profile.allergies?`<div><b>Allergies:</b> ${escapeHtml(profile.allergies)}</div>`:''}
+      ${profile.notes?`<div><b>Notes:</b> ${escapeHtml(profile.notes)}</div>`:''}
+    </div>` : ''}
+
+    ${client?.notes ? `<div style="background:rgba(234,179,8,0.08);padding:10px;border-radius:8px;margin:8px 0;font-size:.9em"><b>Internal note:</b> ${escapeHtml(client.notes)}</div>` : ''}
+
+    <h4 style="margin-top:18px">📅 Appointments (${apts.length})</h4>
+    ${apts.length === 0 ? '<div class="sub">None yet.</div>' : `
+    <div style="overflow:auto"><table class="data" style="width:100%;font-size:.88em">
+      <thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Doctor</th><th>Status</th><th>Amount</th><th>Triage</th></tr></thead>
+      <tbody>${apts.map(aptRow).join('')}</tbody>
+    </table></div>`}
+
+    ${isLab && filteredOrders.length ? `
+    <h4 style="margin-top:18px">🧪 Lab orders (${filteredOrders.length})</h4>
+    <div style="overflow:auto"><table class="data" style="width:100%;font-size:.88em">
+      <thead><tr><th>Date</th><th>Test</th><th>Status</th><th>Value</th><th>Report</th><th>Price</th></tr></thead>
+      <tbody>${filteredOrders.map(labRow).join('')}</tbody>
+    </table></div>` : ''}
+
+    ${reviews.length ? `
+    <h4 style="margin-top:18px">⭐ Reviews (${reviews.length})</h4>
+    ${reviews.filter(r=>r.rating).map(r => `<div style="padding:8px;background:rgba(99,102,241,0.05);border-radius:6px;margin:4px 0;font-size:.9em">
+      ${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)} <span class="sub">${new Date(r.responded_at||r.prompted_at).toLocaleDateString()}</span>
+      ${r.comment?`<div style="margin-top:4px">${escapeHtml(r.comment)}</div>`:''}
+    </div>`).join('') || '<div class="sub">No ratings yet.</div>'}` : ''}
+
+    <h4 style="margin-top:18px">💬 Conversation history (last 50)</h4>
+    ${msgs.length === 0 ? '<div class="sub">No messages yet.</div>' : `
+    <div style="overflow:auto;max-height:340px;border:1px solid rgba(255,255,255,0.06);border-radius:6px"><table class="data" style="width:100%;font-size:.85em">
+      <thead style="position:sticky;top:0"><tr><th>When</th><th>From</th><th>Message</th><th>Intent</th></tr></thead>
+      <tbody>${msgs.map(msgRow).join('')}</tbody>
+    </table></div>`}
+
+    <div class="modal-actions" style="margin-top:18px">
+      <button type="button" class="btn-ghost" id="m-cancel">Close</button>
+      <button type="button" class="btn-ghost" id="cli-edit-notes">✎ Edit internal note</button>
+      ${client?.phone?`<a class="btn-ghost" target="_blank" href="https://wa.me/${(client.phone||'').replace(/\\D/g,'')}" style="text-decoration:none">📞 WhatsApp this patient</a>`:''}
+    </div>
+  </div>`, () => {/* no-op submit */});
+
+  /* PDF download links inside the modal */
+  setTimeout(() => {
+    document.querySelectorAll('[data-pdf-path]').forEach(a => a.onclick = async (ev) => {
+      ev.preventDefault();
+      const path = a.getAttribute('data-pdf-path');
+      const {data:signed} = await sb.storage.from('lab-results').createSignedUrl(path, 60*60);
+      if (signed?.signedUrl) window.open(signed.signedUrl, '_blank');
+    });
+    const editBtn = $('#cli-edit-notes');
+    if (editBtn) editBtn.onclick = async () => {
+      const cur = client?.notes || '';
+      const next = prompt('Internal note (visible only to staff):', cur);
+      if (next === null) return;
+      await sb.from('clients').update({notes: next}).eq('id', clientId);
+      toast({title:'Note updated', message:'Saved', type:'info'});
+      closeModal();
+      await openPatientHistory(clientId);
+    };
+  }, 100);
+}
 
 async function renderDoctors(){
   const {data:team=[]} = await sb.from('users').select('*').eq('business_id', SESSION.business.id).order('created_at');
