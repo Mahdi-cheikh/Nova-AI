@@ -704,8 +704,28 @@ function bindAuth(){
       if (r) r.onclick = (ev) => { ev.preventDefault(); submit.disabled = false; label.textContent = 'Send me a magic link'; };
     }, 50);
   };
-  sb.auth.onAuthStateChange(async (_event, session)=>{
+  sb.auth.onAuthStateChange(async (event, session)=>{
     if (session && !SESSION){ SESSION = await loadSession(); render(); }
+    /* Send a "Welcome back" email once per browser session for OAuth (Google) sign-ins.
+       Magic-link users already received an email so we skip them. */
+    if (event === 'SIGNED_IN' && session && !sessionStorage.getItem('signin_email_sent')) {
+      const provider = session.user?.app_metadata?.provider || '';
+      if (provider === 'google') {
+        sessionStorage.setItem('signin_email_sent', '1');
+        try {
+          const {data: member} = await sb.from('users')
+            .select('name, businesses(name)')
+            .eq('auth_uid', session.user.id).maybeSingle();
+          await sb.functions.invoke('send-signin-notice', {body:{
+            email:         session.user.email,
+            name:          session.user.user_metadata?.full_name || member?.name || session.user.email.split('@')[0],
+            provider:      'google',
+            business_name: member?.businesses?.name || ''
+          }});
+        } catch (e) { console.warn('signin notice email failed (silent)', e); }
+      }
+    }
+    if (event === 'SIGNED_OUT') sessionStorage.removeItem('signin_email_sent');
   });
 }
 
