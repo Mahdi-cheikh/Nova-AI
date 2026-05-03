@@ -582,14 +582,24 @@ serve(async (req) => {
               const n = String(t.name || "").toLowerCase();
               const c = String(t.code || "").toLowerCase();
               if (!n) return false;
-              // Match on code (exact-ish) or name fragment
               if (c && txt.includes(c)) return true;
-              const firstWord = n.split(/\s+/)[0];
-              return firstWord.length >= 3 && txt.includes(firstWord);
+              // Match on any meaningful word in the test name (≥3 chars), not just first word
+              const words = n.split(/[\s()/-]+/).filter((w:string) => w.length >= 3);
+              return words.some((w:string) => txt.includes(w));
             });
+            // If nothing matched, ask again with a clearer prompt instead of advancing
+            if (!matched.length) {
+              const reply = lang === "fr"
+                ? `Je n'ai pas trouvé ces analyses dans notre catalogue. Pouvez-vous reformuler ? Exemples : "bilan lipidique", "TSH", "vitamine D", "NFS".`
+                : lang === "ar"
+                ? `لم أجد هذه التحاليل في الكتالوج. هل يمكنك إعادة الصياغة؟ أمثلة: "صورة الدهون"، "TSH"، "فيتامين د"، "تعداد الدم".`
+                : `I couldn't find those tests in our catalog. Could you rephrase? Examples: "lipid panel", "TSH", "vitamin D", "CBC".`;
+              await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply });
+              await sendWhatsApp(channel, phone, reply);
+              return new Response(JSON.stringify({ ok: true, step: "lab_no_match" }), { headers: { ...cors, "Content-Type": "application/json" } });
+            }
             collected.lab_matched_tests = matched;
-            // Replace the free-text service with a clean comma-joined list
-            if (matched.length) collected.service = matched.map((t: any) => t.name).join(", ");
+            collected.service = matched.map((t: any) => t.name).join(", ");
           }
 
           if (draft.state === "doctor") {
@@ -740,7 +750,10 @@ serve(async (req) => {
           collected.doctor_id = (doctors as any[])[0].id;
         }
       }
-      if (payload.service){
+      // For laboratoire we deliberately DON'T accept Claude's `payload.service` because
+      // sentences like "I want to book some tests" produce service="tests" which would
+      // skip the lab-specific service question (and thus the catalog match + price total).
+      if (payload.service && bizRow?.type !== "laboratoire"){
         const svcMatch = (services as any[]).find(s => lower(s.name).includes(lower(String(payload.service).split(" ")[0])));
         collected.service = svcMatch?.name || payload.service;
       }

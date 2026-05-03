@@ -1298,70 +1298,243 @@ async function renderDoctors(){
 }
 async function bindDoctors(){ $('#add-doc').onclick = ()=>openModal(addDoctorModal()); }
 
-/* ---------- LAB PIPELINE (kanban view of lab_orders) ---------- */
+/* ---------- LAB PIPELINE (worker-friendly kanban) ---------- */
+const LAB_NEXT  = {requested:'sample_collected', sample_collected:'in_analysis', in_analysis:'ready', ready:'delivered'};
+const LAB_PREV  = {sample_collected:'requested', in_analysis:'sample_collected', ready:'in_analysis'};
+const LAB_NLBL  = {requested:'Mark collected', sample_collected:'Start analysis', in_analysis:'Mark ready', ready:'Notify patient'};
+const LAB_NICE  = {requested:'Requested', sample_collected:'Sample collected', in_analysis:'In analysis', ready:'Ready to send', delivered:'Delivered'};
+
 async function renderLabPipeline(){
   const bizId = SESSION.business.id;
   const [{data:orders=[]}, {data:kpi}] = await Promise.all([
     sb.from('lab_orders').select(`
-      id, status, created_at, collected_at, ready_at,
-      lab_tests(name, sample_type, fasting_required),
-      appointments(date, time, clients(name, phone))
+      id, status, created_at, collected_at, ready_at, notes, price_charged,
+      lab_tests(id, name, code, sample_type, fasting_required, category, reference_range),
+      lab_results(id, numeric_value, text_value, unit, is_critical, pdf_path),
+      appointments(id, date, time, clients(id, name, phone))
     `).eq('business_id', bizId).order('created_at',{ascending:false}).limit(200),
     sb.from('v_lab_kpis').select('*').eq('business_id', bizId).maybeSingle()
   ]);
   const byStatus = {requested:[], sample_collected:[], in_analysis:[], ready:[]};
   (orders||[]).forEach(o=>{ if(byStatus[o.status]) byStatus[o.status].push(o); });
-  const card = (o)=>`<div class="apt-row" data-id="${o.id}" style="margin:6px 0;cursor:pointer">
-    <div style="font-weight:600">${escapeHtml(o.lab_tests?.name||'Test')}</div>
-    <div class="sub" style="font-size:.85em">${escapeHtml(o.appointments?.clients?.name||'—')} · ${o.appointments?.date||''} ${(o.appointments?.time||'').slice(0,5)}</div>
-    <div class="sub" style="font-size:.8em;opacity:.7">${o.lab_tests?.sample_type||''}${o.lab_tests?.fasting_required?' · à jeun':''}</div>
-  </div>`;
-  const col = (title, list, action)=>`<div class="panel"><div class="panel-head"><h3>${title} <span class="pill gray">${list.length}</span></h3></div>
-    <div class="panel-body" style="max-height:60vh;overflow:auto">${list.length?list.map(card).join(''):'<div class="empty"><div class="ic">⌀</div>Empty</div>'}
-    ${action?`<button class="btn-primary" data-bulk="${action}" style="width:100%;margin-top:10px">${action==='collect'?'Mark all collected':action==='analyse'?'Mark all in analysis':'Notify all'}</button>`:''}</div></div>`;
+
+  const card = (o)=>{
+    const t = o.lab_tests || {}; const c = o.appointments?.clients || {};
+    const hasResult = (o.lab_results||[]).length > 0;
+    const critical  = (o.lab_results||[]).some(r => r.is_critical);
+    const borderColor = critical ? '#ef4444' : t.fasting_required ? '#eab308' : '#6366f1';
+    const flags = [];
+    if (t.fasting_required) flags.push('<span class="pill" style="background:#eab308;color:#000">FASTING</span>');
+    if (critical)           flags.push('<span class="pill" style="background:#ef4444">CRITICAL</span>');
+    if (hasResult)          flags.push('<span class="pill green">📄 PDF</span>');
+    return `<div class="apt-row lab-card" data-id="${o.id}" style="margin:8px 0;padding:10px;background:rgba(99,102,241,0.06);border-radius:8px;border-left:3px solid ${borderColor};cursor:pointer">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:start">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.95em">${escapeHtml(t.name||'Test')} ${t.code?`<span class="pill blue" style="font-size:.65em;margin-left:4px">${escapeHtml(t.code)}</span>`:''}</div>
+          <div class="sub" style="font-size:.82em;margin-top:4px"><b>${escapeHtml(c.name||'—')}</b> · ${escapeHtml(c.phone||'')}</div>
+          <div class="sub" style="font-size:.78em;opacity:.75;margin-top:2px">${o.appointments?.date||''} ${(o.appointments?.time||'').slice(0,5)} · ${t.sample_type||'—'}</div>
+          ${flags.length?`<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">${flags.join('')}</div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        ${LAB_NEXT[o.status] ? `<button class="btn-primary lab-advance" data-id="${o.id}" data-to="${LAB_NEXT[o.status]}" style="font-size:.78em;padding:5px 8px;flex:1">${LAB_NLBL[o.status]} →</button>` : ''}
+        ${LAB_PREV[o.status] ? `<button class="btn-ghost lab-revert" data-id="${o.id}" data-to="${LAB_PREV[o.status]}" style="font-size:.72em;padding:5px 8px" title="Move back">←</button>` : ''}
+      </div>
+    </div>`;
+  };
+
+  const col = (title, list, status)=>{
+    const bulkBtn = LAB_NEXT[status] && list.length
+      ? `<button class="btn-primary lab-bulk" data-from="${status}" data-to="${LAB_NEXT[status]}" style="width:100%;margin-top:10px;font-size:.82em">⚡ ${LAB_NLBL[status]} all (${list.length})</button>` : '';
+    return `<div class="panel"><div class="panel-head"><h3>${title} <span class="pill ${list.length?'blue':'gray'}">${list.length}</span></h3></div>
+      <div class="panel-body" style="max-height:65vh;overflow:auto">${list.length?list.map(card).join(''):'<div class="empty"><div class="ic">⌀</div>Empty</div>'}${bulkBtn}</div></div>`;
+  };
+
   return `<div class="panel" style="margin-bottom:14px"><div class="panel-body" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
-    <div><div class="sub">Awaiting collection</div><div style="font-size:1.6em;font-weight:600">${kpi?.awaiting_collection||0}</div></div>
-    <div><div class="sub">Awaiting analysis</div><div style="font-size:1.6em;font-weight:600">${kpi?.awaiting_analysis||0}</div></div>
-    <div><div class="sub">In analysis</div><div style="font-size:1.6em;font-weight:600">${kpi?.in_analysis||0}</div></div>
-    <div><div class="sub">Ready to send</div><div style="font-size:1.6em;font-weight:600">${kpi?.ready_to_send||0}</div></div>
-    <div><div class="sub">Avg turnaround (h)</div><div style="font-size:1.6em;font-weight:600">${kpi?.avg_tat_hours||0}</div></div>
-  </div></div>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-    ${col('1. Requested', byStatus.requested, 'collect')}
-    ${col('2. Sample collected', byStatus.sample_collected, 'analyse')}
-    ${col('3. In analysis', byStatus.in_analysis, 'ready')}
-    ${col('4. Ready to send', byStatus.ready, 'notify')}
-  </div>`;
+      <div><div class="sub">Awaiting collection</div><div style="font-size:1.6em;font-weight:600">${kpi?.awaiting_collection||0}</div></div>
+      <div><div class="sub">Awaiting analysis</div><div style="font-size:1.6em;font-weight:600">${kpi?.awaiting_analysis||0}</div></div>
+      <div><div class="sub">In analysis</div><div style="font-size:1.6em;font-weight:600">${kpi?.in_analysis||0}</div></div>
+      <div><div class="sub">Ready to send</div><div style="font-size:1.6em;font-weight:600">${kpi?.ready_to_send||0}</div></div>
+      <div><div class="sub">Avg turnaround (h)</div><div style="font-size:1.6em;font-weight:600">${kpi?.avg_tat_hours||0}</div></div>
+    </div></div>
+    <div class="panel" style="margin-bottom:14px"><div class="panel-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input id="lab-search" placeholder="🔍 Search patient, phone, or test name..." style="flex:1;min-width:240px;padding:8px 10px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:inherit" />
+      <select id="lab-date-filter" style="padding:8px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:inherit">
+        <option value="all">All dates</option>
+        <option value="today">Today only</option>
+        <option value="week">Last 7 days</option>
+      </select>
+      <button class="btn-ghost" id="lab-refresh">↻ Refresh</button>
+    </div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+      ${col('1. Requested',        byStatus.requested,        'requested')}
+      ${col('2. Sample collected', byStatus.sample_collected, 'sample_collected')}
+      ${col('3. In analysis',      byStatus.in_analysis,      'in_analysis')}
+      ${col('4. Ready to send',    byStatus.ready,            'ready')}
+    </div>`;
 }
+
 async function bindLabPipeline(){
-  document.querySelectorAll('[data-bulk]').forEach(b=>b.onclick=async ()=>{
-    const action = b.getAttribute('data-bulk');
-    const map = {collect:{from:'requested',to:'sample_collected',col:'collected_at'},
-                 analyse:{from:'sample_collected',to:'in_analysis',col:'analysed_at'},
-                 ready:  {from:'in_analysis',to:'ready',col:'ready_at'}};
-    if (action==='notify'){
+  const setStatus = async (id, to) => {
+    const upd = {status: to};
+    if (to === 'sample_collected') upd.collected_at = new Date().toISOString();
+    if (to === 'in_analysis')      upd.analysed_at  = new Date().toISOString();
+    if (to === 'ready')             upd.ready_at     = new Date().toISOString();
+    if (to === 'delivered')         upd.delivered_at = new Date().toISOString();
+    return sb.from('lab_orders').update(upd).eq('id', id);
+  };
+
+  /* Per-card advance button (the one-click action) */
+  document.querySelectorAll('.lab-advance').forEach(b => b.onclick = async (e) => {
+    e.stopPropagation();
+    const id = b.getAttribute('data-id');
+    const to = b.getAttribute('data-to');
+    if (to === 'delivered') {
+      // Notify patient via WhatsApp + advance
       const r = await sb.functions.invoke('lab-results-notify', {body:{}});
-      toast({title:'Notify triggered', message: r.error ? String(r.error) : `Sent ${r.data?.sent||0} result(s)`, type:'info'});
-      navigate('#/dashboard/lab'); return;
+      toast({title:'Patient notified', message: r.error ? String(r.error) : `Sent ${r.data?.sent||0} result(s) on WhatsApp`, type:'info'});
+    } else {
+      await setStatus(id, to);
+      toast({title:'Moved', message:`Order → ${LAB_NICE[to]||to}`, type:'info'});
     }
-    const m = map[action];
-    if (!m) return;
-    const upd = {status: m.to}; upd[m.col] = new Date().toISOString();
-    await sb.from('lab_orders').update(upd).eq('business_id', SESSION.business.id).eq('status', m.from);
-    toast({title:'Updated', message:`Moved ${m.from} → ${m.to}`, type:'info'});
     navigate('#/dashboard/lab');
   });
-  document.querySelectorAll('.apt-row[data-id]').forEach(r=>r.onclick=async ()=>{
+
+  /* Per-card undo button */
+  document.querySelectorAll('.lab-revert').forEach(b => b.onclick = async (e) => {
+    e.stopPropagation();
+    const id = b.getAttribute('data-id');
+    const to = b.getAttribute('data-to');
+    await sb.from('lab_orders').update({status: to}).eq('id', id);
+    toast({title:'Reverted', message:`Order back to ${LAB_NICE[to]||to}`, type:'info'});
+    navigate('#/dashboard/lab');
+  });
+
+  /* Bulk advance for whole column */
+  document.querySelectorAll('.lab-bulk').forEach(b => b.onclick = async (e) => {
+    e.stopPropagation();
+    const from = b.getAttribute('data-from');
+    const to   = b.getAttribute('data-to');
+    if (to === 'delivered') {
+      const r = await sb.functions.invoke('lab-results-notify', {body:{}});
+      toast({title:'Notify all', message: r.error ? String(r.error) : `Sent ${r.data?.sent||0} result(s)`, type:'info'});
+    } else {
+      const upd = {status: to};
+      if (to === 'sample_collected') upd.collected_at = new Date().toISOString();
+      if (to === 'in_analysis')      upd.analysed_at  = new Date().toISOString();
+      if (to === 'ready')             upd.ready_at     = new Date().toISOString();
+      await sb.from('lab_orders').update(upd).eq('business_id', SESSION.business.id).eq('status', from);
+      toast({title:'Bulk update', message:`All ${LAB_NICE[from]} → ${LAB_NICE[to]}`, type:'info'});
+    }
+    navigate('#/dashboard/lab');
+  });
+
+  /* Click anywhere on a card → detail modal with full info + result-upload form */
+  document.querySelectorAll('.lab-card').forEach(r => r.onclick = async (e) => {
+    if (e.target.closest('button')) return;   // don't open modal when clicking action buttons
     const id = r.getAttribute('data-id');
-    const next = prompt('Set status to (requested / sample_collected / in_analysis / ready / delivered):');
-    if (!next) return;
-    const upd = {status: next};
-    if (next==='sample_collected') upd.collected_at = new Date().toISOString();
-    if (next==='in_analysis')      upd.analysed_at  = new Date().toISOString();
-    if (next==='ready')             upd.ready_at     = new Date().toISOString();
-    await sb.from('lab_orders').update(upd).eq('id', id);
-    navigate('#/dashboard/lab');
+    const {data:o} = await sb.from('lab_orders').select(`
+      *, lab_tests(*), appointments(*, clients(*)), lab_results(*)
+    `).eq('id', id).single();
+    if (!o) return;
+    const t = o.lab_tests || {}; const c = o.appointments?.clients || {};
+    const existingResults = (o.lab_results||[]).map(rr => `<div style="padding:8px;background:rgba(99,102,241,0.05);border-radius:6px;margin:6px 0;font-size:.9em">
+      ${rr.numeric_value!==null && rr.numeric_value!==undefined ? `<b>${rr.numeric_value} ${escapeHtml(rr.unit||'')}</b>` : ''}
+      ${rr.text_value ? `${escapeHtml(rr.text_value)}` : ''}
+      ${rr.is_critical ? ' <span class="pill" style="background:#ef4444">CRITICAL</span>' : ''}
+      ${rr.pdf_path ? `<div class="sub" style="margin-top:3px">📄 <a href="#" data-pdf="${escapeHtml(rr.pdf_path)}">Download PDF</a></div>` : ''}
+    </div>`).join('');
+
+    openModal(`<div style="max-width:640px"><h3>${escapeHtml(t.name||'Lab order')}</h3>
+      <div style="margin:8px 0"><span class="pill blue">${LAB_NICE[o.status]||o.status}</span>${t.code?` <span class="pill gray">${escapeHtml(t.code)}</span>`:''}${t.fasting_required?' <span class="pill" style="background:#eab308;color:#000">FASTING</span>':''}</div>
+      <table class="data" style="width:100%;font-size:.9em">
+        <tr><td style="opacity:.7">Patient</td><td><b>${escapeHtml(c.name||'—')}</b></td></tr>
+        <tr><td style="opacity:.7">Phone</td><td>${escapeHtml(c.phone||'—')}</td></tr>
+        <tr><td style="opacity:.7">Appointment</td><td>${o.appointments?.date||''} ${(o.appointments?.time||'').slice(0,5)}</td></tr>
+        <tr><td style="opacity:.7">Sample</td><td>${escapeHtml(t.sample_type||'—')}</td></tr>
+        <tr><td style="opacity:.7">Category</td><td>${escapeHtml(t.category||'—')}</td></tr>
+        <tr><td style="opacity:.7">Reference range</td><td>${escapeHtml(t.reference_range||'—')}</td></tr>
+        <tr><td style="opacity:.7">Price</td><td>${o.price_charged||0} TND</td></tr>
+        <tr><td style="opacity:.7">Created</td><td>${new Date(o.created_at).toLocaleString()}</td></tr>
+        ${o.collected_at?`<tr><td style="opacity:.7">Collected</td><td>${new Date(o.collected_at).toLocaleString()}</td></tr>`:''}
+        ${o.ready_at?`<tr><td style="opacity:.7">Ready</td><td>${new Date(o.ready_at).toLocaleString()}</td></tr>`:''}
+      </table>
+      <h4 style="margin-top:14px">Existing results</h4>
+      ${existingResults || '<div class="sub">No result uploaded yet</div>'}
+      <h4 style="margin-top:14px">Upload / record result</h4>
+      <form id="result-upload-form">
+        <div class="field"><label>PDF report (optional)</label><input type="file" name="pdf" accept="application/pdf" /></div>
+        <div class="row">
+          <div class="field grow"><label>Numeric value</label><input name="numeric_value" type="number" step="0.01" placeholder="e.g. 95" /></div>
+          <div class="field"><label>Unit</label><input name="unit" placeholder="mg/dL" /></div>
+        </div>
+        <div class="field"><label>Text value (qualitative)</label><input name="text_value" placeholder="Negative / Positive / Normal..." /></div>
+        <div class="field"><label><input type="checkbox" name="is_critical" /> Mark as critical (auto-flags patient and owner)</label></div>
+        <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Close</button>
+          <button class="btn-primary">Save result &amp; mark Ready</button></div>
+      </form>
+    </div>`, async () => {
+      const form = $('#result-upload-form');
+      if (!form) return;
+      const fd = new FormData(form);
+      const file = fd.get('pdf');
+      let pdfPath = null;
+      if (file && file.size && file.size > 0) {
+        const path = `${SESSION.business.id}/${id}_${Date.now()}.pdf`;
+        const {error} = await sb.storage.from('lab-results').upload(path, file, {contentType:'application/pdf', upsert:false});
+        if (error) { toast({title:'Upload failed', message:error.message, type:'error'}); return; }
+        pdfPath = path;
+      }
+      const numeric = fd.get('numeric_value');
+      await sb.from('lab_results').insert({
+        business_id:   SESSION.business.id,
+        lab_order_id:  id,
+        numeric_value: numeric ? parseFloat(numeric) : null,
+        text_value:    fd.get('text_value') || null,
+        unit:          fd.get('unit') || null,
+        is_critical:   !!fd.get('is_critical'),
+        pdf_path:      pdfPath,
+      });
+      await setStatus(id, 'ready');
+      toast({title:'Result saved', message:'Order moved to Ready to send', type:'info'});
+      navigate('#/dashboard/lab');
+    });
+
+    /* PDF download links inside the modal */
+    setTimeout(() => {
+      document.querySelectorAll('[data-pdf]').forEach(a => a.onclick = async (ev) => {
+        ev.preventDefault();
+        const path = a.getAttribute('data-pdf');
+        const {data:signed} = await sb.storage.from('lab-results').createSignedUrl(path, 60*60);
+        if (signed?.signedUrl) window.open(signed.signedUrl, '_blank');
+      });
+    }, 100);
   });
+
+  /* Search / date filter / refresh */
+  const search = $('#lab-search');
+  if (search) search.oninput = () => {
+    const q = search.value.toLowerCase().trim();
+    document.querySelectorAll('.lab-card').forEach(r => {
+      r.style.display = !q || r.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
+  const dateF = $('#lab-date-filter');
+  if (dateF) dateF.onchange = () => {
+    const filter = dateF.value;
+    const today   = new Date().toISOString().slice(0,10);
+    const weekAgo = new Date(Date.now() - 7*86400*1000).toISOString().slice(0,10);
+    document.querySelectorAll('.lab-card').forEach(r => {
+      const m = r.textContent.match(/(\d{4}-\d{2}-\d{2})/);
+      if (!m) return;
+      let show = true;
+      if (filter === 'today') show = m[1] === today;
+      if (filter === 'week')  show = m[1] >= weekAgo;
+      r.style.display = show ? '' : 'none';
+    });
+  };
+  const refresh = $('#lab-refresh');
+  if (refresh) refresh.onclick = () => navigate('#/dashboard/lab');
 }
 
 /* ---------- TEST CATALOG (CRUD over lab_tests) ---------- */
