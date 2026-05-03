@@ -516,7 +516,7 @@ function renderLanding(){
 
     <section class="hero">
       <h1>Your business deserves a <span>24/7 AI receptionist</span></h1>
-      <p>Nova AI handles WhatsApp messages and voice calls in Arabic, French and English. Books appointments straight into Google Calendar, notifies your team in real time.</p>
+      <p>Nova AI handles WhatsApp messages and voice calls in Arabic, French and English. Reads handwritten prescriptions, books appointments on a built-in calendar, and notifies your team in real time — no third-party calendar required.</p>
       <div class="hero-cta">
         <a href="#/auth?mode=signup" class="btn btn-primary">Create your business →</a>
         <a class="btn btn-ghost" href="#/auth">Sign in</a>
@@ -526,8 +526,8 @@ function renderLanding(){
     <section class="who">
       <h2>Built for any business that books appointments</h2>
       <div class="who-grid">
-        <div class="who-card"><div class="ic">+</div><h4>Clinics</h4><p>Multi-doctor scheduling</p></div>
-        <div class="who-card"><div class="ic">▽</div><h4>Laboratoires</h4><p>Lab tests & sample collection</p></div>
+        <div class="who-card"><div class="ic">+</div><h4>Clinics</h4><p>Multi-doctor scheduling with triage</p></div>
+        <div class="who-card"><div class="ic">▽</div><h4>Laboratoires</h4><p>Test catalog, prescription OCR, results delivery</p></div>
         <div class="who-card"><div class="ic">◊</div><h4>Independent doctors</h4><p>Solo practice automation</p></div>
         <div class="who-card"><div class="ic">▤</div><h4>Companies</h4><p>Sales meetings, support intake</p></div>
         <div class="who-card"><div class="ic">★</div><h4>Salons & spas</h4><p>Stylist & treatment booking</p></div>
@@ -535,13 +535,20 @@ function renderLanding(){
     </section>
 
     <section class="features">
-      <div class="feature"><div class="feature-icon">🌐</div><h3>Trilingual AI</h3><p>Claude understands and replies in Arabic, French and English. Auto-detects the patient's language.</p></div>
-      <div class="feature"><div class="feature-icon">📞</div><h3>Voice + text</h3><p>Patients can call or text the same number. Voice is transcribed by Whisper and runs through the same pipeline.</p></div>
-      <div class="feature"><div class="feature-icon">📅</div><h3>Built-in Calendar</h3><p>All appointments live on a single calendar in the dashboard. AI checks availability before booking.</p></div>
-      <div class="feature"><div class="feature-icon">🔔</div><h3>Real-time alerts</h3><p>Supabase Realtime pushes new bookings and urgent messages instantly to staff dashboards.</p></div>
+      <div class="feature"><div class="feature-icon">🌐</div><h3>Trilingual AI</h3><p>Claude understands and replies in Arabic, French and English (including darija and Arabizi). Auto-detects the patient's language.</p></div>
+      <div class="feature"><div class="feature-icon">📞</div><h3>Voice + text</h3><p>Patients can call or text the same number. Voice notes are transcribed by Whisper and run through the same pipeline.</p></div>
+      <div class="feature"><div class="feature-icon">📅</div><h3>Built-in calendar</h3><p>All appointments live in the dashboard. Nova checks availability with a 30-minute buffer before booking, and remembers each patient's preferences across visits.</p></div>
+      <div class="feature"><div class="feature-icon">📋</div><h3>Prescription OCR</h3><p>Patients send a photo of a handwritten ordonnance — Claude Vision reads it, matches against your test catalog and auto-fills the booking.</p></div>
+      <div class="feature"><div class="feature-icon">🔔</div><h3>Real-time alerts</h3><p>Supabase Realtime pushes new bookings, cancellations and urgent triage flags instantly to staff dashboards.</p></div>
+      <div class="feature"><div class="feature-icon">📊</div><h3>Lab pipeline</h3><p>Sample collection → analysis → results delivery, all on a kanban grouped per patient. One-tap WhatsApp delivery of result PDFs.</p></div>
     </section>
 
-    <footer class="footer">Nova AI · Multi-tenant · Self-hosted on Supabase</footer>`;
+    <footer class="footer">
+      <div style="text-align:center;padding:18px 12px">
+        <div>Nova AI &middot; 24/7 multilingual receptionist for appointment-driven businesses</div>
+        <div style="margin-top:8px;font-size:.9em;opacity:.7">Designed and built by <b>Mehdi Cheikh</b> &middot; &copy; ${new Date().getFullYear()}</div>
+      </div>
+    </footer>`;
 }
 function bindLanding(){
   const tb = $('#theme-btn'); if (tb) tb.onclick = cycleTheme;
@@ -559,22 +566,51 @@ function cycleTheme(){
 
 /* ---------- 9. AUTH ---------- */
 function renderAuth(){
-  return `<div class="auth-wrap"><div class="auth-card">
-    <div class="logo" style="justify-content:center;margin-bottom:18px"><div class="logo-mark">N</div> Nova AI</div>
-    <h2 style="text-align:center;margin:0 0 8px;font-size:20px">Sign in to Nova AI</h2>
-    <p style="text-align:center;color:var(--text-dim);font-size:13.5px;margin:0 0 22px">Enter your email and we send a magic link. New email creates a new account.</p>
+  const params = new URLSearchParams((window.location.hash.split('?')[1]||''));
+  const mode = params.get('mode') === 'signup' ? 'signup' : 'signin';
+  const isSignup = mode === 'signup';
+  return `<div class="auth-wrap"><div class="auth-card" style="max-width:440px">
+    <div class="logo" style="justify-content:center;margin-bottom:14px"><div class="logo-mark">N</div> Nova AI</div>
+
+    <div style="display:flex;background:rgba(99,102,241,0.08);border-radius:8px;padding:4px;margin-bottom:18px">
+      <a href="#/auth" class="auth-tab ${!isSignup?'active':''}" style="flex:1;text-align:center;padding:8px;border-radius:6px;text-decoration:none;font-size:14px;${!isSignup?'background:var(--accent);color:white;font-weight:600':'color:var(--text-dim)'}">Sign in</a>
+      <a href="#/auth?mode=signup" class="auth-tab ${isSignup?'active':''}" style="flex:1;text-align:center;padding:8px;border-radius:6px;text-decoration:none;font-size:14px;${isSignup?'background:var(--accent);color:white;font-weight:600':'color:var(--text-dim)'}">Create account</a>
+    </div>
+
+    <h2 style="text-align:center;margin:0 0 6px;font-size:20px">${isSignup ? 'Get Nova running for your business' : 'Welcome back'}</h2>
+    <p style="text-align:center;color:var(--text-dim);font-size:13.5px;margin:0 0 18px;line-height:1.5">${isSignup
+      ? 'Free 14-day trial · no card required · cancel any time. We\\'ll send a magic link to confirm your email.'
+      : 'Enter the email you signed up with. We\\'ll send a one-time magic link — no passwords to remember.'}</p>
 
     <button class="btn btn-google btn-block" id="google-btn">
       <span style="display:inline-block;width:18px;height:18px;background:conic-gradient(from 0deg,#ea4335 0 25%,#fbbc04 25% 50%,#34a853 50% 75%,#4285f4 75% 100%);border-radius:50%"></span>
       Continue with Google
     </button>
-    <div class="auth-divider">or</div>
+    <div class="auth-divider">or with email</div>
 
     <form id="auth-form">
-      <div class="field"><label>Email</label><input name="email" type="email" required placeholder="you@business.com" /></div>
-      <button class="btn btn-primary btn-block" type="submit"><span id="auth-btn-label">Send me a magic link</span><span class="loading hidden" id="auth-spin"></span></button>
+      <div class="field">
+        <label for="auth-email">Email${isSignup?' address':''}</label>
+        <input id="auth-email" name="email" type="email" required autocomplete="email" inputmode="email" placeholder="${isSignup?'you@yourbusiness.com':'name@example.com'}" />
+        <div class="sub" id="auth-email-hint" style="font-size:.8em;margin-top:4px;display:none"></div>
+      </div>
+      ${isSignup ? `<div class="field">
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text-dim);font-weight:400">
+          <input type="checkbox" id="auth-terms" required style="margin-top:3px" />
+          <span>I agree to receive a magic link by email and accept that Nova will use this address to identify my business account.</span>
+        </label>
+      </div>` : ''}
+      <button class="btn btn-primary btn-block" type="submit" id="auth-submit">
+        <span id="auth-btn-label">${isSignup?'Create my account →':'Send me a magic link'}</span>
+        <span class="loading hidden" id="auth-spin"></span>
+      </button>
+      <div id="auth-status" style="display:none;text-align:center;margin-top:12px;padding:10px;border-radius:6px;font-size:13.5px"></div>
     </form>
-    <div class="auth-foot"><div style="margin-top:10px"><a href="#/">back</a></div></div>
+
+    <div class="auth-foot" style="margin-top:18px;text-align:center;font-size:12.5px;color:var(--text-dim);line-height:1.6">
+      <div>${isSignup?'Already using Nova?':'New to Nova?'} <a href="${isSignup?'#/auth':'#/auth?mode=signup'}">${isSignup?'Sign in instead':'Create your account'}</a></div>
+      <div style="margin-top:6px"><a href="#/">← Back to home</a></div>
+    </div>
   </div></div>`;
 }
 function bindAuth(){
@@ -588,14 +624,85 @@ function bindAuth(){
     });
     if (error) toast({title:'Google sign-in failed', message:error.message, urgent:true});
   };
+  /* Live email validation hint */
+  const emailInput = $('#auth-email');
+  const hint       = $('#auth-email-hint');
+  if (emailInput && hint) emailInput.oninput = () => {
+    const v = emailInput.value.trim();
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+    if (!v) { hint.style.display = 'none'; return; }
+    hint.style.display = 'block';
+    if (valid) {
+      hint.textContent = '✓ Looks good — we\\'ll send the magic link there.';
+      hint.style.color = '#22c55e';
+    } else {
+      hint.textContent = 'That doesn\\'t look like a valid email yet.';
+      hint.style.color = '#eab308';
+    }
+  };
+
   $('#auth-form').onsubmit = async (e)=>{
     e.preventDefault();
-    const fd = Object.fromEntries(new FormData(e.target).entries());
-    $('#auth-spin').classList.remove('hidden');
-    const {error} = await sb.auth.signInWithOtp({email:fd.email, options:{emailRedirectTo: window.location.origin+window.location.pathname}});
-    $('#auth-spin')?.classList.add('hidden');
-    if (error) toast({title:'Failed to send', message:error.message, urgent:true});
-    else toast({title:'Check your email', message:'We sent a magic link to '+fd.email, type:'info'});
+    const fd       = Object.fromEntries(new FormData(e.target).entries());
+    const email    = (fd.email || '').trim().toLowerCase();
+    const status   = $('#auth-status');
+    const submit   = $('#auth-submit');
+    const spinner  = $('#auth-spin');
+    const label    = $('#auth-btn-label');
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      status.style.display = 'block';
+      status.style.background = 'rgba(239,68,68,0.1)';
+      status.style.color = '#ef4444';
+      status.textContent = 'Please enter a valid email address.';
+      return;
+    }
+
+    submit.disabled = true;
+    spinner.classList.remove('hidden');
+    label.textContent = 'Sending...';
+    status.style.display = 'none';
+
+    const {error} = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+    });
+
+    spinner.classList.add('hidden');
+
+    if (error) {
+      submit.disabled = false;
+      label.textContent = 'Try again';
+      status.style.display = 'block';
+      status.style.background = 'rgba(239,68,68,0.1)';
+      status.style.color = '#ef4444';
+      const msg = (error.message||'').toLowerCase().includes('rate')
+        ? 'Too many requests in a row — please wait a minute and try again.'
+        : 'Could not send the magic link: ' + error.message;
+      status.textContent = msg;
+      return;
+    }
+
+    /* SUCCESS — replace the form area with a confirmation panel */
+    label.textContent = '✓ Sent';
+    status.style.display = 'block';
+    status.style.background = 'rgba(34,197,94,0.10)';
+    status.style.color = '#22c55e';
+    status.style.textAlign = 'left';
+    status.style.padding = '14px 16px';
+    status.innerHTML = `
+      <div style="font-weight:600;font-size:14.5px;margin-bottom:6px">📩 Check your inbox</div>
+      <div style="font-size:13px;line-height:1.55;color:var(--text)">
+        We sent a magic link to <b>${escapeHtml(email)}</b>.<br>
+        Open the email and click the button to finish signing in. The link is valid for 60 minutes.
+      </div>
+      <div style="font-size:12px;margin-top:10px;opacity:.8">
+        Don't see it? Check your spam folder, or <a href="#" id="auth-resend">send again</a>.
+      </div>`;
+    setTimeout(() => {
+      const r = $('#auth-resend');
+      if (r) r.onclick = (ev) => { ev.preventDefault(); submit.disabled = false; label.textContent = 'Send me a magic link'; };
+    }, 50);
   };
   sb.auth.onAuthStateChange(async (_event, session)=>{
     if (session && !SESSION){ SESSION = await loadSession(); render(); }
