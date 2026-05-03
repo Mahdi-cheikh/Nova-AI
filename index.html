@@ -1366,8 +1366,9 @@ async function renderLabPipeline(){
           ${flags.length?`<div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">${flags.join('')}</div>`:''}
         </div>
       </div>
-      <div style="display:flex;gap:6px;margin-top:10px">
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
         ${nextStatus ? `<button class="btn-primary lab-group-advance" data-ids="${g.testIds.join(',')}" data-aptid="${g.appointment_id||''}" data-to="${nextStatus}" style="font-size:.8em;padding:6px 10px;flex:1">${LAB_NLBL[g.minStatus]} all →</button>` : ''}
+        ${g.minStatus === 'ready' ? `<button class="btn-ghost lab-group-pickedup" data-ids="${g.testIds.join(',')}" style="font-size:.74em;padding:6px 8px" title="Patient picked up in person — archive without sending WhatsApp">✓ Picked up</button>` : ''}
         ${prevStatus ? `<button class="btn-ghost lab-group-revert" data-ids="${g.testIds.join(',')}" data-to="${prevStatus}" style="font-size:.74em;padding:6px 8px" title="Revert all">← undo</button>` : ''}
       </div>
     </div>`;
@@ -1452,6 +1453,17 @@ async function bindLabPipeline(){
     b.disabled = true;
     await sb.from('lab_orders').update({status: to}).in('id', ids);
     toast({title:'Reverted', message:`${ids.length} test${ids.length===1?'':'s'} back to ${LAB_NICE[to]}`, type:'info'});
+    await render();
+  });
+
+  /* Picked-up (in-person) — archive without sending a WhatsApp notification */
+  document.querySelectorAll('.lab-group-pickedup').forEach(b => b.onclick = async (e) => {
+    e.stopPropagation();
+    const ids = b.getAttribute('data-ids').split(',').filter(Boolean);
+    if (!confirm('Mark these test(s) as picked up in person? They will be removed from the kanban.')) return;
+    b.disabled = true; b.textContent = '...';
+    await setStatusBatch(ids, 'delivered');
+    toast({title:'Archived', message:`${ids.length} test${ids.length===1?'':'s'} marked as delivered`, type:'info'});
     await render();
   });
 
