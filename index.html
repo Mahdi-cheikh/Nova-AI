@@ -908,6 +908,37 @@ function renderLanding(){
     @media (prefers-color-scheme:dark){ .lp-footer{border-color:rgba(255,255,255,0.06)} }
     .lp-footer b { color:#6366f1; }
 
+    /* How it works steps */
+    .lp-steps { display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:48px; }
+    @media (max-width:980px) { .lp-steps{ grid-template-columns:repeat(2,1fr) } }
+    @media (max-width:560px) { .lp-steps{ grid-template-columns:1fr } }
+    .lp-step { background:#fff;border:1px solid rgba(15,23,42,0.06);border-radius:16px;padding:24px;position:relative;transition:transform .2s, box-shadow .2s; }
+    @media (prefers-color-scheme:dark){ .lp-step{background:#13151c;border-color:rgba(99,102,241,0.18)} }
+    .lp-step:hover { transform:translateY(-3px);box-shadow:0 12px 28px -8px rgba(99,102,241,0.18); }
+    .lp-step-num { position:absolute;top:-14px;left:24px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:800;font-size:15px;display:grid;place-items:center;box-shadow:0 4px 12px rgba(99,102,241,0.4); }
+    .lp-step-ic { font-size:30px;margin:8px 0 14px; }
+    .lp-step h3 { margin:0 0 8px;font-size:16px;font-weight:700;letter-spacing:-0.2px; }
+    .lp-step p { margin:0;font-size:13.5px;line-height:1.6;color:#64748b; }
+    @media (prefers-color-scheme:dark){ .lp-step p{color:#94a3b8} }
+    .lp-step i { color:#6366f1;font-style:normal;background:rgba(99,102,241,0.08);padding:1px 6px;border-radius:4px;font-weight:600; }
+
+    /* WhatsApp number explainer card */
+    .lp-number-card { background:#f8fafc;border:1px solid rgba(15,23,42,0.06);border-radius:20px;padding:28px;margin-top:20px; }
+    @media (prefers-color-scheme:dark){ .lp-number-card{background:#13151c;border-color:rgba(99,102,241,0.18)} }
+    .lp-number-head { display:flex;gap:14px;align-items:center;margin-bottom:22px;flex-wrap:wrap; }
+    .lp-number-icon { width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#25d366,#128c7e);display:grid;place-items:center;color:white;font-size:24px;flex-shrink:0; }
+    .lp-number-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px; }
+    @media (max-width:920px) { .lp-number-grid{ grid-template-columns:1fr } }
+    .lp-num-opt { background:#ffffff;border:1px solid rgba(15,23,42,0.05);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:transform .15s, border-color .15s; }
+    @media (prefers-color-scheme:dark){ .lp-num-opt{background:#1a1d27;border-color:rgba(255,255,255,0.05)} }
+    .lp-num-opt:hover { transform:translateY(-2px);border-color:rgba(99,102,241,0.3); }
+    .lp-num-tag { font-size:10.5px;font-weight:800;letter-spacing:0.5px;padding:3px 8px;border-radius:5px;align-self:flex-start; }
+    .lp-num-opt h4 { margin:2px 0 4px;font-size:15px;font-weight:700; }
+    .lp-num-opt p { margin:0;font-size:12.5px;line-height:1.55;color:#64748b; }
+    @media (prefers-color-scheme:dark){ .lp-num-opt p{color:#94a3b8} }
+    .lp-number-foot { margin-top:20px;padding:14px 18px;background:rgba(99,102,241,0.08);border-radius:10px;font-size:13px;line-height:1.6;color:#475569; }
+    @media (prefers-color-scheme:dark){ .lp-number-foot{color:#cbd5e1} }
+
     /* Animations */
     @keyframes lp-fadeup { from { opacity:0;transform:translateY(20px) } to { opacity:1;transform:none } }
     @keyframes lp-float { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-10px) } }
@@ -1007,6 +1038,89 @@ function renderLanding(){
       <div class="lp-feature lp-fadein"><div class="lp-feat-ic orange">🔔</div><h3>Instant alerts</h3><p>Real-time push to your team for new bookings, urgent triage, no-shows.</p></div>
       <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue">👥</div><h3>Multi-user access</h3><p>Owner dashboard, doctor mobile app, lab technician kanban — one platform.</p></div>
       <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink">📊</div><h3>Analytics</h3><p>Bookings, revenue, no-shows, popular services — beautiful weekly reports.</p></div>
+    </section>
+
+    <section id="how" class="lp-section">
+      <div class="lp-section-h">
+        <h2>How Nova works for your business</h2>
+        <p>From sign-up to your first WhatsApp booking in under 10 minutes — no app to install for you or your customers.</p>
+      </div>
+
+      <div class="lp-steps">
+        <div class="lp-step lp-fadein">
+          <div class="lp-step-num">1</div>
+          <div class="lp-step-ic">📝</div>
+          <h3>Sign up &amp; create your business</h3>
+          <p>Pick your type — clinic, lab, salon, garage, lawyer — and Nova pre-loads the right services, reminder templates and forms for your industry. Free 14-day trial, no card required.</p>
+        </div>
+
+        <div class="lp-step lp-fadein">
+          <div class="lp-step-num">2</div>
+          <div class="lp-step-ic">📱</div>
+          <h3>Get your WhatsApp number</h3>
+          <p>This is the address customers text Nova at. Three ways to do it — we handle the Meta verification &amp; the green-tick paperwork either way.</p>
+        </div>
+
+        <div class="lp-step lp-fadein">
+          <div class="lp-step-num">3</div>
+          <div class="lp-step-ic">⚙</div>
+          <h3>Configure services &amp; team</h3>
+          <p>Add your doctors / stylists / mechanics with their hours and specialties. Add your services, prices, durations. Nova adapts the booking conversation to what you sell.</p>
+        </div>
+
+        <div class="lp-step lp-fadein">
+          <div class="lp-step-num">4</div>
+          <div class="lp-step-ic">📤</div>
+          <h3>Share with customers</h3>
+          <p>Print the QR code stickers we generate for your door, mirrors, business cards, receipts. Add the WhatsApp link to your Instagram bio. That's your channel, open 24/7.</p>
+        </div>
+
+        <div class="lp-step lp-fadein">
+          <div class="lp-step-num">5</div>
+          <div class="lp-step-ic">🤖</div>
+          <h3>Nova handles every conversation</h3>
+          <p>Customers say <i>"Nheb maw3ed ghodwa"</i> in darija, French or English. Nova greets them by name, books their appointment, sends reminders, even reads handwritten prescriptions if you're a lab.</p>
+        </div>
+
+        <div class="lp-step lp-fadein">
+          <div class="lp-step-num">6</div>
+          <div class="lp-step-ic">🔔</div>
+          <h3>You see everything live</h3>
+          <p>Real-time alerts on your dashboard the moment a booking comes in or a triage flag fires. Sound + popup + native push — even when the tab is hidden. Calendar, history, revenue, all in one place.</p>
+        </div>
+      </div>
+
+      <!-- WhatsApp number explainer -->
+      <div class="lp-number-card lp-fadein">
+        <div class="lp-number-head">
+          <div class="lp-number-icon">💬</div>
+          <div>
+            <h3 style="margin:0;font-size:20px">About your WhatsApp business number</h3>
+            <p style="margin:4px 0 0;color:#64748b;font-size:13.5px">This is the single most important question — here's exactly how it works.</p>
+          </div>
+        </div>
+        <div class="lp-number-grid">
+          <div class="lp-num-opt">
+            <div class="lp-num-tag" style="background:rgba(99,102,241,0.15);color:#6366f1">RECOMMENDED</div>
+            <h4>We give you a brand-new number</h4>
+            <p>Nova requests a Meta-verified WhatsApp Business number on your behalf, gets the green tick, configures the webhook. You receive your number ready to share. Costs ~5–15 TND/month for the line itself, included in Pro plan.</p>
+          </div>
+          <div class="lp-num-opt">
+            <div class="lp-num-tag" style="background:rgba(34,197,94,0.15);color:#16a34a">EXISTING NUMBER</div>
+            <h4>Connect your current WhatsApp Business</h4>
+            <p>Already running a WhatsApp Business number? We migrate it to the WhatsApp Cloud API in 48h with no service interruption. Customers see no change. Your old chat history stays archived.</p>
+          </div>
+          <div class="lp-num-opt">
+            <div class="lp-num-tag" style="background:rgba(234,179,8,0.18);color:#b45309">TRY FREE</div>
+            <h4>Use our shared sandbox first</h4>
+            <p>Want to try Nova before committing to a number? Use our shared test number — your trial customers message it and the conversation routes to your business. Switch to a dedicated number any time.</p>
+          </div>
+        </div>
+        <div class="lp-number-foot">
+          <span style="font-weight:600">⚡ Whichever option you pick, customers do not need to install anything.</span>
+          They open WhatsApp like they always do, type a message, get an instant reply.
+        </div>
+      </div>
     </section>
 
     <section id="who" class="lp-section">
