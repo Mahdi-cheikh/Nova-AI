@@ -136,9 +136,43 @@ async function detectRoles() {
 }
 
 async function loadSession() {
-  const { data: { session } } = await sb.auth.getSession();
-  SESSION = session;
-  if (session) await detectRoles();
+  try {
+    const { data } = await Promise.race([
+      sb.auth.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('session-timeout')), 3500)),
+    ]);
+    SESSION = data?.session || null;
+  } catch (e) {
+    console.warn('getSession timed out:', e);
+    SESSION = null;
+  }
+  if (SESSION) {
+    try {
+      await Promise.race([
+        detectRoles(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('roles-timeout')), 4000)),
+      ]);
+    } catch (e) {
+      console.warn('detectRoles timed out:', e);
+    }
+  }
+}
+
+/* Nuclear reset: removes every Supabase auth artifact from localStorage and
+   forces a fresh sign-in. Doesn't wait on the network — survives broken sessions. */
+function hardReset() {
+  try { localStorage.removeItem('nova_active_role'); } catch (_e) {}
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith('sb-') || k.includes('supabase')) localStorage.removeItem(k);
+    }
+  } catch (_e) {}
+  try { sessionStorage.clear(); } catch (_e) {}
+  // Best-effort signOut — fire and forget; don't await.
+  sb.auth.signOut().catch(() => {});
+  location.hash = '';
+  // Bust any cached version when reloading
+  location.replace(location.pathname + '?reset=' + Date.now());
 }
 sb.auth.onAuthStateChange(async (event) => {
   await loadSession();
@@ -347,7 +381,7 @@ async function renderPatientHome() {
   </div>${renderNav('home')}`;
 }
 function bindPatientHome() {
-  $('#signout-btn').onclick = async () => { localStorage.removeItem('nova_active_role'); await sb.auth.signOut(); };
+  $('#signout-btn').onclick = () => hardReset();
   bindNav();
 }
 
@@ -386,7 +420,7 @@ async function renderProfile() {
   </div>${renderNav(navKey)}`;
 }
 function bindProfile() {
-  $('#signout').onclick = async () => { localStorage.removeItem('nova_active_role'); await sb.auth.signOut(); };
+  $('#signout').onclick = () => hardReset();
   const sw = $('#switch-role');
   if (sw) sw.onclick = () => { localStorage.removeItem('nova_active_role'); ACTIVE_ROLE = null; render(); };
   bindNav();
@@ -429,7 +463,7 @@ async function renderDoctorMyDay() {
   </div>${renderNav('home')}`;
 }
 function bindDoctorMyDay() {
-  $('#signout-btn').onclick = async () => { localStorage.removeItem('nova_active_role'); await sb.auth.signOut(); };
+  $('#signout-btn').onclick = () => hardReset();
   document.querySelectorAll('.doc-mark').forEach(b => b.onclick = async () => {
     const id = b.getAttribute('data-id'), to = b.getAttribute('data-to');
     b.disabled = true; b.textContent = '…';
@@ -525,10 +559,11 @@ async function safeRender() {
       <div class="logo-mark" style="margin:0 auto 14px">N</div>
       <h2 style="margin:0 0 8px;font-size:18px">Something went wrong</h2>
       <p class="sub" style="margin:0 0 16px">${escapeHtml(String(err?.message || err))}</p>
-      <button class="btn btn-primary btn-block" onclick="location.reload()">Reload</button>
-      <button class="btn btn-secondary btn-block" style="margin-top:8px" id="err-signout">Sign out</button>
+      <button class="btn btn-primary btn-block" id="err-reload">Reload</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px" id="err-reset">Sign out &amp; reset</button>
     </div></div>`;
-    const so = $('#err-signout'); if (so) so.onclick = async () => { localStorage.removeItem('nova_active_role'); try { await sb.auth.signOut(); } catch (_e) {} location.reload(); };
+    const r = $('#err-reload'); if (r) r.onclick = () => location.reload();
+    const so = $('#err-reset'); if (so) so.onclick = () => hardReset();
   } finally {
     RENDERING = false;
   }
