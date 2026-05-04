@@ -82,7 +82,14 @@
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app">
+  <div class="auth-wrap"><div class="auth-card">
+    <div class="logo-mark" style="margin:0 auto 14px">N</div>
+    <div style="font-size:14px;color:var(--text-dim)">Loading Nova…</div>
+    <div style="margin:18px auto 0;width:32px;height:32px;border:3px solid rgba(99,102,241,0.2);border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  </div></div>
+</div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -133,7 +140,10 @@ async function loadSession() {
   SESSION = session;
   if (session) await detectRoles();
 }
-sb.auth.onAuthStateChange(async () => { await loadSession(); render(); });
+sb.auth.onAuthStateChange(async (event) => {
+  await loadSession();
+  if (typeof safeRender === 'function') safeRender(); else render();
+});
 
 /* ---------- AUTH SCREEN ---------- */
 function renderAuth() {
@@ -497,8 +507,44 @@ async function render() {
     return;
   }
 }
-window.addEventListener('hashchange', render);
-render();
+/* Resilient render: catches any error so the user never sees a blank screen */
+let RENDERING = false;
+async function safeRender() {
+  if (RENDERING) return;
+  RENDERING = true;
+  try {
+    // 6-second hard timeout on auth/role detection — if Supabase is slow we
+    // still surface SOMETHING rather than a forever-loading spinner.
+    await Promise.race([
+      render(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
+    ]);
+  } catch (err) {
+    console.error('Render failed:', err);
+    $('#app').innerHTML = `<div class="auth-wrap"><div class="auth-card">
+      <div class="logo-mark" style="margin:0 auto 14px">N</div>
+      <h2 style="margin:0 0 8px;font-size:18px">Something went wrong</h2>
+      <p class="sub" style="margin:0 0 16px">${escapeHtml(String(err?.message || err))}</p>
+      <button class="btn btn-primary btn-block" onclick="location.reload()">Reload</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px" id="err-signout">Sign out</button>
+    </div></div>`;
+    const so = $('#err-signout'); if (so) so.onclick = async () => { localStorage.removeItem('nova_active_role'); try { await sb.auth.signOut(); } catch (_e) {} location.reload(); };
+  } finally {
+    RENDERING = false;
+  }
+}
+
+window.addEventListener('hashchange', safeRender);
+/* Re-render when the tab becomes visible again (returning from another app, etc.) */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') safeRender();
+});
+/* And on focus, in case visibilitychange doesn't fire on some browsers */
+window.addEventListener('focus', safeRender);
+/* Also re-render when we come back online after the network had dropped */
+window.addEventListener('online', safeRender);
+
+safeRender();
 
 /* Service worker */
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
