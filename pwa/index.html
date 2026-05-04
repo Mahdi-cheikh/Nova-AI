@@ -230,11 +230,6 @@ function renderRolePicker() {
 function bindRolePicker() {
   document.querySelectorAll('.role-card').forEach(c => c.onclick = async () => {
     const role = c.getAttribute('data-role');
-    if (role === 'owner' && OWNER_BIZ) {
-      // Send the owner over to the existing dashboard
-      location.href = location.origin + '/#/dashboard';
-      return;
-    }
     if (role === 'patient' && !PATIENT) {
       // Create the patient_users row now (idempotent RPC)
       const { data, error } = await sb.rpc('pwa_ensure_patient_user', { p_full_name: SESSION.user.user_metadata?.full_name || null });
@@ -499,6 +494,56 @@ function renderDoctorNotes() {
   </div>${renderNav('notes')}`;
 }
 
+/* ---------- OWNER VIEW ---------- */
+function renderOwnerHome() {
+  const bizName = OWNER_BIZ?.name || 'your business';
+  const bizType = OWNER_BIZ?.type || '';
+  return `<div class="wrap">
+    <div class="topbar">
+      <div class="logo"><div class="logo-mark">N</div> Nova</div>
+      <button class="nav-btn" id="signout-btn" style="font-size:11px"><span class="ic">⎋</span><span>Sign out</span></button>
+    </div>
+    <div class="hero">
+      <div class="greet">Owner mode</div>
+      <h1>${escapeHtml(bizName)} ${bizType?`<span style="font-size:13px;opacity:.7;font-weight:400">· ${escapeHtml(bizType)}</span>`:''}</h1>
+      <div style="font-size:13px;opacity:.85;margin-top:6px">The full dashboard with calendar, appointments, lab pipeline, team, settings is on the desktop UI.</div>
+    </div>
+
+    <div class="card">
+      <h3>Open the dashboard</h3>
+      <p class="sub" style="margin:0 0 14px">Best on a tablet or computer — full feature set.</p>
+      <a href="/#/dashboard" class="btn btn-primary btn-block" style="text-decoration:none">Open full dashboard →</a>
+    </div>
+
+    ${ROLES.length > 1 ? `<div class="card">
+      <h3>Switch role</h3>
+      <p class="sub" style="margin:0 0 12px">You also have ${ROLES.filter(r=>r!=='owner').join(' and ')} access on Nova.</p>
+      <button class="btn btn-secondary btn-block" id="switch-role">Pick a different role</button>
+    </div>` : `<div class="card">
+      <h3>Use Nova as a patient</h3>
+      <p class="sub" style="margin:0 0 12px">Want to track your own bookings across other businesses on Nova?</p>
+      <button class="btn btn-secondary btn-block" id="become-patient">Set up as patient</button>
+    </div>`}
+
+    <div class="card" style="text-align:center">
+      <p class="sub" style="margin:0;font-size:11.5px">Designed and built by <b>Mehdi Cheikh</b></p>
+    </div>
+  </div>`;
+}
+function bindOwnerHome() {
+  $('#signout-btn').onclick = () => hardReset();
+  const sw = $('#switch-role'); if (sw) sw.onclick = () => { localStorage.removeItem('nova_active_role'); ACTIVE_ROLE = null; safeRender(); };
+  const bp = $('#become-patient'); if (bp) bp.onclick = async () => {
+    const { data, error } = await sb.rpc('pwa_ensure_patient_user', { p_full_name: SESSION.user.user_metadata?.full_name || null });
+    if (error) { toast('Could not start patient setup: ' + error.message); return; }
+    PATIENT = data;
+    if (!ROLES.includes('patient')) ROLES.push('patient');
+    localStorage.setItem('nova_active_role', 'patient');
+    ACTIVE_ROLE = 'patient';
+    safeRender();
+  };
+}
+
 /* ---------- ROUTER ---------- */
 async function render() {
   await loadSession();
@@ -517,8 +562,8 @@ async function render() {
   // Multi-role with no choice persisted → ask once
   if (!ACTIVE_ROLE && ROLES.length > 1) { $('#app').innerHTML = renderRolePicker(); bindRolePicker(); return; }
 
-  // Owner role: redirect to existing dashboard
-  if (ACTIVE_ROLE === 'owner') { location.href = location.origin + '/#/dashboard'; return; }
+  // Owner role: render an "Owner mode" landing page inside the PWA (no auto-redirect).
+  if (ACTIVE_ROLE === 'owner') { $('#app').innerHTML = renderOwnerHome(); bindOwnerHome(); return; }
 
   // Patient role: phone-OTP onboarding gate
   if (ACTIVE_ROLE === 'patient') {
