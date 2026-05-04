@@ -528,59 +528,310 @@ function bindSetup(){
 /* ---------- 8. LANDING ---------- */
 function renderLanding(){
   return `
-    <header class="nav"><div class="nav-inner">
-      <div class="logo"><div class="logo-mark">N</div> Nova AI</div>
-      <div class="nav-links">
-        <button class="icon-btn" id="theme-btn" title="Toggle theme">${currentThemeIcon()}</button>
-        <a href="#/auth" class="btn btn-ghost btn-sm">Sign in</a>
-        <a href="#/auth?mode=signup" class="btn btn-primary btn-sm">Get started</a>
-      </div>
-    </div></header>
+  <style>
+    /* Landing-page-only styles, scoped to .lp-* */
+    .lp { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;color:#0f172a;background:#ffffff;min-height:100vh; }
+    .lp * { box-sizing:border-box; }
+    @media (prefers-color-scheme: dark) { .lp { background:#0a0b10;color:#f3f4f6 } .lp .lp-card,.lp .lp-feature{background:#13151c;border-color:rgba(99,102,241,0.18) } .lp .lp-mockup{background:#13151c;border-color:rgba(99,102,241,0.2) } .lp-stat{background:#1a1d27 } }
+    .lp-nav { position:sticky;top:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(15,23,42,0.06);z-index:100; }
+    @media (prefers-color-scheme: dark) { .lp-nav{ background:rgba(10,11,16,0.85);border-color:rgba(255,255,255,0.06) } }
+    .lp-nav-inner { max-width:1280px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px; }
+    .lp-brand { display:flex;align-items:center;gap:10px; }
+    .lp-logo-mark { width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);display:grid;place-items:center;color:white;font-weight:800;font-size:20px;box-shadow:0 4px 14px rgba(99,102,241,0.3); }
+    .lp-brand-name { font-weight:700;font-size:17px;letter-spacing:-0.3px;line-height:1; }
+    .lp-brand-tag { font-size:11.5px;color:#6b7280;margin-top:2px; }
+    .lp-nav-links { display:flex;gap:30px;font-size:14px;font-weight:500; }
+    .lp-nav-links a { color:#475569;text-decoration:none;transition:color .15s; }
+    .lp-nav-links a:hover { color:#6366f1; }
+    @media (prefers-color-scheme:dark){ .lp-nav-links a{color:#cbd5e1} }
+    @media (max-width:920px) { .lp-nav-links { display:none; } }
+    .lp-nav-cta { display:flex;gap:10px; }
+    .lp-btn { display:inline-flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:0;cursor:pointer;transition:transform .12s, box-shadow .15s, opacity .15s;gap:8px; }
+    .lp-btn-lg { padding:14px 28px;font-size:15px;border-radius:12px; }
+    .lp-btn:active { transform:scale(0.97); }
+    .lp-btn-primary { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;box-shadow:0 4px 18px rgba(99,102,241,0.35); }
+    .lp-btn-primary:hover { box-shadow:0 6px 24px rgba(99,102,241,0.5); }
+    .lp-btn-outline { background:transparent;color:#0f172a;border:1.5px solid rgba(15,23,42,0.12); }
+    .lp-btn-outline:hover { border-color:#6366f1;color:#6366f1; }
+    @media (prefers-color-scheme:dark){ .lp-btn-outline{color:#f3f4f6;border-color:rgba(255,255,255,0.12)} }
+    .lp-btn-ghost { color:#475569;background:transparent; }
+    @media (prefers-color-scheme:dark){ .lp-btn-ghost{color:#cbd5e1} }
 
-    <section class="hero">
-      <h1>Your business deserves a <span>24/7 AI receptionist</span></h1>
-      <p>Nova AI handles WhatsApp messages and voice calls in Arabic, French and English. Reads handwritten prescriptions, books appointments on a built-in calendar, and notifies your team in real time — no third-party calendar required.</p>
-      <div class="hero-cta">
-        <a href="#/auth?mode=signup" class="btn btn-primary">Create your business →</a>
-        <a class="btn btn-ghost" href="#/auth">Sign in</a>
-        <a href="/pwa/?install=1" class="btn btn-ghost" id="install-cta-hero">📱 Install the app</a>
-      </div>
-    </section>
+    /* Hero */
+    .lp-hero { max-width:1280px;margin:0 auto;padding:60px 24px 80px;display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center; }
+    @media (max-width:1080px) { .lp-hero{ grid-template-columns:1fr;padding:36px 20px 56px;gap:32px } }
+    .lp-hero-content { animation:lp-fadeup .7s ease both; }
+    .lp-badge { display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,0.1);color:#6366f1;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;margin-bottom:22px;border:1px solid rgba(99,102,241,0.18); }
+    .lp-hero h1 { font-size:64px;line-height:1.05;font-weight:800;letter-spacing:-1.5px;margin:0 0 22px;color:#0f172a; }
+    @media (prefers-color-scheme:dark){ .lp-hero h1{color:#f9fafb} }
+    @media (max-width:920px) { .lp-hero h1 { font-size:44px;letter-spacing:-1px } }
+    @media (max-width:480px) { .lp-hero h1 { font-size:36px } }
+    .lp-grad-text { background:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;display:inline-block; }
+    .lp-hero p { font-size:17px;line-height:1.65;color:#475569;margin:0 0 32px;max-width:540px; }
+    @media (prefers-color-scheme:dark){ .lp-hero p{color:#cbd5e1} }
+    .lp-cta-row { display:flex;gap:14px;flex-wrap:wrap;margin-bottom:32px; }
+    .lp-trust { display:flex;align-items:center;gap:14px;flex-wrap:wrap; }
+    .lp-avatars { display:flex; }
+    .lp-avatars span { width:38px;height:38px;border-radius:50%;border:3px solid #fff;display:grid;place-items:center;font-weight:700;font-size:14px;color:white;margin-left:-10px; }
+    .lp-avatars span:first-child { margin-left:0; }
+    @media (prefers-color-scheme:dark){ .lp-avatars span { border-color:#0a0b10 } }
+    .lp-trust-text { font-size:13.5px;font-weight:600;color:#0f172a; }
+    @media (prefers-color-scheme:dark){ .lp-trust-text{color:#f3f4f6} }
+    .lp-trust-stars { color:#fbbf24;font-size:14px;letter-spacing:1px;margin-top:2px; }
 
-    <section class="install-cta" style="max-width:980px;margin:32px auto;padding:0 16px">
-      <div style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#22d3ee 100%);border-radius:20px;padding:32px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px;color:white;box-shadow:0 8px 32px rgba(99,102,241,0.25)">
-        <div style="flex:1;min-width:260px">
-          <div style="font-size:12.5px;text-transform:uppercase;letter-spacing:.6px;opacity:.85;margin-bottom:8px;font-weight:600">📱 Mobile app</div>
-          <h2 style="margin:0 0 10px;font-size:26px;letter-spacing:-0.4px;color:white">Take Nova everywhere</h2>
-          <p style="margin:0;font-size:15px;line-height:1.6;opacity:.95">Install Nova on your phone in 5 seconds. No app store. Works offline. Get push notifications when results arrive or appointments are confirmed. Your business and your bookings, always one tap away.</p>
+    /* Hero visual: dashboard mockup + WhatsApp chat overlay */
+    .lp-hero-visual { position:relative;animation:lp-fadeup .9s ease .1s both; }
+    .lp-mockup { background:#fff;border-radius:18px;box-shadow:0 24px 60px -20px rgba(15,23,42,0.25);border:1px solid rgba(15,23,42,0.06);overflow:hidden;position:relative; }
+    .lp-mockup-head { background:#f8fafc;padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(15,23,42,0.05); }
+    @media (prefers-color-scheme:dark){ .lp-mockup-head{background:#1a1d27;border-color:rgba(255,255,255,0.05)} }
+    .lp-mockup-dot { width:11px;height:11px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#22d3ee); }
+    .lp-mockup-title { font-weight:700;font-size:15px;flex:1; }
+    .lp-mockup-body { padding:18px; }
+    .lp-stats { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px; }
+    .lp-stat { background:#f8fafc;border-radius:10px;padding:10px 12px;border:1px solid rgba(15,23,42,0.04); }
+    .lp-stat-label { font-size:10.5px;color:#64748b;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:6px; }
+    .lp-stat-row { display:flex;align-items:baseline;justify-content:space-between;gap:6px; }
+    .lp-stat-val { font-size:20px;font-weight:800;color:#0f172a; }
+    @media (prefers-color-scheme:dark){ .lp-stat-val{color:#f3f4f6} }
+    .lp-stat-delta { font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:rgba(34,197,94,0.15);color:#16a34a; }
+    .lp-stat-delta.neg { background:rgba(239,68,68,0.15);color:#dc2626; }
+    .lp-stat-foot { font-size:10.5px;color:#94a3b8;margin-top:4px; }
+    .lp-table-h { display:flex;justify-content:space-between;align-items:center;margin:12px 0 8px;padding:0 2px; }
+    .lp-table-h .t { font-weight:700;font-size:13.5px; }
+    .lp-table-h a { font-size:11.5px;color:#6366f1;text-decoration:none;font-weight:600; }
+    .lp-table { display:grid;gap:6px; }
+    .lp-trow { display:grid;grid-template-columns:60px 1fr 1fr 60px;gap:8px;align-items:center;font-size:11.5px;padding:9px 10px;background:#f8fafc;border-radius:7px; }
+    @media (prefers-color-scheme:dark){ .lp-trow{background:#1a1d27} }
+    .lp-trow .t { font-weight:700;color:#0f172a; }
+    @media (prefers-color-scheme:dark){ .lp-trow .t{color:#f3f4f6} }
+    .lp-pill { font-size:9.5px;padding:2px 7px;border-radius:5px;font-weight:700;text-align:center; }
+    .lp-pill.green { background:rgba(34,197,94,0.15);color:#16a34a; }
+    .lp-pill.amber { background:rgba(251,191,36,0.18);color:#b45309; }
+
+    /* Floating WhatsApp chat */
+    .lp-wa { position:absolute;right:-10px;bottom:-30px;width:230px;background:#fff;border-radius:22px;box-shadow:0 24px 60px -10px rgba(15,23,42,0.4);overflow:hidden;border:1px solid rgba(15,23,42,0.06);animation:lp-float 4s ease-in-out infinite; }
+    @media (prefers-color-scheme:dark){ .lp-wa{background:#13151c;border-color:rgba(255,255,255,0.08)} }
+    .lp-wa-head { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:12px 14px;display:flex;align-items:center;gap:10px; }
+    .lp-wa-avatar { width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.18);display:grid;place-items:center;font-weight:800;font-size:14px; }
+    .lp-wa-name { font-size:13px;font-weight:700; }
+    .lp-wa-status { font-size:10.5px;opacity:.85; }
+    .lp-wa-body { padding:12px;background:#f0f2f5;display:flex;flex-direction:column;gap:6px;font-size:11.5px; }
+    @media (prefers-color-scheme:dark){ .lp-wa-body{background:#1a1d27} }
+    .lp-bubble { max-width:78%;padding:7px 10px;border-radius:9px;line-height:1.4; }
+    .lp-bubble.in { align-self:flex-start;background:#ffffff;color:#0f172a; }
+    .lp-bubble.out { align-self:flex-end;background:#dcf8c6;color:#0f172a; }
+    @media (prefers-color-scheme:dark){ .lp-bubble.in{background:#262932;color:#f3f4f6} .lp-bubble.out{background:#005c4b;color:#fff} }
+    @media (max-width:1080px) { .lp-wa { display:none } }
+
+    /* Floating notification card */
+    .lp-notif { position:absolute;left:-30px;bottom:30px;background:#fff;border-radius:14px;box-shadow:0 16px 40px -10px rgba(15,23,42,0.25);padding:14px 18px;display:flex;align-items:center;gap:12px;border:1px solid rgba(15,23,42,0.06);animation:lp-float 5s ease-in-out infinite reverse;max-width:280px; }
+    @media (prefers-color-scheme:dark){ .lp-notif{background:#13151c;border-color:rgba(255,255,255,0.08)} }
+    .lp-notif-icon { width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#22d3ee);display:grid;place-items:center;color:white;flex-shrink:0;font-size:18px; }
+    .lp-notif-t { font-weight:700;font-size:13px; }
+    .lp-notif-d { font-size:11.5px;color:#64748b;margin-top:2px; }
+    @media (max-width:1080px) { .lp-notif { display:none } }
+
+    /* Feature cards */
+    .lp-features-row { max-width:1280px;margin:-30px auto 0;padding:0 24px;display:grid;grid-template-columns:repeat(5,1fr);gap:18px; }
+    @media (max-width:1080px) { .lp-features-row{ grid-template-columns:repeat(2,1fr);margin-top:24px } }
+    @media (max-width:640px) { .lp-features-row{ grid-template-columns:1fr } }
+    .lp-feature { background:#fff;border:1px solid rgba(15,23,42,0.06);border-radius:16px;padding:22px;transition:transform .2s, box-shadow .2s;cursor:default; }
+    .lp-feature:hover { transform:translateY(-4px);box-shadow:0 12px 32px -8px rgba(99,102,241,0.2); }
+    .lp-feat-ic { width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:20px;margin-bottom:14px; }
+    .lp-feat-ic.purple { background:rgba(99,102,241,0.15);color:#6366f1; }
+    .lp-feat-ic.green { background:rgba(34,197,94,0.15);color:#16a34a; }
+    .lp-feat-ic.orange { background:rgba(251,146,60,0.15);color:#ea580c; }
+    .lp-feat-ic.blue { background:rgba(59,130,246,0.15);color:#2563eb; }
+    .lp-feat-ic.pink { background:rgba(236,72,153,0.15);color:#db2777; }
+    .lp-feature h3 { margin:0 0 6px;font-size:16px;font-weight:700;letter-spacing:-0.2px; }
+    .lp-feature p { margin:0;font-size:13.5px;line-height:1.55;color:#64748b; }
+    @media (prefers-color-scheme:dark){ .lp-feature p{color:#94a3b8} }
+
+    /* Sections */
+    .lp-section { max-width:1280px;margin:80px auto;padding:0 24px; }
+    .lp-section-h { text-align:center;margin-bottom:40px; }
+    .lp-section-h h2 { font-size:36px;font-weight:800;letter-spacing:-0.6px;margin:0 0 10px;color:#0f172a; }
+    @media (prefers-color-scheme:dark){ .lp-section-h h2{color:#f3f4f6} }
+    .lp-section-h p { font-size:16px;color:#64748b;margin:0;max-width:600px;margin:0 auto; }
+    .lp-who-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:18px; }
+    @media (max-width:1080px) { .lp-who-grid{ grid-template-columns:repeat(2,1fr) } }
+    @media (max-width:480px) { .lp-who-grid{ grid-template-columns:1fr } }
+    .lp-who { padding:24px 20px;border-radius:16px;background:#f8fafc;border:1px solid rgba(15,23,42,0.04);text-align:center;transition:transform .2s, background .2s; }
+    @media (prefers-color-scheme:dark){ .lp-who{background:#13151c;border-color:rgba(255,255,255,0.05)} }
+    .lp-who:hover { transform:translateY(-3px);background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(139,92,246,0.06)); }
+    .lp-who-ic { font-size:32px;margin-bottom:10px; }
+    .lp-who h4 { margin:0 0 4px;font-size:15px;font-weight:700; }
+    .lp-who p { margin:0;font-size:12.5px;color:#64748b;line-height:1.5; }
+
+    /* Install CTA */
+    .lp-install-card { max-width:1080px;margin:80px auto;padding:0 24px; }
+    .lp-install-inner { background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#22d3ee 100%);border-radius:24px;padding:44px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:30px;color:white;box-shadow:0 20px 50px -10px rgba(99,102,241,0.4);position:relative;overflow:hidden; }
+    .lp-install-inner::before { content:'';position:absolute;top:-50%;right:-10%;width:300px;height:300px;background:rgba(255,255,255,0.08);border-radius:50%;filter:blur(60px); }
+    .lp-install-inner h2 { font-size:32px;letter-spacing:-0.5px;margin:0 0 10px;color:white; }
+    .lp-install-inner p { margin:0;font-size:16px;line-height:1.6;opacity:.95;max-width:520px; }
+    .lp-install-cta { background:white;color:#6366f1;font-weight:700;padding:14px 28px;font-size:15px;border-radius:12px;border:0;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.18);transition:transform .12s, box-shadow .15s; }
+    .lp-install-cta:hover { transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,0.25); }
+
+    /* Footer */
+    .lp-footer { text-align:center;padding:42px 24px;border-top:1px solid rgba(15,23,42,0.06);margin-top:60px;color:#64748b;font-size:13.5px;line-height:1.7; }
+    @media (prefers-color-scheme:dark){ .lp-footer{border-color:rgba(255,255,255,0.06)} }
+    .lp-footer b { color:#6366f1; }
+
+    /* Animations */
+    @keyframes lp-fadeup { from { opacity:0;transform:translateY(20px) } to { opacity:1;transform:none } }
+    @keyframes lp-float { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-10px) } }
+    .lp-fadein { opacity:0;transform:translateY(20px);transition:opacity .8s ease, transform .8s ease; }
+    .lp-fadein.visible { opacity:1;transform:none; }
+  </style>
+
+  <div class="lp">
+    <header class="lp-nav">
+      <div class="lp-nav-inner">
+        <a href="#" class="lp-brand" style="text-decoration:none;color:inherit">
+          <div class="lp-logo-mark">N</div>
+          <div>
+            <div class="lp-brand-name">Nova AI</div>
+            <div class="lp-brand-tag">AI Receptionist</div>
+          </div>
+        </a>
+        <nav class="lp-nav-links">
+          <a href="#features">Features</a>
+          <a href="#how">How It Works</a>
+          <a href="#who">For Clinics</a>
+          <a href="#who">For Doctors</a>
+          <a href="#who">For Companies</a>
+          <a href="#install">Mobile app</a>
+        </nav>
+        <div class="lp-nav-cta">
+          <a href="#/auth" class="lp-btn lp-btn-outline">Log in</a>
+          <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary">Sign up</a>
         </div>
-        <div style="flex-shrink:0;display:flex;flex-direction:column;gap:10px;min-width:200px">
-          <button class="btn btn-primary" id="install-pwa-btn" style="background:white;color:#6366f1;font-weight:700;padding:14px 24px;font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,0.2)">Install Nova app →</button>
-          <a class="btn btn-ghost" href="/pwa/" style="color:white;border:1px solid rgba(255,255,255,0.4);text-align:center">Open mobile version</a>
-          <div style="font-size:11.5px;opacity:.8;text-align:center">Free · works on Android & iPhone</div>
+      </div>
+    </header>
+
+    <section class="lp-hero">
+      <div class="lp-hero-content">
+        <div class="lp-badge">✨ AI Powered Business Assistant</div>
+        <h1>Your 24/7 AI <span class="lp-grad-text">Receptionist</span></h1>
+        <p>Nova helps clinics, labs, doctors, salons and companies automate appointments, communicate with clients in Arabic, French and English on WhatsApp — and never miss an opportunity.</p>
+        <div class="lp-cta-row">
+          <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary lp-btn-lg">Start free demo →</a>
+          <a href="#install" class="lp-btn lp-btn-outline lp-btn-lg">📱 Install the app</a>
+        </div>
+        <div class="lp-trust">
+          <div class="lp-avatars">
+            <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">M</span>
+            <span style="background:linear-gradient(135deg,#22d3ee,#6366f1)">L</span>
+            <span style="background:linear-gradient(135deg,#ec4899,#8b5cf6)">A</span>
+          </div>
+          <div>
+            <div class="lp-trust-text">Trusted by Tunisian clinics &amp; labs</div>
+            <div class="lp-trust-stars">★★★★★</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lp-hero-visual">
+        <div class="lp-mockup">
+          <div class="lp-mockup-head"><div class="lp-mockup-dot"></div><div class="lp-mockup-title">Dashboard</div><span style="font-size:11.5px;color:#94a3b8">Today</span></div>
+          <div class="lp-mockup-body">
+            <div class="lp-stats">
+              <div class="lp-stat"><div class="lp-stat-label">Appointments</div><div class="lp-stat-row"><span class="lp-stat-val">128</span><span class="lp-stat-delta">+12%</span></div><div class="lp-stat-foot">This week</div></div>
+              <div class="lp-stat"><div class="lp-stat-label">New clients</div><div class="lp-stat-row"><span class="lp-stat-val">45</span><span class="lp-stat-delta">+8%</span></div><div class="lp-stat-foot">This week</div></div>
+              <div class="lp-stat"><div class="lp-stat-label">Messages</div><div class="lp-stat-row"><span class="lp-stat-val">320</span><span class="lp-stat-delta">+15%</span></div><div class="lp-stat-foot">This week</div></div>
+              <div class="lp-stat"><div class="lp-stat-label">No-show rate</div><div class="lp-stat-row"><span class="lp-stat-val">5%</span><span class="lp-stat-delta neg">−2%</span></div><div class="lp-stat-foot">This week</div></div>
+            </div>
+            <div class="lp-table-h"><div class="t">Upcoming appointments</div><a href="#/auth">View all</a></div>
+            <div class="lp-table">
+              <div class="lp-trow"><span class="t">09:00</span><span>Sarah Johnson</span><span>Consultation</span><span class="lp-pill green">OK</span></div>
+              <div class="lp-trow"><span class="t">10:30</span><span>Michael Brown</span><span>Cardiology</span><span class="lp-pill green">OK</span></div>
+              <div class="lp-trow"><span class="t">12:00</span><span>Emily Davis</span><span>Lab tests</span><span class="lp-pill amber">Wait</span></div>
+              <div class="lp-trow"><span class="t">14:30</span><span>James Wilson</span><span>Follow-up</span><span class="lp-pill green">OK</span></div>
+              <div class="lp-trow"><span class="t">16:00</span><span>Olivia Taylor</span><span>Consultation</span><span class="lp-pill amber">Wait</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="lp-notif">
+          <div class="lp-notif-icon">🔔</div>
+          <div>
+            <div class="lp-notif-t">New appointment</div>
+            <div class="lp-notif-d">Sarah booked with Dr Smith · 2 min ago</div>
+          </div>
+        </div>
+        <div class="lp-wa">
+          <div class="lp-wa-head">
+            <div class="lp-wa-avatar">N</div>
+            <div><div class="lp-wa-name">Nova AI</div><div class="lp-wa-status">Online</div></div>
+          </div>
+          <div class="lp-wa-body">
+            <div class="lp-bubble in">Hi! 👋 How can I help today?</div>
+            <div class="lp-bubble out">I want a cardiology appointment</div>
+            <div class="lp-bubble in">Sure — Dr Smith is free at 10:00, 14:30. Which works?</div>
+            <div class="lp-bubble out">10:00 please</div>
+            <div class="lp-bubble in">✓ Confirmed for tomorrow at 10:00.</div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="who">
-      <h2>Built for any business that books appointments</h2>
-      <div class="who-grid">
-        <div class="who-card"><div class="ic">+</div><h4>Clinics</h4><p>Multi-doctor scheduling with triage</p></div>
-        <div class="who-card"><div class="ic">▽</div><h4>Laboratoires</h4><p>Test catalog, prescription OCR, results delivery</p></div>
-        <div class="who-card"><div class="ic">◊</div><h4>Independent doctors</h4><p>Solo practice automation</p></div>
-        <div class="who-card"><div class="ic">▤</div><h4>Companies</h4><p>Sales meetings, support intake</p></div>
-        <div class="who-card"><div class="ic">★</div><h4>Salons & spas</h4><p>Stylist & treatment booking</p></div>
+    <section class="lp-features-row">
+      <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple">💬</div><h3>AI chat &amp; voice</h3><p>WhatsApp + voice calls in Arabic, French, English. Auto-detects language.</p></div>
+      <div class="lp-feature lp-fadein"><div class="lp-feat-ic green">📅</div><h3>Smart scheduling</h3><p>Books, reschedules, cancels with calendar sync &amp; conflict checks.</p></div>
+      <div class="lp-feature lp-fadein"><div class="lp-feat-ic orange">🔔</div><h3>Instant alerts</h3><p>Real-time push to your team for new bookings, urgent triage, no-shows.</p></div>
+      <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue">👥</div><h3>Multi-user access</h3><p>Owner dashboard, doctor mobile app, lab technician kanban — one platform.</p></div>
+      <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink">📊</div><h3>Analytics</h3><p>Bookings, revenue, no-shows, popular services — beautiful weekly reports.</p></div>
+    </section>
+
+    <section id="who" class="lp-section">
+      <div class="lp-section-h">
+        <h2>Built for any business that books appointments</h2>
+        <p>One platform, every vertical. Nova adapts to how your business actually works.</p>
+      </div>
+      <div class="lp-who-grid">
+        <div class="lp-who lp-fadein"><div class="lp-who-ic">🏥</div><h4>Clinics</h4><p>Multi-doctor scheduling with triage</p></div>
+        <div class="lp-who lp-fadein"><div class="lp-who-ic">🧪</div><h4>Laboratoires</h4><p>Test catalog &amp; prescription OCR</p></div>
+        <div class="lp-who lp-fadein"><div class="lp-who-ic">🩺</div><h4>Independent doctors</h4><p>Solo practice automation</p></div>
+        <div class="lp-who lp-fadein"><div class="lp-who-ic">💼</div><h4>Companies</h4><p>Sales meetings, support intake</p></div>
+        <div class="lp-who lp-fadein"><div class="lp-who-ic">💇</div><h4>Salons &amp; spas</h4><p>Stylist &amp; treatment booking</p></div>
       </div>
     </section>
 
-    <section class="features">
-      <div class="feature"><div class="feature-icon">🌐</div><h3>Trilingual AI</h3><p>Claude understands and replies in Arabic, French and English (including darija and Arabizi). Auto-detects the patient's language.</p></div>
-      <div class="feature"><div class="feature-icon">📞</div><h3>Voice + text</h3><p>Patients can call or text the same number. Voice notes are transcribed by Whisper and run through the same pipeline.</p></div>
-      <div class="feature"><div class="feature-icon">📅</div><h3>Built-in calendar</h3><p>All appointments live in the dashboard. Nova checks availability with a 30-minute buffer before booking, and remembers each patient's preferences across visits.</p></div>
-      <div class="feature"><div class="feature-icon">📋</div><h3>Prescription OCR</h3><p>Patients send a photo of a handwritten ordonnance — Claude Vision reads it, matches against your test catalog and auto-fills the booking.</p></div>
-      <div class="feature"><div class="feature-icon">🔔</div><h3>Real-time alerts</h3><p>Supabase Realtime pushes new bookings, cancellations and urgent triage flags instantly to staff dashboards.</p></div>
-      <div class="feature"><div class="feature-icon">📊</div><h3>Lab pipeline</h3><p>Sample collection → analysis → results delivery, all on a kanban grouped per patient. One-tap WhatsApp delivery of result PDFs.</p></div>
+    <section id="features" class="lp-section">
+      <div class="lp-section-h">
+        <h2>Everything Nova does</h2>
+        <p>A WhatsApp-first AI receptionist with the depth of a full ops platform.</p>
+      </div>
+      <div class="lp-who-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple">🌐</div><h3>Trilingual AI</h3><p>Claude understands Arabic (incl. darija), French, English. Fluent code-switching.</p></div>
+        <div class="lp-feature lp-fadein"><div class="lp-feat-ic green">📞</div><h3>Voice + text</h3><p>Same number for calls and chat. Whisper transcribes voice notes.</p></div>
+        <div class="lp-feature lp-fadein"><div class="lp-feat-ic orange">📅</div><h3>Built-in calendar</h3><p>30-min buffer between visits, remembers preferences across visits.</p></div>
+        <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue">📋</div><h3>Prescription OCR</h3><p>Patient sends a photo, Claude Vision reads it &amp; pre-fills the booking.</p></div>
+        <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink">⚗</div><h3>Lab pipeline</h3><p>Sample → analysis → results delivery on a kanban grouped per patient.</p></div>
+        <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple">🔔</div><h3>Real-time alerts</h3><p>Instant notifications when bookings, cancels or urgent flags arrive.</p></div>
+      </div>
     </section>
+
+    <section id="install" class="lp-install-card">
+      <div class="lp-install-inner">
+        <div style="flex:1;min-width:280px;position:relative;z-index:1">
+          <div style="font-size:12.5px;text-transform:uppercase;letter-spacing:.6px;opacity:.85;margin-bottom:8px;font-weight:700">📱 Mobile app</div>
+          <h2>Take Nova everywhere</h2>
+          <p>Install Nova on your phone in 5 seconds. No app store. Works offline. Push notifications when results arrive or appointments are confirmed.</p>
+        </div>
+        <div style="flex-shrink:0;display:flex;flex-direction:column;gap:10px;min-width:200px;position:relative;z-index:1">
+          <button class="lp-install-cta" id="install-pwa-btn">Install Nova app →</button>
+          <a href="/pwa/" style="color:white;border:1px solid rgba(255,255,255,0.4);text-align:center;padding:12px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px">Open mobile version</a>
+          <div style="font-size:11.5px;opacity:.85;text-align:center">Free · works on Android &amp; iPhone</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="lp-footer">
+      <div>Nova AI · 24/7 multilingual receptionist for appointment-driven businesses</div>
+      <div style="margin-top:6px">Designed and built by <b>Mehdi Cheikh</b> · © ${new Date().getFullYear()}</div>
+    </footer>
+  </div>`;
+}
 
     <footer class="footer">
       <div style="text-align:center;padding:18px 12px">
@@ -590,7 +841,24 @@ function renderLanding(){
     </footer>`;
 }
 function bindLanding(){
-  const tb = $('#theme-btn'); if (tb) tb.onclick = cycleTheme;
+  /* Smooth scroll for in-page anchor nav */
+  document.querySelectorAll('.lp a[href^="#"]:not([href="#/auth"]):not([href^="#/auth"])').forEach(a => {
+    a.addEventListener('click', (ev) => {
+      const id = a.getAttribute('href').slice(1);
+      const target = document.getElementById(id);
+      if (target) { ev.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+
+  /* Reveal cards on scroll */
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('visible'); io.unobserve(en.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.lp-fadein').forEach(el => io.observe(el));
+  } else {
+    document.querySelectorAll('.lp-fadein').forEach(el => el.classList.add('visible'));
+  }
 
   /* Install button — uses the captured beforeinstallprompt event if available,
      otherwise opens the PWA URL where the in-app install banner takes over. */
