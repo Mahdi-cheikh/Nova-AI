@@ -739,7 +739,25 @@ function bindSetup(){
 }
 
 /* ---------- 8. LANDING ---------- */
+/* Tunisian names + services, randomised each render so the demo feels alive. */
+const TN_NAMES_F = ['Lilia Dridi','Asma Ben Salem','Nadia Trabelsi','Yasmine Hammami','Salma Cheikh','Rania Bouazizi','Sirine Karoui','Mouna Riahi','Nour Mejri','Imen Sassi','Hana Ben Amor','Manel Khelifi','Rim Jelassi','Olfa Bouchra'];
+const TN_NAMES_M = ['Mehdi Cheikh','Karim Ben Ali','Yassine Trabelsi','Anis Hammami','Wassim Ben Salem','Bilel Hamdi','Rami Mejri','Walid Bouazizi','Nizar Karoui','Sami Riahi','Aymen Slimani','Khaled Toumi','Tarek Bouguerra','Houssem Sassi'];
+const TN_DOCTORS = ['Dr Radhouane','Dr Lilia Dridi','Dr Karim Trabelsi','Dr Sami Hammami','Dr Asma Ben Salem','Dr Nizar Mejri','Dr Imen Riahi','Dr Yassine Cheikh'];
+const TN_SERVICES = ['Consultation','Cardiologie','Bilan sanguin','Suivi','Échographie','Glycémie','TSH (Thyroïde)','Bilan lipidique','Vitamine D','NFS'];
+function tnPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function tnPickN(arr, n){ const c = [...arr]; const out = []; while (out.length < n && c.length) out.push(c.splice(Math.floor(Math.random()*c.length),1)[0]); return out; }
+
 function renderLanding(){
+  // Pick 5 unique patient names (mix of male/female), 5 services, and a hero-doctor + booking-name
+  const patientPool = [...TN_NAMES_F, ...TN_NAMES_M];
+  const patients = tnPickN(patientPool, 5);
+  const services = tnPickN(TN_SERVICES, 5);
+  const heroDoctor = tnPick(TN_DOCTORS);
+  const notifPatient = tnPick(patientPool);
+  const notifDoctor  = tnPick(TN_DOCTORS);
+  const chatService  = tnPick(['cardiologie','un bilan sanguin','glycémie à jeun','TSH','vitamine D','suivi de grossesse']);
+  const slots = ['09:00','10:30','12:00','14:30','16:00'];
+  const statuses = ['OK','OK','Wait','OK','Wait'];
   return `
   <style>
     /* Landing-page-only styles, scoped to .lp-* */
@@ -956,11 +974,7 @@ function renderLanding(){
             </div>
             <div class="lp-table-h"><div class="t">Upcoming appointments</div><a href="#/auth">View all</a></div>
             <div class="lp-table">
-              <div class="lp-trow"><span class="t">09:00</span><span>Sarah Johnson</span><span>Consultation</span><span class="lp-pill green">OK</span></div>
-              <div class="lp-trow"><span class="t">10:30</span><span>Michael Brown</span><span>Cardiology</span><span class="lp-pill green">OK</span></div>
-              <div class="lp-trow"><span class="t">12:00</span><span>Emily Davis</span><span>Lab tests</span><span class="lp-pill amber">Wait</span></div>
-              <div class="lp-trow"><span class="t">14:30</span><span>James Wilson</span><span>Follow-up</span><span class="lp-pill green">OK</span></div>
-              <div class="lp-trow"><span class="t">16:00</span><span>Olivia Taylor</span><span>Consultation</span><span class="lp-pill amber">Wait</span></div>
+              ${patients.map((name, i) => `<div class="lp-trow"><span class="t">${slots[i]}</span><span>${name}</span><span>${services[i]}</span><span class="lp-pill ${statuses[i] === 'OK' ? 'green' : 'amber'}">${statuses[i]}</span></div>`).join('')}
             </div>
           </div>
         </div>
@@ -968,7 +982,7 @@ function renderLanding(){
           <div class="lp-notif-icon">🔔</div>
           <div>
             <div class="lp-notif-t">New appointment</div>
-            <div class="lp-notif-d">Sarah booked with Dr Smith · 2 min ago</div>
+            <div class="lp-notif-d">${notifPatient.split(' ')[0]} booked with ${notifDoctor} · 2 min ago</div>
           </div>
         </div>
         <div class="lp-wa">
@@ -977,11 +991,11 @@ function renderLanding(){
             <div><div class="lp-wa-name">Nova AI</div><div class="lp-wa-status">Online</div></div>
           </div>
           <div class="lp-wa-body">
-            <div class="lp-bubble in">Hi! 👋 How can I help today?</div>
-            <div class="lp-bubble out">I want a cardiology appointment</div>
-            <div class="lp-bubble in">Sure — Dr Smith is free at 10:00, 14:30. Which works?</div>
-            <div class="lp-bubble out">10:00 please</div>
-            <div class="lp-bubble in">✓ Confirmed for tomorrow at 10:00.</div>
+            <div class="lp-bubble in">Ahla 👋 ! Comment je peux vous aider ?</div>
+            <div class="lp-bubble out">Nheb mou3id ${chatService} ghodwa</div>
+            <div class="lp-bubble in">Bien sûr ! ${heroDoctor} est libre à 10:00 ou 14:30 — laquelle vous convient ?</div>
+            <div class="lp-bubble out">10:00 svp</div>
+            <div class="lp-bubble in">✓ Confirmé pour demain 10:00.</div>
           </div>
         </div>
       </div>
