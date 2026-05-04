@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nova">
+<meta name="description" content="Nova AI — book appointments and manage your day.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Nova AI</title>
+<style>
+  :root {
+    --bg:#0a0b10; --surface:#13151c; --surface-2:#1a1d27; --border:rgba(99,102,241,0.15);
+    --text:#f3f4f6; --text-dim:#9ca3af; --text-faint:#6b7280;
+    --accent:#6366f1; --accent-2:#8b5cf6; --accent-3:#22d3ee;
+    --green:#22c55e; --yellow:#eab308; --red:#ef4444;
+    --grad:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#22d3ee 100%);
+    --safe-top:env(safe-area-inset-top,0); --safe-bot:env(safe-area-inset-bottom,0);
+  }
+  *,*::before,*::after { box-sizing:border-box; }
+  html,body { margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;overscroll-behavior-y:contain; }
+  body { min-height:100vh;min-height:100dvh;padding-bottom:calc(72px + var(--safe-bot)); }
+  a { color:var(--accent);text-decoration:none; }
+  button { font:inherit;cursor:pointer;border:0;background:transparent;color:inherit; }
+  input,textarea,select { font:inherit;color:inherit;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;width:100%; }
+  input:focus,textarea:focus,select:focus { outline:2px solid var(--accent);outline-offset:1px; }
+  .wrap { max-width:480px;margin:0 auto;padding:calc(20px + var(--safe-top)) 16px 24px; }
+  .topbar { display:flex;align-items:center;justify-content:space-between;margin-bottom:18px; }
+  .logo { display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-0.3px; }
+  .logo-mark { width:32px;height:32px;border-radius:9px;background:var(--grad);display:grid;place-items:center;color:white;font-weight:800;font-size:16px; }
+  .bottom-nav { position:fixed;left:0;right:0;bottom:0;background:rgba(13,15,22,0.92);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:8px 8px calc(8px + var(--safe-bot));display:grid;grid-template-columns:repeat(4,1fr);gap:4px;z-index:50; }
+  .nav-btn { display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:10px;color:var(--text-dim);font-size:11px;transition:color .15s; }
+  .nav-btn .ic { font-size:22px;line-height:1; }
+  .nav-btn.active { color:var(--accent); }
+  .nav-btn:active { background:rgba(99,102,241,0.08); }
+  .card { background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px; }
+  .card h3 { margin:0 0 8px;font-size:16px;font-weight:600; }
+  .sub { color:var(--text-dim);font-size:13px; }
+  .btn { display:inline-flex;align-items:center;justify-content:center;padding:13px 20px;border-radius:12px;font-weight:600;font-size:15px;transition:transform .08s,opacity .15s;gap:8px; }
+  .btn:active { transform:scale(0.97); }
+  .btn-primary { background:var(--grad);color:white;box-shadow:0 4px 16px rgba(99,102,241,0.35); }
+  .btn-secondary { background:var(--surface-2);color:var(--text);border:1px solid var(--border); }
+  .btn-block { width:100%; }
+  .btn[disabled] { opacity:.55;pointer-events:none; }
+  .pill { display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:0.2px; }
+  .pill-blue { background:rgba(99,102,241,0.15);color:#a5b4fc; }
+  .pill-green { background:rgba(34,197,94,0.15);color:#86efac; }
+  .pill-yellow { background:rgba(234,179,8,0.15);color:#fde047; }
+  .pill-red { background:rgba(239,68,68,0.15);color:#fca5a5; }
+  .pill-gray { background:rgba(156,163,175,0.15);color:var(--text-dim); }
+  .hero { background:var(--grad);border-radius:18px;padding:22px;color:white;margin-bottom:14px; }
+  .hero h1 { margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-0.3px; }
+  .hero .greet { font-size:13px;opacity:.9;text-transform:uppercase;letter-spacing:.5px; }
+  .auth-wrap { min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px; }
+  .auth-card { background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 24px;width:100%;max-width:400px;text-align:center; }
+  .auth-card .logo-mark { width:56px;height:56px;font-size:26px;border-radius:14px;margin:0 auto 16px; }
+  .apt-row { padding:12px;border-radius:12px;background:var(--surface-2);margin-bottom:8px;border-left:3px solid var(--accent); }
+  .apt-when { font-weight:600;font-size:14px; }
+  .apt-where { font-size:12.5px;color:var(--text-dim);margin-top:2px; }
+  .empty { text-align:center;padding:40px 16px;color:var(--text-dim); }
+  .empty .ic { font-size:48px;opacity:.4;margin-bottom:8px; }
+  .toast { position:fixed;left:16px;right:16px;bottom:calc(80px + var(--safe-bot));background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13.5px;box-shadow:0 6px 24px rgba(0,0,0,0.5);z-index:100;transform:translateY(140%);transition:transform .25s; }
+  .toast.show { transform:translateY(0); }
+  .section-h { display:flex;justify-content:space-between;align-items:center;margin:16px 4px 10px;font-size:13px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px; }
+  .placeholder-page { padding:40px 16px;text-align:center; }
+  .placeholder-page .ic { font-size:64px;margin-bottom:12px; }
+  .role-card { padding:18px;border-radius:14px;background:var(--surface-2);border:1px solid var(--border);margin-bottom:10px;cursor:pointer;display:flex;gap:14px;align-items:center;transition:transform .08s; }
+  .role-card:active { transform:scale(0.98); }
+  .role-card .ic { font-size:32px;flex-shrink:0; }
+  .role-card .t { font-weight:600;font-size:15px; }
+  .role-card .d { font-size:12.5px;color:var(--text-dim);margin-top:2px; }
+  .otp-input { letter-spacing:8px;font-size:22px;font-weight:600;text-align:center; }
+  @media (prefers-color-scheme:light) {
+    :root { --bg:#f8fafc;--surface:#ffffff;--surface-2:#f1f5f9;--border:rgba(99,102,241,0.18);--text:#0f172a;--text-dim:#64748b;--text-faint:#94a3b8; }
+    .bottom-nav { background:rgba(255,255,255,0.92); }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+/* CONFIG — paste your Supabase anon key once */
+const SUPABASE_URL = "https://blhvzuhufygdcnxpcwqx.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_B07mS2iUZWuFEygDZIyhVg_KW86VgKh";   // <-- paste anon (public) key from Supabase → Settings → API
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY || "MISSING");
+
+let SESSION = null, ROLES = [], ACTIVE_ROLE = null, PATIENT = null, DOCTOR = null, OWNER_BIZ = null;
+
+const $ = (s) => document.querySelector(s);
+const e = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+const route = () => (location.hash || '#/').slice(1) || '/';
+const navigate = (h) => { location.hash = h; };
+const toast = (msg) => { const t = e(`<div class="toast">${escapeHtml(msg)}</div>`); document.body.appendChild(t); requestAnimationFrame(()=>t.classList.add('show')); setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),250); }, 2800); };
+const isoDate = (off=0) => { const d = new Date(); d.setDate(d.getDate()+off); return d.toISOString().slice(0,10); };
+const friendlyDate = (s) => {
+  if (!s) return '';
+  if (s === isoDate(0)) return 'Today';
+  if (s === isoDate(1)) return 'Tomorrow';
+  if (s === isoDate(-1)) return 'Yesterday';
+  return new Date(s+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+};
+
+/* Detect every role this auth user has */
+async function detectRoles() {
+  ROLES = []; PATIENT = null; DOCTOR = null; OWNER_BIZ = null;
+  if (!SESSION) return;
+  const uid = SESSION.user.id;
+  const [{data: pu}, {data: doc}, {data: biz}] = await Promise.all([
+    sb.from('patient_users').select('*').eq('auth_uid', uid).maybeSingle(),
+    sb.from('users').select('id, name, business_id, role, businesses(name, type)').eq('auth_uid', uid).eq('role','doctor').maybeSingle(),
+    sb.from('businesses').select('id, name, type').eq('owner_user_id', uid).maybeSingle(),
+  ]);
+  if (pu)  { PATIENT = pu;       ROLES.push('patient'); }
+  if (doc) { DOCTOR = doc;       ROLES.push('doctor');  }
+  if (biz) { OWNER_BIZ = biz;    ROLES.push('owner');   }
+  const stored = localStorage.getItem('nova_active_role');
+  if (stored && ROLES.includes(stored)) ACTIVE_ROLE = stored;
+  else if (ROLES.length === 1) ACTIVE_ROLE = ROLES[0];
+  else ACTIVE_ROLE = null;
+}
+
+async function loadSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  SESSION = session;
+  if (session) await detectRoles();
+}
+sb.auth.onAuthStateChange(async () => { await loadSession(); render(); });
+
+/* ---------- AUTH SCREEN ---------- */
+function renderAuth() {
+  return `<div class="auth-wrap"><div class="auth-card">
+    <div class="logo-mark">N</div>
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:700">Nova</h2>
+    <p class="sub" style="margin:0 0 20px">Your 24/7 receptionist for clinics, labs, salons and more.</p>
+    <form id="auth-form">
+      <div style="margin-bottom:12px;text-align:left">
+        <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim)">Email</label>
+        <input id="auth-email" type="email" required placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit"><span id="auth-label">Send me a magic link</span></button>
+    </form>
+    <div id="auth-status" style="display:none;margin-top:14px;padding:12px;border-radius:10px;font-size:13px"></div>
+  </div></div>`;
+}
+function bindAuth() {
+  $('#auth-form').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const email = $('#auth-email').value.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { toast('Please enter a valid email'); return; }
+    $('#auth-label').textContent = 'Sending…';
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+    const status = $('#auth-status');
+    status.style.display = 'block';
+    if (error) { status.style.background='rgba(239,68,68,0.12)'; status.style.color='#fca5a5'; status.textContent = error.message; $('#auth-label').textContent = 'Try again'; }
+    else { status.style.background='rgba(34,197,94,0.12)'; status.style.color='#86efac'; status.textContent = `📩 Sent — check ${email} for the magic link.`; $('#auth-label').textContent = '✓ Sent'; }
+  };
+}
+
+/* ---------- ROLE PICKER (only when no role yet, or multi-role) ---------- */
+function renderRolePicker() {
+  const opts = [];
+  // Always offer the patient flow (it's how new users opt in)
+  opts.push({key:'patient', icon:'👤', t:"I'm a patient", d:'Find clinics, manage my appointments, see my results.'});
+  if (DOCTOR)    opts.push({key:'doctor',   icon:'🩺', t:"I'm a doctor",       d:`See your day at ${escapeHtml(DOCTOR.businesses?.name || '')}`});
+  if (OWNER_BIZ) opts.push({key:'owner',    icon:'⚙', t:"I'm a business owner", d:`Open ${escapeHtml(OWNER_BIZ.name)} dashboard`});
+
+  return `<div class="auth-wrap"><div class="auth-card" style="max-width:440px;text-align:left">
+    <div class="logo-mark" style="margin:0 auto 16px">N</div>
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:700;text-align:center">How will you use Nova?</h2>
+    <p class="sub" style="margin:0 0 22px;text-align:center">Pick the experience that fits — you can switch later.</p>
+    ${opts.map(o => `<div class="role-card" data-role="${o.key}">
+      <div class="ic">${o.icon}</div>
+      <div><div class="t">${o.t}</div><div class="d">${o.d}</div></div>
+    </div>`).join('')}
+  </div></div>`;
+}
+function bindRolePicker() {
+  document.querySelectorAll('.role-card').forEach(c => c.onclick = async () => {
+    const role = c.getAttribute('data-role');
+    if (role === 'owner' && OWNER_BIZ) {
+      // Send the owner over to the existing dashboard
+      location.href = location.origin + '/#/dashboard';
+      return;
+    }
+    if (role === 'patient' && !PATIENT) {
+      // Create the patient_users row now (idempotent RPC)
+      const { data, error } = await sb.rpc('pwa_ensure_patient_user', { p_full_name: SESSION.user.user_metadata?.full_name || null });
+      if (error) { toast('Could not start patient setup: ' + error.message); return; }
+      PATIENT = data; ROLES.push('patient');
+    }
+    localStorage.setItem('nova_active_role', role);
+    ACTIVE_ROLE = role;
+    navigate('#/');
+    render();
+  });
+}
+
+/* ---------- PHONE OTP ONBOARDING ---------- */
+function renderPhoneOnboarding(step = 'phone') {
+  if (step === 'phone') return `<div class="auth-wrap"><div class="auth-card">
+    <div class="logo-mark" style="margin:0 auto 14px">N</div>
+    <h2 style="margin:0 0 6px;font-size:20px;font-weight:700">Verify your phone</h2>
+    <p class="sub" style="margin:0 0 18px">We use it to find every appointment you've booked across Nova-powered businesses.</p>
+    <form id="phone-form">
+      <input id="phone-input" type="tel" inputmode="tel" placeholder="+216 29 774 784" required style="margin-bottom:12px;text-align:center;font-size:17px"/>
+      <button class="btn btn-primary btn-block" type="submit" id="phone-submit">Send WhatsApp code</button>
+    </form>
+    <p class="sub" style="margin-top:14px;font-size:11.5px">Format: +216 followed by your 8 digits.</p>
+  </div></div>`;
+  return `<div class="auth-wrap"><div class="auth-card">
+    <div class="logo-mark" style="margin:0 auto 14px">N</div>
+    <h2 style="margin:0 0 6px;font-size:20px;font-weight:700">Enter the code</h2>
+    <p class="sub" style="margin:0 0 18px">We sent a 6-digit code to <b id="phone-display"></b> on WhatsApp.</p>
+    <form id="otp-form">
+      <input id="otp-input" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000" required class="otp-input" style="margin-bottom:12px"/>
+      <button class="btn btn-primary btn-block" type="submit" id="otp-submit">Verify</button>
+    </form>
+    <p class="sub" style="margin-top:14px;font-size:12px"><a href="#" id="otp-resend">Send a new code</a> · <a href="#" id="otp-back">Change number</a></p>
+  </div></div>`;
+}
+let PENDING_PHONE = '';
+async function bindPhoneStep() {
+  $('#phone-form').onsubmit = async (ev) => {
+    ev.preventDefault();
+    let phone = $('#phone-input').value.trim().replace(/\s/g, '');
+    if (!phone.startsWith('+')) phone = '+216' + phone.replace(/^0/, '');
+    if (!/^\+\d{8,15}$/.test(phone)) { toast('Phone must be in +216XXXXXXXX format'); return; }
+    $('#phone-submit').disabled = true; $('#phone-submit').textContent = 'Sending…';
+    const { data, error } = await sb.functions.invoke('pwa-send-otp', {
+      body: { patient_user_id: PATIENT.id, phone },
+    });
+    if (error || data?.error) {
+      toast((error?.message || data?.error || 'Could not send code'));
+      $('#phone-submit').disabled = false; $('#phone-submit').textContent = 'Send WhatsApp code';
+      return;
+    }
+    PENDING_PHONE = phone;
+    $('#app').innerHTML = renderPhoneOnboarding('code');
+    $('#phone-display').textContent = phone;
+    bindOtpStep();
+  };
+}
+function bindOtpStep() {
+  $('#otp-form').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const code = $('#otp-input').value.trim();
+    if (!/^\d{6}$/.test(code)) { toast('Code must be 6 digits'); return; }
+    $('#otp-submit').disabled = true; $('#otp-submit').textContent = 'Checking…';
+    const { data, error } = await sb.functions.invoke('pwa-verify-otp', {
+      body: { patient_user_id: PATIENT.id, phone: PENDING_PHONE, code },
+    });
+    if (error || data?.error) {
+      toast((error?.message || data?.error || 'Verification failed'));
+      $('#otp-submit').disabled = false; $('#otp-submit').textContent = 'Verify';
+      return;
+    }
+    toast('Phone verified — welcome!');
+    await loadSession();
+    navigate('#/');
+    render();
+  };
+  $('#otp-back').onclick = (ev) => { ev.preventDefault(); $('#app').innerHTML = renderPhoneOnboarding('phone'); bindPhoneStep(); };
+  $('#otp-resend').onclick = async (ev) => {
+    ev.preventDefault();
+    const { error } = await sb.functions.invoke('pwa-send-otp', { body: { patient_user_id: PATIENT.id, phone: PENDING_PHONE } });
+    if (error) toast('Could not resend');
+    else toast('New code sent on WhatsApp');
+  };
+}
+
+/* ---------- BOTTOM NAV (per role) ---------- */
+function navItem(key, label, icon, currentKey) {
+  return `<button class="nav-btn ${currentKey===key?'active':''}" data-go="/${key === 'home' ? '' : key}"><span class="ic">${icon}</span><span>${label}</span></button>`;
+}
+function renderNav(currentKey) {
+  if (ACTIVE_ROLE === 'doctor') {
+    return `<nav class="bottom-nav">
+      ${navItem('home','My day','◷',currentKey)}
+      ${navItem('patients','Patients','◉',currentKey)}
+      ${navItem('notes','Notes','▤',currentKey)}
+      ${navItem('profile','Me','◉',currentKey)}
+    </nav>`;
+  }
+  return `<nav class="bottom-nav">
+    ${navItem('home','Home','⌂',currentKey)}
+    ${navItem('discover','Discover','◎',currentKey)}
+    ${navItem('files','Files','▤',currentKey)}
+    ${navItem('profile','Me','◉',currentKey)}
+  </nav>`;
+}
+function bindNav() {
+  document.querySelectorAll('.nav-btn[data-go]').forEach(b => b.onclick = () => navigate('#' + b.getAttribute('data-go')));
+}
+
+/* ---------- PATIENT VIEWS ---------- */
+async function renderPatientHome() {
+  const greet = (() => { const h = new Date().getHours(); return h<12?'Good morning':h<18?'Good afternoon':'Good evening'; })();
+  const name = (PATIENT?.full_name || SESSION.user.email).split(/[\s@]/)[0];
+  const today = isoDate(0);
+  const { data: apts = [] } = await sb.from('appointments')
+    .select('id, date, time, status, total_amount, services(name), businesses(name, phone, type), clients(patient_user_id)')
+    .gte('date', today).neq('status','cancelled').order('date').order('time').limit(8);
+  const mine = (apts||[]).filter(a => a.clients?.patient_user_id === PATIENT?.id);
+
+  const aptCard = (a) => `<div class="apt-row">
+    <div class="apt-when">${friendlyDate(a.date)} · ${(a.time||'').slice(0,5)}</div>
+    <div class="apt-where">${escapeHtml(a.businesses?.name||'')}${a.services?.name?` · ${escapeHtml(a.services.name)}`:''}</div>
+    <div style="margin-top:6px"><span class="pill pill-${a.status==='confirmed'?'green':'gray'}">${a.status}</span>${a.businesses?.phone?` <a href="https://wa.me/${a.businesses.phone.replace(/\D/g,'')}" class="pill pill-blue" style="text-decoration:none;margin-left:6px">📞 WhatsApp</a>`:''}</div>
+  </div>`;
+
+  return `<div class="wrap">
+    <div class="topbar">
+      <div class="logo"><div class="logo-mark">N</div> Nova</div>
+      <button class="nav-btn" id="signout-btn" style="font-size:11px"><span class="ic">⎋</span><span>Sign out</span></button>
+    </div>
+    <div class="hero">
+      <div class="greet">${greet}</div>
+      <h1>${escapeHtml(name)} 👋</h1>
+      <div style="font-size:13px;opacity:.85;margin-top:4px">${mine.length===0?'You have no upcoming appointments.':`You have ${mine.length} upcoming appointment${mine.length===1?'':'s'}.`}</div>
+    </div>
+    <div class="section-h"><span>Upcoming</span></div>
+    ${mine.length===0?`<div class="card"><div class="empty"><div class="ic">📅</div>Nothing scheduled yet.<br><a href="#/discover">Find a business →</a></div></div>`:mine.slice(0,3).map(aptCard).join('')}
+    <div class="section-h"><span>Quick actions</span></div>
+    <div class="card" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <a href="#/discover" class="btn btn-secondary" style="text-decoration:none">◎ Find</a>
+      <a href="#/files" class="btn btn-secondary" style="text-decoration:none">▤ Files</a>
+    </div>
+  </div>${renderNav('home')}`;
+}
+function bindPatientHome() {
+  $('#signout-btn').onclick = async () => { localStorage.removeItem('nova_active_role'); await sb.auth.signOut(); };
+  bindNav();
+}
+
+function renderDiscover() {
+  return `<div class="wrap"><div class="topbar"><div class="logo"><div class="logo-mark">N</div> Discover</div></div>
+    <div class="card placeholder-page"><div class="ic">◎</div>
+      <h3 style="margin:0 0 6px">Find a business near you</h3>
+      <p class="sub" style="margin:0 0 16px">Cross-business search lands in iteration #2.</p>
+    </div>
+  </div>${renderNav('discover')}`;
+}
+function renderFiles() {
+  return `<div class="wrap"><div class="topbar"><div class="logo"><div class="logo-mark">N</div> Files</div></div>
+    <div class="card placeholder-page"><div class="ic">▤</div>
+      <h3 style="margin:0 0 6px">Your documents</h3>
+      <p class="sub" style="margin:0">Lab results, prescriptions, contracts. Coming in iteration #4.</p>
+    </div>
+  </div>${renderNav('files')}`;
+}
+async function renderProfile() {
+  const navKey = ACTIVE_ROLE === 'doctor' ? 'profile' : 'profile';
+  return `<div class="wrap"><div class="topbar"><div class="logo"><div class="logo-mark">N</div> Profile</div></div>
+    <div class="card">
+      <h3>${escapeHtml((PATIENT?.full_name || DOCTOR?.name || OWNER_BIZ?.name || SESSION.user.email))}</h3>
+      <div class="sub">${escapeHtml(SESSION.user.email)}${PATIENT?.phone?` · ${escapeHtml(PATIENT.phone)}`:''}</div>
+      ${ACTIVE_ROLE ? `<div style="margin-top:10px"><span class="pill pill-blue">Active role: ${ACTIVE_ROLE}</span></div>` : ''}
+    </div>
+    ${ROLES.length > 1 ? `<div class="card">
+      <h3>Switch role</h3>
+      <p class="sub" style="margin:0 0 10px">You have ${ROLES.length} roles on Nova.</p>
+      <button class="btn btn-secondary btn-block" id="switch-role">Switch</button>
+    </div>` : ''}
+    <div class="card" style="text-align:center"><button class="btn btn-secondary" id="signout">Sign out</button>
+      <p class="sub" style="margin:14px 0 0;font-size:11.5px">Designed and built by <b>Mehdi Cheikh</b></p>
+    </div>
+  </div>${renderNav(navKey)}`;
+}
+function bindProfile() {
+  $('#signout').onclick = async () => { localStorage.removeItem('nova_active_role'); await sb.auth.signOut(); };
+  const sw = $('#switch-role');
+  if (sw) sw.onclick = () => { localStorage.removeItem('nova_active_role'); ACTIVE_ROLE = null; render(); };
+  bindNav();
+}
+
+/* ---------- DOCTOR VIEWS ---------- */
+async function renderDoctorMyDay() {
+  const today = isoDate(0);
+  const { data: apts = [] } = await sb.from('appointments')
+    .select('id, date, time, status, total_amount, triage_level, services(name), clients(name, phone)')
+    .eq('business_id', DOCTOR.business_id).eq('doctor_id', DOCTOR.id)
+    .eq('date', today).order('time');
+
+  const aptCard = (a) => {
+    const triage = a.triage_level === 'urgent' ? '<span class="pill pill-red" style="margin-left:6px">URGENT</span>' : '';
+    return `<div class="apt-row">
+      <div class="apt-when">${(a.time||'').slice(0,5)} · ${escapeHtml(a.clients?.name || '—')} ${triage}</div>
+      <div class="apt-where">${escapeHtml(a.services?.name || '')} · ${escapeHtml(a.clients?.phone || '')}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <span class="pill pill-${a.status==='confirmed'?'green':a.status==='completed'?'blue':a.status==='no_show'?'red':'gray'}">${a.status}</span>
+        ${a.status === 'confirmed' ? `<button class="btn btn-secondary doc-mark" data-id="${a.id}" data-to="completed" style="font-size:12px;padding:5px 10px">✓ Done</button>
+                                       <button class="btn btn-secondary doc-mark" data-id="${a.id}" data-to="no_show" style="font-size:12px;padding:5px 10px">✗ No-show</button>` : ''}
+        ${a.clients?.phone ? `<a href="https://wa.me/${a.clients.phone.replace(/\D/g,'')}" class="btn btn-secondary" style="font-size:12px;padding:5px 10px;text-decoration:none">📞 Chat</a>` : ''}
+      </div>
+    </div>`;
+  };
+
+  return `<div class="wrap">
+    <div class="topbar">
+      <div class="logo"><div class="logo-mark">N</div> ${escapeHtml(DOCTOR.name || 'Doctor')}</div>
+      <button class="nav-btn" id="signout-btn" style="font-size:11px"><span class="ic">⎋</span><span>Sign out</span></button>
+    </div>
+    <div class="hero">
+      <div class="greet">${friendlyDate(today)}</div>
+      <h1>${apts.length} appointment${apts.length===1?'':'s'}</h1>
+      <div style="font-size:13px;opacity:.85;margin-top:4px">${escapeHtml(DOCTOR.businesses?.name || '')}</div>
+    </div>
+    <div class="section-h"><span>Today's schedule</span></div>
+    ${apts.length===0?`<div class="card"><div class="empty"><div class="ic">📅</div>No appointments today.</div></div>`:apts.map(aptCard).join('')}
+  </div>${renderNav('home')}`;
+}
+function bindDoctorMyDay() {
+  $('#signout-btn').onclick = async () => { localStorage.removeItem('nova_active_role'); await sb.auth.signOut(); };
+  document.querySelectorAll('.doc-mark').forEach(b => b.onclick = async () => {
+    const id = b.getAttribute('data-id'), to = b.getAttribute('data-to');
+    b.disabled = true; b.textContent = '…';
+    await sb.from('appointments').update({ status: to }).eq('id', id);
+    toast(`Marked ${to.replace('_',' ')}`);
+    render();
+  });
+  bindNav();
+}
+
+async function renderDoctorPatients() {
+  const { data: apts = [] } = await sb.from('appointments')
+    .select('client_id, clients(id, name, phone, age, last_visit_at)')
+    .eq('doctor_id', DOCTOR.id).order('created_at',{ascending:false}).limit(200);
+  const seen = new Map();
+  for (const a of apts) { if (a.clients && !seen.has(a.client_id)) seen.set(a.client_id, a.clients); }
+  const list = Array.from(seen.values());
+  const row = (c) => `<div class="apt-row">
+    <div class="apt-when">${escapeHtml(c.name||'—')} ${c.age?`<span class="pill pill-gray" style="margin-left:6px">${c.age}y</span>`:''}</div>
+    <div class="apt-where">${escapeHtml(c.phone||'')}${c.last_visit_at?` · last visit ${friendlyDate(String(c.last_visit_at).slice(0,10))}`:''}</div>
+  </div>`;
+  return `<div class="wrap"><div class="topbar"><div class="logo"><div class="logo-mark">N</div> Patients</div></div>
+    <div class="section-h"><span>${list.length} patient${list.length===1?'':'s'}</span></div>
+    ${list.length===0?`<div class="card empty"><div class="ic">👥</div>No patients yet.</div>`:list.map(row).join('')}
+  </div>${renderNav('patients')}`;
+}
+function renderDoctorNotes() {
+  return `<div class="wrap"><div class="topbar"><div class="logo"><div class="logo-mark">N</div> Notes</div></div>
+    <div class="card placeholder-page"><div class="ic">▤</div>
+      <h3 style="margin:0 0 6px">Voice-to-text notes</h3>
+      <p class="sub">Record during a consultation; Nova writes the SOAP note. Coming soon.</p>
+    </div>
+  </div>${renderNav('notes')}`;
+}
+
+/* ---------- ROUTER ---------- */
+async function render() {
+  await loadSession();
+
+  if (!SUPABASE_ANON_KEY) {
+    $('#app').innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-mark">N</div>
+      <h2 style="margin:0 0 8px">Setup needed</h2>
+      <p class="sub">Edit pwa/index.html and paste your Supabase anon key in SUPABASE_ANON_KEY.</p></div></div>`;
+    return;
+  }
+  if (!SESSION) { $('#app').innerHTML = renderAuth(); bindAuth(); return; }
+
+  // Newly-arrived user with no role yet → role picker
+  if (ROLES.length === 0) { $('#app').innerHTML = renderRolePicker(); bindRolePicker(); return; }
+
+  // Multi-role with no choice persisted → ask once
+  if (!ACTIVE_ROLE && ROLES.length > 1) { $('#app').innerHTML = renderRolePicker(); bindRolePicker(); return; }
+
+  // Owner role: redirect to existing dashboard
+  if (ACTIVE_ROLE === 'owner') { location.href = location.origin + '/#/dashboard'; return; }
+
+  // Patient role: phone-OTP onboarding gate
+  if (ACTIVE_ROLE === 'patient') {
+    if (!PATIENT?.phone_verified) { $('#app').innerHTML = renderPhoneOnboarding('phone'); bindPhoneStep(); return; }
+    const r = route();
+    if (r === '/profile')   { $('#app').innerHTML = await renderProfile(); bindProfile(); return; }
+    if (r === '/discover')  { $('#app').innerHTML = renderDiscover(); bindNav(); return; }
+    if (r === '/files')     { $('#app').innerHTML = renderFiles(); bindNav(); return; }
+    $('#app').innerHTML = await renderPatientHome(); bindPatientHome();
+    return;
+  }
+
+  // Doctor role
+  if (ACTIVE_ROLE === 'doctor') {
+    const r = route();
+    if (r === '/patients') { $('#app').innerHTML = await renderDoctorPatients(); bindNav(); return; }
+    if (r === '/notes')    { $('#app').innerHTML = renderDoctorNotes(); bindNav(); return; }
+    if (r === '/profile')  { $('#app').innerHTML = await renderProfile(); bindProfile(); return; }
+    $('#app').innerHTML = await renderDoctorMyDay(); bindDoctorMyDay();
+    return;
+  }
+}
+window.addEventListener('hashchange', render);
+render();
+
+/* Service worker */
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+/* Install banner (Android) */
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (ev) => {
+  ev.preventDefault(); deferredInstall = ev;
+  setTimeout(() => {
+    if (!deferredInstall || sessionStorage.getItem('pwa_install_dismissed')) return;
+    const banner = e(`<div class="toast show" style="background:var(--grad);color:white;border:0;display:flex;justify-content:space-between;gap:10px;align-items:center">
+      <span style="font-size:13px">Add Nova to your home screen</span>
+      <span><button id="pwa-install" style="background:rgba(255,255,255,0.18);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600">Install</button>
+      <button id="pwa-dismiss" style="opacity:.7;margin-left:6px">×</button></span></div>`);
+    document.body.appendChild(banner);
+    banner.querySelector('#pwa-install').onclick = async () => {
+      banner.remove(); deferredInstall.prompt();
+      const choice = await deferredInstall.userChoice;
+      deferredInstall = null;
+      if (choice.outcome === 'accepted') toast('Nova installed');
+    };
+    banner.querySelector('#pwa-dismiss').onclick = () => { sessionStorage.setItem('pwa_install_dismissed','1'); banner.remove(); };
+  }, 5000);
+});
+</script>
+</body>
+</html>
