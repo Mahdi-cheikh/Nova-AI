@@ -320,6 +320,27 @@ function navigate(h){window.location.hash=h}
 function currentRoute(){return (window.location.hash||'#/').slice(1)||'/'}
 window.addEventListener('hashchange', render);
 
+/* Floating "← Back to app" pill — shows whenever the dashboard was opened
+   from the Nova PWA, so the owner can pop back to the mobile app in one tap. */
+(function setupBackToPwa(){
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.get('from') === 'pwa') localStorage.setItem('nova_from_pwa', '1');
+    if (localStorage.getItem('nova_from_pwa') !== '1') return;
+    const pill = document.createElement('a');
+    pill.href = '/pwa/';
+    pill.textContent = '← Back to Nova app';
+    pill.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:600;text-decoration:none;box-shadow:0 6px 24px rgba(99,102,241,0.45);z-index:9999;display:flex;align-items:center;gap:6px';
+    const close = document.createElement('span');
+    close.textContent = '×';
+    close.title = 'Hide';
+    close.style.cssText = 'opacity:.7;cursor:pointer;padding:0 2px;font-size:16px;margin-left:4px';
+    close.onclick = (e) => { e.preventDefault(); e.stopPropagation(); localStorage.removeItem('nova_from_pwa'); pill.remove(); };
+    pill.appendChild(close);
+    document.body.appendChild(pill);
+  } catch (_e) {}
+})();
+
 /* ---------- 4. NOTIFICATIONS (toast) ---------- */
 function toast({title, message, type='info', urgent=false}){
   const root=$('#toasts'); if(!root) return;
