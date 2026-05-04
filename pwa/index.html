@@ -633,6 +633,17 @@ if ('serviceWorker' in navigator) window.addEventListener('load', () => navigato
 let deferredInstall = null;
 window.addEventListener('beforeinstallprompt', (ev) => {
   ev.preventDefault(); deferredInstall = ev;
+  // If the user came from the landing page's "Install" button (?install=1),
+  // fire the native prompt immediately instead of waiting 5 seconds.
+  if (new URLSearchParams(location.search).get('install') === '1') {
+    setTimeout(() => {
+      if (deferredInstall) {
+        deferredInstall.prompt();
+        deferredInstall.userChoice.then((c) => { if (c.outcome === 'accepted') toast('Nova installed'); deferredInstall = null; });
+      }
+    }, 200);
+    return;
+  }
   setTimeout(() => {
     if (!deferredInstall || sessionStorage.getItem('pwa_install_dismissed')) return;
     const banner = e(`<div class="toast show" style="background:var(--grad);color:white;border:0;display:flex;justify-content:space-between;gap:10px;align-items:center">
