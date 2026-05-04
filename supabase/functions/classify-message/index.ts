@@ -339,6 +339,107 @@ serve(async (req) => {
       }
     }
 
+    // 1.4. PACKAGE PURCHASE INTENT — keyword detection so we don't burn a Claude
+    // call on obvious cases. If the message asks about packages/abonnements/séances,
+    // list active packages and offer a checkout link.
+    if (clientId) {
+      const lc = String(text).toLowerCase();
+      const wantsPackages = /\b(package|packages|abonnement|abonnements|forfait|forfaits|memberships?|achat|buy)\b/.test(lc)
+                           || /(\d+)\s*(s[eé]ances?|sessions?)/.test(lc)
+                           || /اشتراك|حزمة|ابغى|نشتري|chrayet/.test(lc);
+      if (wantsPackages) {
+        const { data: pkgs = [] } = await sb.from("service_packages")
+          .select("id, name, total_sessions, price, currency, description")
+          .eq("business_id", business_id).eq("active", true).order("price");
+        if ((pkgs as any[]).length === 0) {
+          const reply = "We don't have any packages available right now. Tell me if you'd like to book a single appointment instead.";
+          await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply, intent: "package_query" });
+          await sendWhatsApp(channel, phone, reply);
+          return new Response(JSON.stringify({ ok: true, step: "no_packages" }), { headers: { ...cors, "Content-Type": "application/json" } });
+        }
+        // Match the user's text to a specific package by name fragment, OR if only
+        // one package exists, auto-pick it. Otherwise list them all.
+        const matched = (pkgs as any[]).find((p: any) =>
+          lc.includes(String(p.name || "").toLowerCase().split(" ")[0])
+        );
+        const pickPkg = matched || ((pkgs as any[]).length === 1 ? pkgs[0] : null);
+
+        if (!pickPkg) {
+          const list = (pkgs as any[]).map((p: any, i: number) =>
+            `${i + 1}. ${p.name} — ${p.total_sessions} sessions · ${p.price} ${p.currency || "TND"}`
+          ).join("\n");
+          const reply = `Here are our packages:\n\n${list}\n\nWhich one would you like? Reply with the number or the name.`;
+          await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply, intent: "package_query" });
+          await sendWhatsApp(channel, phone, reply);
+          return new Response(JSON.stringify({ ok: true, step: "package_list" }), { headers: { ...cors, "Content-Type": "application/json" } });
+        }
+
+        // PAYMENT MODE — read from settings. Default is "manual" (online
+        // payment provider not yet configured). When set to "konnect" or
+        // "stripe", we'll generate a hosted checkout via create-package-checkout.
+        const paymentMode = Deno.env.get("PACKAGE_PAYMENT_MODE") || "manual";
+
+        if (paymentMode === "manual") {
+          // Manual mode: insert a pending purchase row, notify the owner, ask
+          // the patient to wait for contact about payment (cash / bank transfer /
+          // in-person card). The owner activates it from the Packages dashboard.
+          const { data: pending } = await sb.from("package_purchases").insert({
+            business_id, client_id: clientId, package_id: pickPkg.id,
+            status: "pending",
+            sessions_remaining: 0,
+            payment_provider: "manual",
+          }).select().single();
+
+          const langLow = (collected?.language || "en");
+          const reply = langLow === "fr"
+            ? `📦 ${pickPkg.name} — ${pickPkg.total_sessions} séances pour ${pickPkg.price} ${pickPkg.currency || "TND"}.\n\nNotre équipe va vous contacter pour finaliser le paiement (espèces, virement ou carte sur place). Merci !`
+            : langLow === "ar"
+            ? `📦 ${pickPkg.name} — ${pickPkg.total_sessions} حصة بسعر ${pickPkg.price} ${pickPkg.currency || "د.ت"}.\n\nسيتواصل معك الفريق لإتمام الدفع (نقدا أو تحويل أو بطاقة عند الزيارة). شكرا!`
+            : `📦 ${pickPkg.name} — ${pickPkg.total_sessions} sessions for ${pickPkg.price} ${pickPkg.currency || "TND"}.\n\nOur team will contact you shortly to arrange payment (cash, bank transfer, or card on site). Thank you!`;
+
+          await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply, intent: "package_inquiry" });
+          await sendWhatsApp(channel, phone, reply);
+
+          await sb.from("notifications").insert({
+            business_id, type: "info",
+            title: "📦 Package inquiry",
+            message: `${phone}: wants "${pickPkg.name}" (${pickPkg.price} ${pickPkg.currency || "TND"}). Open Packages → confirm payment to activate.`,
+            urgent: false,
+          });
+
+          return new Response(JSON.stringify({ ok: true, step: "package_manual_pending", purchase_id: pending?.id }), {
+            headers: { ...cors, "Content-Type": "application/json" },
+          });
+        }
+
+        // Online checkout path (Konnect / Stripe) — only fires when paymentMode is set
+        try {
+          const r = await fetch(`${SUPABASE_URL}/functions/v1/create-package-checkout`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ business_id, package_id: pickPkg.id, client_id: clientId, provider: paymentMode }),
+          });
+          const out = await r.json();
+          if (out.ok && out.payment_url) {
+            const reply = `📦 ${pickPkg.name} — ${pickPkg.total_sessions} sessions for ${pickPkg.price} ${pickPkg.currency || "TND"}.\n\nTap to pay securely (card or D17):\n${out.payment_url}\n\nOnce paid you can book any session and Nova will deduct from your package automatically.`;
+            await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply, intent: "package_checkout" });
+            await sendWhatsApp(channel, phone, reply);
+            return new Response(JSON.stringify({ ok: true, step: "package_checkout" }), { headers: { ...cors, "Content-Type": "application/json" } });
+          } else {
+            const reply = "Sorry, I couldn't generate a payment link right now. Our team will contact you to arrange payment.";
+            await sendWhatsApp(channel, phone, reply);
+            await sb.from("notifications").insert({
+              business_id, type: "info", title: "📦 Package inquiry (checkout failed)",
+              message: `${phone} wants "${pickPkg.name}". Online checkout failed — handle manually.`,
+            });
+            return new Response(JSON.stringify({ ok: true, step: "package_checkout_failed" }), { headers: { ...cors, "Content-Type": "application/json" } });
+          }
+        } catch (e) {
+          console.error("Package checkout failed:", e);
+        }
+      }
+    }
+
     // 1.5. If a booking-draft is in progress for this client, handle it directly.
     if (clientId) {
       // Order by updated_at desc + limit 1 so we always pick the freshest row even
@@ -504,13 +605,36 @@ serve(async (req) => {
             const labTotal   = labMatched.reduce((a: number, b: any) => a + Number(b.price || 0), 0);
             const labFasting = labMatched.some((t: any) => t.fasting_required);
 
+            // Try to consume a session from an active package the patient owns
+            // that covers this service. If consumed, the appointment is "free"
+            // (already paid for via package) and we link them.
+            let packagePurchaseId: string | null = null;
+            let packageSessionInfo = "";
+            if (svc?.id) {
+              const { data: pid } = await sb.rpc("consume_package_session", {
+                p_business_id: business_id,
+                p_client_id:   clientId,
+                p_service_id:  svc.id,
+              });
+              if (pid) {
+                packagePurchaseId = pid as string;
+                const { data: pp } = await sb.from("package_purchases")
+                  .select("sessions_remaining, sessions_used, service_packages(name, total_sessions)")
+                  .eq("id", pid).maybeSingle();
+                if (pp) {
+                  packageSessionInfo = ` (session ${pp.sessions_used} of ${pp.service_packages?.total_sessions || pp.sessions_used + pp.sessions_remaining} from ${pp.service_packages?.name || "your package"})`;
+                }
+              }
+            }
+
             const { data: apt } = await sb.from("appointments").insert({
               business_id, client_id: clientId,
               doctor_id: doctor?.id ?? null, service_id: svc?.id ?? null,
               date: collected.date, time: collected.time, status: "confirmed",
               source: channel === "whatsapp_voice" ? "whatsapp_voice" : "whatsapp_ai",
               fasting_required: labFasting,
-              total_amount: labTotal || null,
+              total_amount: packagePurchaseId ? 0 : (labTotal || null),
+              package_purchase_id: packagePurchaseId,
             }).select().single();
 
             // Create lab_orders rows for every matched test
@@ -520,7 +644,7 @@ serve(async (req) => {
                 appointment_id: apt.id,
                 test_id: t.id,
                 status: "requested",
-                price_charged: t.price,
+                price_charged: packagePurchaseId ? 0 : t.price,
               }));
               await sb.from("lab_orders").insert(orderRows);
             }
@@ -535,9 +659,9 @@ serve(async (req) => {
             // Update client with collected data
             await sb.from("clients").update({ name: collected.name, age: collected.age }).eq("id", clientId);
             await sb.from("booking_drafts").delete().eq("id", draft.id);
-            const reply = lang==="fr" ? `C'est confirmé, ${collected.name} ! Votre rendez-vous est le ${collected.date} à ${collected.time}.`
-                       : lang==="ar" ? `تم التأكيد ${collected.name}! موعدك يوم ${collected.date} على الساعة ${collected.time}.`
-                       : `Confirmed, ${collected.name}! Your appointment is on ${collected.date} at ${collected.time}.`;
+            const reply = lang==="fr" ? `C'est confirmé, ${collected.name} ! Votre rendez-vous est le ${collected.date} à ${collected.time}.${packageSessionInfo}`
+                       : lang==="ar" ? `تم التأكيد ${collected.name}! موعدك يوم ${collected.date} على الساعة ${collected.time}.${packageSessionInfo}`
+                       : `Confirmed, ${collected.name}! Your appointment is on ${collected.date} at ${collected.time}.${packageSessionInfo}`;
             await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply });
             await sendWhatsApp(channel, phone, reply);
             return new Response(JSON.stringify({ ok: true, step: "booked" }), { headers: { ...cors, "Content-Type": "application/json" } });

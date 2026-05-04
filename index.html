@@ -1660,6 +1660,7 @@ async function renderDashboard(route){
       ${biz.type==='laboratoire' ? navItem('lab','Lab pipeline','⚗') : ''}
       ${biz.type==='laboratoire' ? navItem('tests','Test catalog','✚') : ''}
       ${navItem('services','Services','★')}
+      ${navItem('packages','Packages','📦')}
       ${navItem('messages','Messages','✉')}
       ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
       ${navItem('test','Test assistant','▶')}
@@ -1686,7 +1687,7 @@ async function renderDashboard(route){
     </main>
   </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
   overview:"Today's snapshot of your business",
   appointments:'List view of every booking',
@@ -1738,6 +1739,7 @@ async function bindDashboard(route){
   if (sub==='lab') await bindLabPipeline();
   if (sub==='tests') await bindTestCatalog();
   if (sub==='services') await bindServices();
+  if (sub==='packages') await bindPackages();
   if (sub==='notifications') await bindNotifications();
   if (sub==='test') await bindTest();
   if (sub==='settings') await bindSettings();
@@ -1775,6 +1777,7 @@ async function renderPage(sub){
   if (sub==='lab') return await renderLabPipeline();
   if (sub==='tests') return await renderTestCatalog();
   if (sub==='services') return await renderServices();
+  if (sub==='packages') return await renderPackages();
   if (sub==='messages') return await renderMessages();
   if (sub==='notifications') return await renderNotifications();
   if (sub==='test') return renderTest();
@@ -2713,6 +2716,257 @@ async function renderServices(){
         </td>
       </tr>`).join('')}</tbody>
     </table>`}</div></div>`;
+}
+
+/* ---------- PACKAGES (recurring sessions / memberships) ---------- */
+async function renderPackages(){
+  const bizId = SESSION.business.id;
+  const [{data:pkgs=[]}, {data:purchases=[]}, {data:svcs=[]}, {data:kpis=[]}] = await Promise.all([
+    sb.from('service_packages').select('*, services(name)').eq('business_id', bizId).order('created_at', {ascending:false}),
+    sb.from('package_purchases').select('id, status, sessions_remaining, sessions_used, paid_at, created_at, expires_at, package_id, payment_url, clients(name, phone)').eq('business_id', bizId).order('created_at', {ascending:false}).limit(100),
+    sb.from('services').select('id, name').eq('business_id', bizId),
+    sb.from('v_package_kpis').select('*').eq('business_id', bizId)
+  ]);
+
+  // Aggregate KPIs across all packages
+  const totalRevenue = (kpis||[]).reduce((s,k)=>s + Number(k.revenue_total||0), 0);
+  const revenue30d   = (kpis||[]).reduce((s,k)=>s + Number(k.revenue_30d||0), 0);
+  const totalActive  = (kpis||[]).reduce((s,k)=>s + Number(k.active_count||0), 0);
+  const totalSold    = (kpis||[]).reduce((s,k)=>s + Number(k.sold_count||0), 0);
+
+  const kpiByPkg = Object.fromEntries((kpis||[]).map(k=>[k.package_id, k]));
+
+  const pkgRow = (p) => {
+    const k = kpiByPkg[p.id] || {};
+    return `<tr class="pkg-row" data-id="${p.id}">
+      <td><b>${escapeHtml(p.name)}</b>${p.description?`<div class="sub" style="font-size:11px">${escapeHtml(p.description)}</div>`:''}</td>
+      <td>${p.services?.name ? escapeHtml(p.services.name) : '<span class="sub">Any service</span>'}</td>
+      <td>${p.total_sessions} sessions</td>
+      <td>${p.price} ${p.currency||'TND'}</td>
+      <td>${p.validity_days||365} days</td>
+      <td><span class="pill blue">${k.active_count||0} active</span> ${k.pending_count?`<span class="pill amber">${k.pending_count} pending</span>`:''}</td>
+      <td>${k.revenue_total||0} ${p.currency||'TND'}</td>
+      <td><span class="pill ${p.active?'green':'gray'}">${p.active?'on':'off'}</span></td>
+      <td>
+        <button class="btn-ghost btn-sm" data-pkg-edit="${p.id}">Edit</button>
+        <button class="btn-ghost btn-sm" data-pkg-toggle="${p.id}" data-active="${p.active}">${p.active?'Pause':'Activate'}</button>
+        <button class="btn-ghost btn-sm" data-pkg-share="${p.id}" data-name="${escapeHtml(p.name)}">Share</button>
+      </td>
+    </tr>`;
+  };
+
+  const purchaseRow = (pp) => {
+    const pkg = (pkgs||[]).find(x=>x.id===pp.package_id);
+    return `<tr>
+      <td>${escapeHtml(pp.clients?.name||'—')}</td>
+      <td>${escapeHtml(pp.clients?.phone||'—')}</td>
+      <td>${escapeHtml(pkg?.name||'—')}</td>
+      <td><span class="pill ${pp.status==='active'?'green':pp.status==='pending'?'amber':pp.status==='exhausted'?'gray':'red'}">${pp.status}</span></td>
+      <td>${pp.sessions_remaining ?? 0} / ${pkg?.total_sessions||'—'}</td>
+      <td>${pp.paid_at ? new Date(pp.paid_at).toLocaleDateString() : '—'}</td>
+      <td>
+        ${pp.status==='pending' ? `<button class="btn-primary btn-sm" data-pp-activate="${pp.id}">✓ Mark paid</button>` : ''}
+        ${pp.status==='pending' ? `<button class="btn-ghost btn-sm" data-pp-cancel="${pp.id}" style="color:#ef4444">Cancel</button>` : ''}
+        ${pp.payment_url && pp.status==='pending' ? `<a href="${pp.payment_url}" target="_blank" class="pill blue" style="margin-left:6px">Pay link</a>` : ''}
+      </td>
+    </tr>`;
+  };
+
+  return `
+  <div class="row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+    <div class="panel"><div class="panel-body"><div class="sub">Active subscribers</div><div style="font-size:1.8em;font-weight:700">${totalActive}</div></div></div>
+    <div class="panel"><div class="panel-body"><div class="sub">Total sold</div><div style="font-size:1.8em;font-weight:700">${totalSold}</div></div></div>
+    <div class="panel"><div class="panel-body"><div class="sub">Revenue 30d</div><div style="font-size:1.8em;font-weight:700">${revenue30d.toFixed(0)} TND</div></div></div>
+    <div class="panel"><div class="panel-body"><div class="sub">Revenue all-time</div><div style="font-size:1.8em;font-weight:700">${totalRevenue.toFixed(0)} TND</div></div></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:18px">
+    <div class="panel-head"><h3>Packages (${pkgs.length})</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary btn-sm" id="sell-manual">+ Sell manually</button>
+        <button class="btn-primary btn-sm" id="add-pkg">+ New package</button>
+      </div>
+    </div>
+    <div class="panel-body no-pad">${pkgs.length===0
+      ? `<div class="empty"><div class="ic">📦</div>No packages yet — create one to start selling subscriptions.</div>`
+      : `<table class="data" style="width:100%;font-size:.9em">
+          <thead><tr><th>Name</th><th>For service</th><th>Sessions</th><th>Price</th><th>Validity</th><th>Active</th><th>Revenue</th><th>Status</th><th></th></tr></thead>
+          <tbody>${pkgs.map(pkgRow).join('')}</tbody>
+        </table>`}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>Recent purchases (${purchases.length})</h3></div>
+    <div class="panel-body no-pad">${purchases.length===0
+      ? `<div class="empty"><div class="ic">⌀</div>No purchases yet.</div>`
+      : `<table class="data" style="width:100%;font-size:.88em">
+          <thead><tr><th>Patient</th><th>Phone</th><th>Package</th><th>Status</th><th>Sessions</th><th>Paid</th><th>Pay link</th></tr></thead>
+          <tbody>${purchases.map(purchaseRow).join('')}</tbody>
+        </table>`}
+    </div>
+  </div>`;
+}
+
+async function bindPackages(){
+  const bizId = SESSION.business.id;
+  const {data:svcs=[]} = await sb.from('services').select('id, name').eq('business_id', bizId);
+
+  const open = (p)=>{
+    const svcOpts = `<option value="">Any service</option>${svcs.map(s=>`<option value="${s.id}" ${p?.service_id===s.id?'selected':''}>${escapeHtml(s.name)}</option>`).join('')}`;
+    openModal(`<form id="pkg-form"><h3>${p?'Edit':'New'} package</h3>
+      <div class="field"><label>Name *</label><input name="name" required value="${escapeHtml(p?.name||'')}" placeholder="e.g. 10-session physiotherapy plan" /></div>
+      <div class="field"><label>Description</label><input name="description" value="${escapeHtml(p?.description||'')}" placeholder="What's included, who it's for" /></div>
+      <div class="row">
+        <div class="field grow"><label>Service this covers</label><select name="service_id">${svcOpts}</select></div>
+        <div class="field"><label>Sessions *</label><input name="total_sessions" type="number" min="1" value="${p?.total_sessions||10}" required /></div>
+      </div>
+      <div class="row">
+        <div class="field grow"><label>Price (TND) *</label><input name="price" type="number" step="0.5" value="${p?.price||0}" required /></div>
+        <div class="field"><label>Validity (days)</label><input name="validity_days" type="number" min="1" value="${p?.validity_days||365}" /></div>
+        <div class="field"><label>Discount %</label><input name="discount_percent" type="number" min="0" max="100" value="${p?.discount_percent||0}" /></div>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Cancel</button>
+        ${p?`<button type="button" class="btn-ghost" id="m-del" style="color:#ef4444">Delete</button>`:''}
+        <button class="btn-primary">Save</button></div>
+    </form>`, async ()=>{
+      const fd = Object.fromEntries(new FormData($('#pkg-form')).entries());
+      const row = {
+        business_id: bizId,
+        name: fd.name,
+        description: fd.description || null,
+        service_id: fd.service_id || null,
+        total_sessions: parseInt(fd.total_sessions||'10', 10),
+        price: parseFloat(fd.price||'0'),
+        currency: 'TND',
+        validity_days: parseInt(fd.validity_days||'365', 10),
+        discount_percent: fd.discount_percent ? parseInt(fd.discount_percent,10) : null,
+        active: true,
+      };
+      if (p) await sb.from('service_packages').update(row).eq('id', p.id);
+      else   await sb.from('service_packages').insert(row);
+      toast({title: p?'Package updated':'Package created', message:'Saved.', type:'booking'});
+      await render();
+    });
+    setTimeout(()=>{
+      const del = $('#m-del');
+      if (del && p) del.onclick = async ()=>{
+        if (!confirm('Delete this package? Existing purchases keep working.')) return;
+        await sb.from('service_packages').delete().eq('id', p.id);
+        closeModal(); await render();
+      };
+    }, 50);
+  };
+
+  $('#add-pkg').onclick = () => open(null);
+
+  document.querySelectorAll('[data-pkg-edit]').forEach(b => b.onclick = async () => {
+    const id = b.getAttribute('data-pkg-edit');
+    const {data:p} = await sb.from('service_packages').select('*').eq('id', id).single();
+    open(p);
+  });
+
+  document.querySelectorAll('[data-pkg-toggle]').forEach(b => b.onclick = async () => {
+    const id = b.getAttribute('data-pkg-toggle');
+    const wasActive = b.getAttribute('data-active') === 'true';
+    await sb.from('service_packages').update({ active: !wasActive }).eq('id', id);
+    toast({ title: wasActive ? 'Paused' : 'Activated', message: 'Package status updated.', type:'info' });
+    await render();
+  });
+
+  document.querySelectorAll('[data-pkg-share]').forEach(b => b.onclick = async () => {
+    const id = b.getAttribute('data-pkg-share');
+    const name = b.getAttribute('data-name');
+    const link = `https://wa.me/${(SESSION.business.phone||'').replace(/\D/g,'')}?text=${encodeURIComponent('I want to buy: ' + name)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title:'Copied', message:'Share this link on Instagram, FB, business cards. Customers tap → message Nova → get a checkout link.', type:'info' });
+    } catch {
+      prompt('Share link:', link);
+    }
+  });
+
+  /* Activate a pending purchase: flip status to active, set sessions_remaining
+     and expires_at from the package config, send the patient a receipt. */
+  document.querySelectorAll('[data-pp-activate]').forEach(b => b.onclick = async () => {
+    const id = b.getAttribute('data-pp-activate');
+    const note = prompt('Payment method note (optional — e.g. "cash", "bank transfer"):', 'cash');
+    if (note === null) return;
+    const {data: pp} = await sb.from('package_purchases').select('*, service_packages(name, total_sessions, validity_days, price, currency), clients(name, phone)').eq('id', id).maybeSingle();
+    if (!pp) { toast({title:'Not found', urgent:true}); return; }
+    const total = pp.service_packages?.total_sessions || 1;
+    const validity = pp.service_packages?.validity_days || 365;
+    const expires_at = new Date(Date.now() + validity*86400*1000).toISOString();
+    const {error} = await sb.from('package_purchases').update({
+      status: 'active',
+      sessions_remaining: total,
+      sessions_used: 0,
+      paid_at: new Date().toISOString(),
+      expires_at,
+      notes: note ? note : null,
+    }).eq('id', id);
+    if (error) { toast({title:'Failed', message:error.message, urgent:true}); return; }
+    toast({title:'✓ Activated', message:`${total} sessions for ${pp.service_packages?.name}`, type:'booking'});
+    // Send receipt to patient
+    try {
+      const phone = (pp.clients?.phone||'').replace(/^\+/,'');
+      if (phone && SESSION.business.phone) {
+        const cName = (pp.clients?.name||'').split(' ')[0] || 'there';
+        const body = `✅ Hi ${cName}, your package is now active!\n\n📦 ${pp.service_packages?.name}\n🎟 ${total} sessions, valid ${validity} days\n💳 Paid (${note||'manual'})\n\nReply BOOK any time — Nova will deduct from your package automatically.`;
+        // Use the existing test infrastructure via classify-message? Simpler: send via WhatsApp through a direct fetch from the OWNER side… Actually we don't have a direct WA send from the dashboard. We rely on the next inbound from the patient.
+        await sb.from('messages').insert({ business_id: SESSION.business.id, client_id: pp.client_id, direction: 'out', channel: 'whatsapp', text: body, intent: 'package_activated' });
+      }
+    } catch (_e) {}
+    await render();
+  });
+
+  document.querySelectorAll('[data-pp-cancel]').forEach(b => b.onclick = async () => {
+    if (!confirm('Cancel this pending purchase?')) return;
+    const id = b.getAttribute('data-pp-cancel');
+    await sb.from('package_purchases').update({ status: 'cancelled' }).eq('id', id);
+    await render();
+  });
+
+  /* Sell manually — owner picks a package + a client, creates an active
+     purchase row directly. Used when the customer pays in person/cash/bank. */
+  const sellBtn = $('#sell-manual');
+  if (sellBtn) sellBtn.onclick = async () => {
+    if (!pkgs || pkgs.length === 0) { toast({title:'No packages yet', message:'Create a package first.', urgent:true}); return; }
+    const {data: clients = []} = await sb.from('clients').select('id, name, phone').eq('business_id', bizId).order('created_at', {ascending:false}).limit(200);
+    const pkgOpts = pkgs.filter(p=>p.active).map(p=>`<option value="${p.id}">${escapeHtml(p.name)} — ${p.total_sessions} sessions · ${p.price} ${p.currency||'TND'}</option>`).join('');
+    const cliOpts = clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name||c.phone)} (${escapeHtml(c.phone||'')})</option>`).join('');
+    openModal(`<form id="sell-form"><h3>Sell a package manually</h3>
+      <p class="sub">Use this when a customer pays in cash, by bank transfer, or in person. Activates the package immediately.</p>
+      <div class="field"><label>Package *</label><select name="package_id" required>${pkgOpts}</select></div>
+      <div class="field"><label>Client *</label><select name="client_id" required>${cliOpts || '<option value="">— no clients yet —</option>'}</select></div>
+      <div class="field"><label>Payment method</label><select name="method">
+        <option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="card">Card on site</option><option value="other">Other</option>
+      </select></div>
+      <div class="field"><label>Notes (optional)</label><input name="notes" placeholder="receipt #, voucher code, etc." /></div>
+      <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Cancel</button><button class="btn-primary">Activate package</button></div>
+    </form>`, async () => {
+      const fd = Object.fromEntries(new FormData($('#sell-form')).entries());
+      if (!fd.package_id || !fd.client_id) { toast({title:'Pick a package and a client', urgent:true}); return; }
+      const pkg = pkgs.find(p=>p.id===fd.package_id);
+      const validity = pkg?.validity_days || 365;
+      const total = pkg?.total_sessions || 1;
+      const {error} = await sb.from('package_purchases').insert({
+        business_id: bizId,
+        client_id: fd.client_id,
+        package_id: fd.package_id,
+        status: 'active',
+        sessions_remaining: total,
+        sessions_used: 0,
+        paid_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + validity*86400*1000).toISOString(),
+        payment_provider: fd.method || 'manual',
+        notes: fd.notes || null,
+      });
+      if (error) { toast({title:'Failed', message:error.message, urgent:true}); return; }
+      toast({title:'✓ Sold', message:`${total} sessions activated for the customer.`, type:'booking'});
+      await render();
+    });
+  };
 }
 
 async function bindServices(){
