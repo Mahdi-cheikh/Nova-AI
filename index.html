@@ -320,7 +320,35 @@ const isoDate = d=>{const x=new Date();x.setDate(x.getDate()+(d||0));return x.to
 
 function navigate(h){window.location.hash=h}
 function currentRoute(){return (window.location.hash||'#/').slice(1)||'/'}
-window.addEventListener('hashchange', render);
+/* Resilient render: wraps render() in a timeout so the dashboard never sits
+   on a blank page forever. If it hangs past 8 seconds, surface a recovery card. */
+let DASHBOARD_RENDERING = false;
+async function safeRender(){
+  if (DASHBOARD_RENDERING) return;
+  DASHBOARD_RENDERING = true;
+  try {
+    await Promise.race([
+      render(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Dashboard load timed out')), 8000)),
+    ]);
+  } catch (err) {
+    console.error('Dashboard render failed:', err);
+    const app = document.getElementById('app');
+    if (app) app.innerHTML = `<div style="min-height:100vh;display:grid;place-items:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif">
+      <div style="background:#13151c;border:1px solid rgba(99,102,241,0.2);border-radius:18px;padding:30px;max-width:380px;text-align:center;color:#f3f4f6">
+        <div style="width:54px;height:54px;border-radius:13px;background:linear-gradient(135deg,#6366f1,#22d3ee);display:grid;place-items:center;color:white;font-weight:800;font-size:24px;margin:0 auto 14px">N</div>
+        <h2 style="margin:0 0 8px;font-size:18px">Could not load dashboard</h2>
+        <p style="margin:0 0 16px;font-size:13.5px;color:#9ca3af">${(err && err.message) || 'Network or session issue.'}</p>
+        <button onclick="location.reload()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:0;padding:12px 22px;border-radius:10px;font-weight:600;cursor:pointer;width:100%;margin-bottom:8px">Reload</button>
+        <button onclick="dashboardHardReset()" style="background:transparent;color:#cbd5e1;border:1px solid rgba(255,255,255,0.12);padding:12px 22px;border-radius:10px;font-weight:600;cursor:pointer;width:100%">Sign out &amp; reset</button>
+      </div></div>`;
+  } finally {
+    DASHBOARD_RENDERING = false;
+  }
+}
+window.addEventListener('hashchange', safeRender);
+window.addEventListener('focus', safeRender);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') safeRender(); });
 
 /* Floating "← Back to app" pill — shows whenever the dashboard was opened
    from the Nova PWA, so the owner can pop back to the mobile app in one tap. */
@@ -374,12 +402,35 @@ async function bootSupabase(){
 
 async function loadSession(){
   if (!sb) return null;
-  const {data:{session}} = await sb.auth.getSession();
+  // Cap each step with its own timeout so a hanging Supabase call can't freeze
+  // the entire dashboard. If anything stalls beyond 4s, we proceed with what we have.
+  let session = null;
+  try {
+    const r = await Promise.race([
+      sb.auth.getSession(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('session-timeout')), 4000)),
+    ]);
+    session = r?.data?.session || null;
+  } catch (e) { console.warn('getSession timed out:', e); return null; }
   if (!session) return null;
-  /* Look up business through users table */
-  const {data:member} = await sb.from('users').select('*, businesses(*)').eq('auth_uid', session.user.id).maybeSingle();
-  const result = member ? {user: session.user, business: member.businesses, member} : {user: session.user, business: null, member: null};
-  return result;
+  let member = null;
+  try {
+    const r = await Promise.race([
+      sb.from('users').select('*, businesses(*)').eq('auth_uid', session.user.id).maybeSingle(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('member-timeout')), 4000)),
+    ]);
+    member = r?.data || null;
+  } catch (e) { console.warn('member lookup timed out:', e); }
+  return member ? {user: session.user, business: member.businesses, member} : {user: session.user, business: null, member: null};
+}
+
+/* Hard reset for the dashboard — same pattern as the PWA. Clears any stuck
+   Supabase auth artefact and reloads. Used by error-recovery UI. */
+function dashboardHardReset(){
+  try { for (const k of Object.keys(localStorage)) { if (k.startsWith('sb-') || k.includes('supabase')) localStorage.removeItem(k); } } catch (_e) {}
+  try { sessionStorage.clear(); } catch (_e) {}
+  try { if (sb) sb.auth.signOut().catch(() => {}); } catch (_e) {}
+  location.replace(location.pathname + '?reset=' + Date.now());
 }
 
 /* Global auth-state listener: catches the moment Supabase finishes processing
@@ -2730,7 +2781,7 @@ async function addAppointmentModal(){
 }
 
 /* ---------- BOOT ---------- */
-window.addEventListener('DOMContentLoaded', render);
+window.addEventListener('DOMContentLoaded', safeRender);
 window.NOVA = {
   reset(){ localStorage.removeItem(CFG_KEY); localStorage.removeItem(THEME_KEY); location.reload(); },
   cfg: ()=>CFG,
