@@ -944,9 +944,90 @@ function renderLanding(){
     @keyframes lp-float { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-10px) } }
     .lp-fadein { opacity:0;transform:translateY(20px);transition:opacity .8s ease, transform .8s ease; }
     .lp-fadein.visible { opacity:1;transform:none; }
+
+    /* ============================================================
+       ANTI-GRAVITY THEME — floating orbs, levitating cards, glow auras
+       ============================================================ */
+    .lp { position:relative;overflow-x:hidden; }
+    .lp-orbs { position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden; }
+    .lp-orb { position:absolute;border-radius:50%;filter:blur(90px);opacity:0.55;will-change:transform;mix-blend-mode:screen; }
+    @media (prefers-color-scheme:light) { .lp-orb { opacity:0.30;mix-blend-mode:multiply } }
+    .lp-orb-1 { width:520px;height:520px;background:radial-gradient(circle,#6366f1,transparent 70%);top:-10%;left:-10%;animation:lp-drift-1 28s ease-in-out infinite; }
+    .lp-orb-2 { width:460px;height:460px;background:radial-gradient(circle,#8b5cf6,transparent 70%);top:30%;right:-12%;animation:lp-drift-2 34s ease-in-out infinite; }
+    .lp-orb-3 { width:600px;height:600px;background:radial-gradient(circle,#22d3ee,transparent 70%);bottom:-15%;left:25%;animation:lp-drift-3 40s ease-in-out infinite; }
+    .lp-orb-4 { width:380px;height:380px;background:radial-gradient(circle,#ec4899,transparent 70%);top:60%;left:8%;animation:lp-drift-4 32s ease-in-out infinite; }
+    @keyframes lp-drift-1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(80px,120px) scale(1.15)} 66%{transform:translate(-40px,200px) scale(0.95)} }
+    @keyframes lp-drift-2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-100px,-80px) scale(1.1)} }
+    @keyframes lp-drift-3 { 0%,100%{transform:translate(0,0) scale(1)} 25%{transform:translate(120px,-60px) scale(0.9)} 75%{transform:translate(-60px,-180px) scale(1.2)} }
+    @keyframes lp-drift-4 { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-80px,100px) scale(1.1)} 80%{transform:translate(40px,-90px) scale(0.95)} }
+
+    /* Tiny drifting particles — pure CSS dots that float upward through the page */
+    .lp-particle { position:absolute;width:4px;height:4px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.7),rgba(255,255,255,0));opacity:0.6;will-change:transform;pointer-events:none; }
+    @media (prefers-color-scheme:light) { .lp-particle{background:radial-gradient(circle,rgba(99,102,241,0.6),transparent);opacity:0.5} }
+    @keyframes lp-rise { 0%{transform:translateY(0) translateX(0);opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{transform:translateY(-120vh) translateX(40px);opacity:0} }
+
+    /* All landing content sits ABOVE the orb layer */
+    .lp-nav, .lp-hero, .lp-features-row, .lp-section, .lp-install-card, .lp-footer { position:relative;z-index:1; }
+
+    /* Levitating cards — every card bobs gently with a staggered phase. */
+    .lp-feature, .lp-step, .lp-num-opt, .lp-who, .lp-mockup {
+      animation: lp-levitate 6s ease-in-out infinite;
+    }
+    .lp-features-row > :nth-child(1) { animation-delay: -0.0s }
+    .lp-features-row > :nth-child(2) { animation-delay: -1.2s }
+    .lp-features-row > :nth-child(3) { animation-delay: -2.4s }
+    .lp-features-row > :nth-child(4) { animation-delay: -3.6s }
+    .lp-features-row > :nth-child(5) { animation-delay: -4.8s }
+    .lp-steps > :nth-child(odd)  { animation-delay: -1.5s }
+    .lp-steps > :nth-child(even) { animation-delay: -3.5s }
+    .lp-who-grid > :nth-child(1) { animation-delay: -0.5s }
+    .lp-who-grid > :nth-child(2) { animation-delay: -1.7s }
+    .lp-who-grid > :nth-child(3) { animation-delay: -2.9s }
+    .lp-who-grid > :nth-child(4) { animation-delay: -4.1s }
+    .lp-who-grid > :nth-child(5) { animation-delay: -5.3s }
+    @keyframes lp-levitate { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-6px) } }
+    .lp-feature:hover, .lp-step:hover, .lp-num-opt:hover, .lp-who:hover { animation-play-state:paused; }
+
+    /* Primary CTA gets a slowly-pulsing glow aura — looks like it's hovering above the page */
+    .lp-btn-primary {
+      position:relative;
+      box-shadow: 0 4px 18px rgba(99,102,241,0.35), 0 0 0 0 rgba(99,102,241,0.4);
+      animation: lp-glow-pulse 3.5s ease-in-out infinite;
+    }
+    @keyframes lp-glow-pulse {
+      0%,100% { box-shadow: 0 4px 18px rgba(99,102,241,0.35), 0 0 0 0 rgba(99,102,241,0.0); transform:translateY(0); }
+      50%     { box-shadow: 0 8px 32px rgba(99,102,241,0.55), 0 0 0 12px rgba(99,102,241,0.0); transform:translateY(-2px); }
+    }
+
+    /* Hero headline gets a subtle breathing scale */
+    .lp-hero h1 .lp-grad-text {
+      background-size: 200% 200%;
+      animation: lp-grad-shift 6s ease-in-out infinite;
+    }
+    @keyframes lp-grad-shift {
+      0%,100% { background-position: 0% 50% }
+      50%     { background-position: 100% 50% }
+    }
+
+    /* Logo mark also levitates subtly so the brand identity matches the theme */
+    .lp-brand .lp-logo-mark { animation: lp-levitate 5s ease-in-out infinite; }
+
+    /* Respect users who prefer reduced motion — disable all anti-gravity animations */
+    @media (prefers-reduced-motion: reduce) {
+      .lp-orb, .lp-particle, .lp-feature, .lp-step, .lp-num-opt, .lp-who, .lp-mockup,
+      .lp-btn-primary, .lp-hero h1 .lp-grad-text, .lp-brand .lp-logo-mark { animation: none !important }
+    }
   </style>
 
   <div class="lp">
+    <!-- Anti-gravity background: drifting gradient orbs + rising particles -->
+    <div class="lp-orbs" aria-hidden="true">
+      <div class="lp-orb lp-orb-1"></div>
+      <div class="lp-orb lp-orb-2"></div>
+      <div class="lp-orb lp-orb-3"></div>
+      <div class="lp-orb lp-orb-4"></div>
+    </div>
+
     <header class="lp-nav">
       <div class="lp-nav-inner">
         <a href="#" class="lp-brand" style="text-decoration:none;color:inherit">
@@ -1175,6 +1256,36 @@ function renderLanding(){
 }
 
 function bindLanding(){
+  /* ANTI-GRAVITY: spawn 18 small particles that float upward through the page */
+  const orbs = document.querySelector('.lp-orbs');
+  if (orbs && !document.querySelector('.lp-particle')) {
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('span');
+      p.className = 'lp-particle';
+      const delay = -Math.random() * 18;
+      const dur = 14 + Math.random() * 12;
+      const left = Math.random() * 100;
+      const size = 2 + Math.random() * 5;
+      p.style.cssText = `left:${left}vw;bottom:-10vh;width:${size}px;height:${size}px;animation:lp-rise ${dur}s linear ${delay}s infinite`;
+      orbs.appendChild(p);
+    }
+  }
+
+  /* Reverse parallax: orbs drift slower than scroll, deepening the "depth" feel */
+  let lastScroll = 0, ticking = false;
+  const handleScroll = () => {
+    lastScroll = window.scrollY;
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const orbsEl = document.querySelector('.lp-orbs');
+        if (orbsEl) orbsEl.style.transform = `translateY(${lastScroll * 0.18}px)`;
+        ticking = false;
+      });
+      ticking = true;
+    }
+  };
+  window.addEventListener('scroll', handleScroll, { passive: true });
+
   /* Smooth scroll for in-page anchor nav */
   document.querySelectorAll('.lp a[href^="#"]:not([href="#/auth"]):not([href^="#/auth"])').forEach(a => {
     a.addEventListener('click', (ev) => {
