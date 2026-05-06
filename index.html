@@ -1118,7 +1118,7 @@ function renderLanding(){
  @keyframes lp-rise { 0%{transform:translateY(0) translateX(0);opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{transform:translateY(-120vh) translateX(40px);opacity:0} }
 
  /* Floating WhatsApp message bubbles — drift upward with appointment snippets */
- .lp-msg-float { position:absolute;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;font-size:12px;font-weight:600;padding:8px 13px;border-radius:14px;border-bottom-left-radius:3px;box-shadow:0 8px 24px -4px rgba(37,211,102,0.4),0 0 0 1px rgba(255,255,255,0.08) inset;white-space:nowrap;pointer-events:none;will-change:transform,opacity;backdrop-filter:blur(4px);opacity:0; }
+ .lp-msg-float { position:absolute;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;font-size:12px;font-weight:600;padding:8px 13px;border-radius:14px;border-bottom-left-radius:3px;box-shadow:0 8px 24px -4px rgba(37,211,102,0.4),0 0 0 1px rgba(255,255,255,0.08) inset;white-space:nowrap;pointer-events:none;will-change:transform,opacity;opacity:0; }
  .lp-msg-float.alt { background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 8px 24px -4px rgba(99,102,241,0.4),0 0 0 1px rgba(255,255,255,0.08) inset;border-bottom-left-radius:14px;border-bottom-right-radius:3px; }
  .lp-msg-float::before { content:'';position:absolute;left:-5px;bottom:0;width:10px;height:10px;background:inherit;clip-path:polygon(0 0,100% 100%,100% 0); }
  .lp-msg-float.alt::before { left:auto;right:-5px;clip-path:polygon(0 0,100% 0,0 100%); }
@@ -1158,14 +1158,7 @@ function renderLanding(){
  @keyframes lp-node-orbit-4 { from{transform:translate(-50%,-50%) rotate(200deg) translateX(230px) rotate(-200deg)} to{transform:translate(-50%,-50%) rotate(560deg) translateX(230px) rotate(-560deg)} }
  @keyframes lp-node-orbit-5 { from{transform:translate(-50%,-50%) rotate(40deg) translateX(180px) rotate(-40deg)} to{transform:translate(-50%,-50%) rotate(400deg) translateX(180px) rotate(-400deg)} }
  @keyframes lp-node-orbit-6 { from{transform:translate(-50%,-50%) rotate(220deg) translateX(180px) rotate(-220deg)} to{transform:translate(-50%,-50%) rotate(580deg) translateX(180px) rotate(-580deg)} }
- @media (max-width:1080px) {
-  @keyframes lp-node-orbit-1 { from{transform:translate(-50%,-50%) rotate(0deg) translateX(210px) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg) translateX(210px) rotate(-360deg)} }
-  @keyframes lp-node-orbit-2 { from{transform:translate(-50%,-50%) rotate(60deg) translateX(210px) rotate(-60deg)} to{transform:translate(-50%,-50%) rotate(420deg) translateX(210px) rotate(-420deg)} }
-  @keyframes lp-node-orbit-3 { from{transform:translate(-50%,-50%) rotate(120deg) translateX(170px) rotate(-120deg)} to{transform:translate(-50%,-50%) rotate(480deg) translateX(170px) rotate(-480deg)} }
-  @keyframes lp-node-orbit-4 { from{transform:translate(-50%,-50%) rotate(200deg) translateX(170px) rotate(-200deg)} to{transform:translate(-50%,-50%) rotate(560deg) translateX(170px) rotate(-560deg)} }
-  @keyframes lp-node-orbit-5 { from{transform:translate(-50%,-50%) rotate(40deg) translateX(130px) rotate(-40deg)} to{transform:translate(-50%,-50%) rotate(400deg) translateX(130px) rotate(-400deg)} }
-  @keyframes lp-node-orbit-6 { from{transform:translate(-50%,-50%) rotate(220deg) translateX(130px) rotate(-220deg)} to{transform:translate(-50%,-50%) rotate(580deg) translateX(130px) rotate(-580deg)} }
- }
+ @media (max-width:1080px) { .lp-orbit { display:none } }
 
  /* All landing content sits ABOVE the orb layer */
  .lp-nav, .lp-hero, .lp-features-row, .lp-section, .lp-install-card, .lp-footer { position:relative;z-index:1; }
@@ -3616,4 +3609,22 @@ async function renderProfile(){
  <div>
  <div style="font-size:18px;font-weight:700">${escapeHtml(name)}</div>
  <div style="color:var(--text-dim);font-size:13px">${escapeHtml(user.email)}</div>
- <div 
+ <div style="color:var(--text-faint);font-size:12px;margin-top:4px">Account created: ${created}</div>
+ </div>
+ </div>
+ <button class="btn btn-danger btn-sm" id="signout-btn">Sign out</button>
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Your business</h3></div>
+ <div class="panel-body">
+ <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Name</div>
+ <div style="font-weight:600;margin-bottom:14px">${escapeHtml(biz.name)}</div>
+ <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Type</div>
+ <div style="margin-bottom:14px">${escapeHtml(biz.type)}</div>
+ <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">WhatsApp phone</div>
+ <div style="margin-bottom:14px">${escapeHtml(biz.phone||'—')} ${biz.whatsapp_verified ? '<span class="pill green">verified</span>' : '<span class="pill amber">unverified</span>'}</div>
+ ${biz.description ? `<div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Description</div><div style="margin-bottom:14px">${escapeHtml(biz.description)}</div>` : ''}
+ <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Plan</div>
+ <div style="margin-bottom:14px"><span class="pill blue">${esc
