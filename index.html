@@ -826,61 +826,167 @@ function renderLanding(){
  @media (prefers-color-scheme:dark){ .lp-trust-text{color:#f3f4f6} }
  .lp-trust-stars { color:#fbbf24;font-size:14px;letter-spacing:1px;margin-top:2px; }
 
- /* Hero visual: dashboard mockup + WhatsApp chat overlay */
- .lp-hero-visual { position:relative;animation:lp-fadeup .9s ease .1s both;min-width:0;max-width:100%; }
- .lp-mockup { background:#fff;border-radius:18px;box-shadow:0 24px 60px -20px rgba(15,23,42,0.25);border:1px solid rgba(15,23,42,0.06);overflow:hidden;position:relative;max-width:100%; }
- .lp-mockup-head { background:#f8fafc;padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(15,23,42,0.05); }
- @media (prefers-color-scheme:dark){ .lp-mockup-head{background:#1a1d27;border-color:rgba(255,255,255,0.05)} }
- .lp-mockup-dot { width:11px;height:11px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#22d3ee); }
- .lp-mockup-title { font-weight:700;font-size:15px;flex:1; }
- .lp-mockup-body { padding:18px; }
- @media (max-width:480px) { .lp-mockup-body{padding:14px} }
- .lp-stats { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px; }
- @media (max-width:560px) { .lp-stats{ grid-template-columns:repeat(2,1fr);gap:8px } }
- .lp-stat { background:#f8fafc;border-radius:10px;padding:10px 12px;border:1px solid rgba(15,23,42,0.04);min-width:0; }
- .lp-stat-label { font-size:10.5px;color:#64748b;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:6px; }
- .lp-stat-row { display:flex;align-items:baseline;justify-content:space-between;gap:6px; }
- .lp-stat-val { font-size:20px;font-weight:800;color:#0f172a; }
- @media (prefers-color-scheme:dark){ .lp-stat-val{color:#f3f4f6} }
- .lp-stat-delta { font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:rgba(34,197,94,0.15);color:#16a34a; }
- .lp-stat-delta.neg { background:rgba(239,68,68,0.15);color:#dc2626; }
- .lp-stat-foot { font-size:10.5px;color:#94a3b8;margin-top:4px; }
- .lp-table-h { display:flex;justify-content:space-between;align-items:center;margin:12px 0 8px;padding:0 2px; }
- .lp-table-h .t { font-weight:700;font-size:13.5px; }
- .lp-table-h a { font-size:11.5px;color:#6366f1;text-decoration:none;font-weight:600; }
- .lp-table { display:grid;gap:6px; }
- .lp-trow { display:grid;grid-template-columns:50px minmax(0,1fr) minmax(0,1fr) 50px;gap:6px;align-items:center;font-size:11.5px;padding:9px 10px;background:#f8fafc;border-radius:7px; }
- .lp-trow > span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0; }
- @media (max-width:480px) { .lp-trow{ grid-template-columns:42px minmax(0,1.2fr) minmax(0,1fr) 38px;font-size:10.5px;padding:8px } }
- @media (prefers-color-scheme:dark){ .lp-trow{background:#1a1d27} }
- .lp-trow .t { font-weight:700;color:#0f172a; }
- @media (prefers-color-scheme:dark){ .lp-trow .t{color:#f3f4f6} }
- .lp-pill { font-size:9.5px;padding:2px 7px;border-radius:5px;font-weight:700;text-align:center; }
- .lp-pill.green { background:rgba(34,197,94,0.15);color:#16a34a; }
- .lp-pill.amber { background:rgba(251,191,36,0.18);color:#b45309; }
+ /* Hero visual: levitating phone mockup with WhatsApp demo */
+ .lp-hero-visual { position:relative;animation:lp-fadeup .9s ease .1s both;min-width:0;max-width:100%;display:flex;justify-content:center;align-items:center;min-height:600px; }
+ @media (max-width:1080px) { .lp-hero-visual{ min-height:560px } }
+ @media (max-width:480px) { .lp-hero-visual{ min-height:520px } }
 
- /* Floating WhatsApp chat */
- .lp-wa { position:absolute;right:-10px;bottom:-30px;width:230px;background:#fff;border-radius:22px;box-shadow:0 24px 60px -10px rgba(15,23,42,0.4);overflow:hidden;border:1px solid rgba(15,23,42,0.06);animation:lp-float 4s ease-in-out infinite; }
- @media (prefers-color-scheme:dark){ .lp-wa{background:#13151c;border-color:rgba(255,255,255,0.08)} }
- .lp-wa-head { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:12px 14px;display:flex;align-items:center;gap:10px; }
- .lp-wa-avatar { width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.18);display:grid;place-items:center;font-weight:800;font-size:14px; }
- .lp-wa-name { font-size:13px;font-weight:700; }
- .lp-wa-status { font-size:10.5px;opacity:.85; }
- .lp-wa-body { padding:12px;background:#f0f2f5;display:flex;flex-direction:column;gap:6px;font-size:11.5px; }
- @media (prefers-color-scheme:dark){ .lp-wa-body{background:#1a1d27} }
- .lp-bubble { max-width:78%;padding:7px 10px;border-radius:9px;line-height:1.4; }
- .lp-bubble.in { align-self:flex-start;background:#ffffff;color:#0f172a; }
- .lp-bubble.out { align-self:flex-end;background:#dcf8c6;color:#0f172a; }
- @media (prefers-color-scheme:dark){ .lp-bubble.in{background:#262932;color:#f3f4f6} .lp-bubble.out{background:#005c4b;color:#fff} }
- @media (max-width:1080px) { .lp-wa { display:none } }
+ .lp-phone-mockup { position:relative;width:300px;max-width:88vw;height:600px;background:#0f1117;border-radius:46px;padding:10px;box-shadow:0 30px 80px -20px rgba(99,102,241,0.45),0 0 0 2px rgba(255,255,255,0.06) inset,0 0 60px rgba(139,92,246,0.25);animation:lp-levitate 6s ease-in-out infinite;z-index:2; }
+ @media (max-width:480px) { .lp-phone-mockup{ width:270px;height:540px;border-radius:40px } }
+
+ .lp-phone-glow { position:absolute;inset:-30px;border-radius:60px;background:radial-gradient(closest-side,rgba(99,102,241,0.4),rgba(139,92,246,0.2),transparent 70%);filter:blur(30px);z-index:-1;animation:lp-glow-pulse 4s ease-in-out infinite; }
+
+ .lp-phone-screen { position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:#000; }
+ @media (max-width:480px) { .lp-phone-screen{ border-radius:32px } }
+
+ .lp-phone-notch { position:absolute;top:0;left:50%;transform:translateX(-50%);width:110px;height:26px;background:#000;border-radius:0 0 18px 18px;z-index:10; }
+
+ .lp-phone-status { position:absolute;top:0;left:0;right:0;height:34px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:11.5px;color:#fff;font-weight:600;z-index:11; }
+ .lp-phone-status .l { padding-top:6px; }
+ .lp-phone-status .r { padding-top:6px;letter-spacing:1px; }
+
+ /* HOME screen */
+ .lp-home { position:absolute;inset:0;background:linear-gradient(160deg,#1e1b4b 0%,#312e81 35%,#6366f1 100%);padding:44px 18px 22px;display:flex;flex-direction:column;animation:lp-show-home 14s ease-in-out infinite;z-index:3; }
+ .lp-home-time { color:#fff;font-size:64px;font-weight:200;text-align:center;letter-spacing:-2px;line-height:1;margin-top:14px; }
+ .lp-home-date { color:rgba(255,255,255,0.85);font-size:13.5px;text-align:center;margin-top:6px;font-weight:500; }
+ .lp-home-grid { margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:14px 10px;padding:12px 4px 30px; }
+ .lp-app { aspect-ratio:1;border-radius:12px;display:grid;place-items:center;font-size:18px;color:#fff;font-weight:700;position:relative; }
+ .lp-app.wa { background:linear-gradient(135deg,#25d366,#128c7e);animation:lp-tap-wa 14s ease-in-out infinite;box-shadow:0 4px 12px rgba(37,211,102,0.4); }
+ .lp-app.wa::before { content:'';position:absolute;inset:0;border-radius:12px;border:2px solid rgba(255,255,255,0.6);opacity:0;animation:lp-tap-ring 14s ease-out infinite; }
+ .lp-app.wa svg { width:60%;height:60%;fill:#fff; }
+ .lp-app.cal { background:#fff;color:#ef4444; }
+ .lp-app.msg { background:#3b82f6; }
+ .lp-app.cam { background:#1f2937; }
+ .lp-app.set { background:#6b7280; }
+ .lp-app.mus { background:#ec4899; }
+ .lp-app.map { background:#10b981; }
+ .lp-app.pho { background:#22c55e; }
+ .lp-home-dock { display:none; }
+
+ /* WHATSAPP screen */
+ .lp-wa-screen { position:absolute;inset:0;background:#0b141a;display:flex;flex-direction:column;opacity:0;animation:lp-show-wa 14s ease-in-out infinite;z-index:4; }
+ .lp-wa-head2 { background:#1f2c33;color:#fff;padding:38px 14px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0; }
+ .lp-wa-back { color:#00a884;font-size:20px;font-weight:300; }
+ .lp-wa-avatar2 { width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#22d3ee);display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff; }
+ .lp-wa-meta { flex:1;min-width:0; }
+ .lp-wa-name2 { font-size:14.5px;font-weight:600; }
+ .lp-wa-online { font-size:11px;color:#8696a0; }
+ .lp-wa-icons { color:#aebac1;font-size:14px;letter-spacing:6px; }
+
+ .lp-wa-chat { flex:1;background:#0b141a;background-image:radial-gradient(rgba(255,255,255,0.02) 1px,transparent 1px);background-size:20px 20px;padding:14px 10px;display:flex;flex-direction:column;gap:6px;overflow:hidden; }
+
+ .lp-bubble { max-width:78%;padding:8px 10px 6px;border-radius:8px;line-height:1.35;font-size:12.5px;opacity:0;transform:translateY(8px);position:relative;box-shadow:0 1px 0.5px rgba(0,0,0,0.13); }
+ .lp-bubble.in { align-self:flex-start;background:#1f2c33;color:#e9edef;border-top-left-radius:0; }
+ .lp-bubble.out { align-self:flex-end;background:#005c4b;color:#e9edef;border-top-right-radius:0; }
+ .lp-bubble .t { display:block;font-size:9.5px;color:rgba(233,237,239,0.55);text-align:right;margin-top:2px; }
+
+ .lp-msg-1 { animation:lp-msg-pop 14s ease-out infinite;animation-delay:0s; }
+ .lp-msg-2 { animation:lp-msg-pop 14s ease-out infinite;animation-delay:0s; }
+ .lp-msg-3 { animation:lp-msg-pop 14s ease-out infinite;animation-delay:0s; }
+ .lp-msg-4 { animation:lp-msg-pop 14s ease-out infinite;animation-delay:0s; }
+ .lp-msg-5 { animation:lp-msg-pop 14s ease-out infinite;animation-delay:0s; }
+ .lp-msg-6 { animation:lp-msg-pop 14s ease-out infinite;animation-delay:0s; }
+
+ .lp-typing { align-self:flex-start;background:#1f2c33;padding:10px 12px;border-radius:8px;border-top-left-radius:0;display:flex;gap:4px;opacity:0; }
+ .lp-typing span { width:6px;height:6px;border-radius:50%;background:#8696a0;animation:lp-typing-dot 1.2s ease-in-out infinite; }
+ .lp-typing span:nth-child(2){ animation-delay:.2s; }
+ .lp-typing span:nth-child(3){ animation-delay:.4s; }
+ .lp-typing-1 { animation:lp-typing-show 14s ease-out infinite; }
+ .lp-typing-2 { animation:lp-typing-show2 14s ease-out infinite; }
+
+ .lp-wa-input { background:#1f2c33;padding:8px 10px;display:flex;gap:8px;align-items:center;flex-shrink:0; }
+ .lp-wa-input-box { flex:1;background:#2a3942;border-radius:20px;padding:7px 14px;color:#8696a0;font-size:12px; }
+ .lp-wa-mic { width:32px;height:32px;border-radius:50%;background:#00a884;display:grid;place-items:center;color:#fff;font-size:14px; }
 
  /* Floating notification card */
- .lp-notif { position:absolute;left:-30px;bottom:30px;background:#fff;border-radius:14px;box-shadow:0 16px 40px -10px rgba(15,23,42,0.25);padding:14px 18px;display:flex;align-items:center;gap:12px;border:1px solid rgba(15,23,42,0.06);animation:lp-float 5s ease-in-out infinite reverse;max-width:280px; }
+ .lp-notif { position:absolute;left:-20px;top:60px;background:#fff;border-radius:14px;box-shadow:0 16px 40px -10px rgba(15,23,42,0.3);padding:12px 16px;display:flex;align-items:center;gap:10px;border:1px solid rgba(15,23,42,0.06);animation:lp-float 5s ease-in-out infinite reverse;max-width:240px;z-index:5; }
  @media (prefers-color-scheme:dark){ .lp-notif{background:#13151c;border-color:rgba(255,255,255,0.08)} }
- .lp-notif-icon { width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#22d3ee);display:grid;place-items:center;color:white;flex-shrink:0;font-size:18px; }
- .lp-notif-t { font-weight:700;font-size:13px; }
- .lp-notif-d { font-size:11.5px;color:#64748b;margin-top:2px; }
+ .lp-notif-icon { width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#22d3ee);display:grid;place-items:center;color:white;flex-shrink:0;font-size:16px;font-weight:800; }
+ .lp-notif-t { font-weight:700;font-size:12.5px; }
+ .lp-notif-d { font-size:11px;color:#64748b;margin-top:2px; }
  @media (max-width:1080px) { .lp-notif { display:none } }
+
+ @keyframes lp-levitate {
+  0%,100% { transform:translateY(0) rotate(-1.5deg) }
+  50% { transform:translateY(-18px) rotate(1.5deg) }
+ }
+ @keyframes lp-glow-pulse {
+  0%,100% { opacity:.6;transform:scale(1) }
+  50% { opacity:1;transform:scale(1.08) }
+ }
+ @keyframes lp-show-home {
+  0%,10% { opacity:1;transform:scale(1);filter:blur(0) }
+  14% { opacity:1;transform:scale(1.6);filter:blur(2px) }
+  18%,100% { opacity:0;transform:scale(2);filter:blur(6px);pointer-events:none }
+ }
+ @keyframes lp-show-wa {
+  0%,12% { opacity:0;transform:scale(.96) }
+  16%,92% { opacity:1;transform:scale(1) }
+  98%,100% { opacity:0;transform:scale(.98) }
+ }
+ @keyframes lp-tap-wa {
+  0%,8% { transform:scale(1) }
+  10% { transform:scale(.85) }
+  12% { transform:scale(1.05) }
+  14%,100% { transform:scale(1) }
+ }
+ @keyframes lp-tap-ring {
+  0%,8% { opacity:0;transform:scale(1) }
+  10% { opacity:.9;transform:scale(1) }
+  14% { opacity:0;transform:scale(1.6) }
+  100% { opacity:0;transform:scale(1.6) }
+ }
+ @keyframes lp-msg-pop {
+  0%,18% { opacity:0;transform:translateY(8px) }
+  19% { opacity:1;transform:translateY(0) }
+  92% { opacity:1;transform:translateY(0) }
+  100% { opacity:0;transform:translateY(0) }
+ }
+ .lp-msg-1 { animation-delay:0s;animation-fill-mode:both }
+ .lp-msg-2 { animation:lp-msg-2 14s ease-out infinite;animation-fill-mode:both }
+ .lp-msg-3 { animation:lp-msg-3 14s ease-out infinite;animation-fill-mode:both }
+ .lp-msg-4 { animation:lp-msg-4 14s ease-out infinite;animation-fill-mode:both }
+ .lp-msg-5 { animation:lp-msg-5 14s ease-out infinite;animation-fill-mode:both }
+ .lp-msg-6 { animation:lp-msg-6 14s ease-out infinite;animation-fill-mode:both }
+ @keyframes lp-msg-2 {
+  0%,28% { opacity:0;transform:translateY(8px) }
+  30% { opacity:1;transform:translateY(0) }
+  92% { opacity:1 } 100% { opacity:0 }
+ }
+ @keyframes lp-msg-3 {
+  0%,46% { opacity:0;transform:translateY(8px) }
+  48% { opacity:1;transform:translateY(0) }
+  92% { opacity:1 } 100% { opacity:0 }
+ }
+ @keyframes lp-msg-4 {
+  0%,56% { opacity:0;transform:translateY(8px) }
+  58% { opacity:1;transform:translateY(0) }
+  92% { opacity:1 } 100% { opacity:0 }
+ }
+ @keyframes lp-msg-5 {
+  0%,72% { opacity:0;transform:translateY(8px) }
+  74% { opacity:1;transform:translateY(0) }
+  92% { opacity:1 } 100% { opacity:0 }
+ }
+ @keyframes lp-msg-6 {
+  0%,82% { opacity:0;transform:translateY(8px) }
+  84% { opacity:1;transform:translateY(0) }
+  92% { opacity:1 } 100% { opacity:0 }
+ }
+ @keyframes lp-typing-show {
+  0%,38% { opacity:0 }
+  40%,46% { opacity:1 }
+  47%,100% { opacity:0 }
+ }
+ @keyframes lp-typing-show2 {
+  0%,64% { opacity:0 }
+  66%,72% { opacity:1 }
+  73%,100% { opacity:0 }
+ }
+ @keyframes lp-typing-dot {
+  0%,80%,100% { opacity:.4;transform:scale(.8) }
+  40% { opacity:1;transform:scale(1.2) }
+ }
 
  /* Feature cards */
  .lp-features-row { max-width:1280px;margin:-30px auto 0;padding:0 24px;display:grid;grid-template-columns:repeat(5,1fr);gap:18px; }
@@ -1103,39 +1209,61 @@ function renderLanding(){
  </div>
 
  <div class="lp-hero-visual">
- <div class="lp-mockup">
- <div class="lp-mockup-head"><div class="lp-mockup-dot"></div><div class="lp-mockup-title">Dashboard</div><span style="font-size:11.5px;color:#94a3b8">Today</span></div>
- <div class="lp-mockup-body">
- <div class="lp-stats">
- <div class="lp-stat"><div class="lp-stat-label">Appointments</div><div class="lp-stat-row"><span class="lp-stat-val">128</span><span class="lp-stat-delta">+12%</span></div><div class="lp-stat-foot">This week</div></div>
- <div class="lp-stat"><div class="lp-stat-label">New clients</div><div class="lp-stat-row"><span class="lp-stat-val">45</span><span class="lp-stat-delta">+8%</span></div><div class="lp-stat-foot">This week</div></div>
- <div class="lp-stat"><div class="lp-stat-label">Messages</div><div class="lp-stat-row"><span class="lp-stat-val">320</span><span class="lp-stat-delta">+15%</span></div><div class="lp-stat-foot">This week</div></div>
- <div class="lp-stat"><div class="lp-stat-label">No-show rate</div><div class="lp-stat-row"><span class="lp-stat-val">5%</span><span class="lp-stat-delta neg">−2%</span></div><div class="lp-stat-foot">This week</div></div>
+ <div class="lp-phone-mockup">
+ <div class="lp-phone-glow"></div>
+ <div class="lp-phone-screen">
+ <div class="lp-phone-notch"></div>
+ <div class="lp-phone-status"><span class="l">9:41</span><span class="r">5G</span></div>
+
+ <div class="lp-home">
+ <div class="lp-home-time">9:41</div>
+ <div class="lp-home-date">Wednesday, May 6</div>
+ <div class="lp-home-grid">
+ <div class="lp-app cal">31</div>
+ <div class="lp-app msg"></div>
+ <div class="lp-app cam"></div>
+ <div class="lp-app set"></div>
+ <div class="lp-app mus"></div>
+ <div class="lp-app map"></div>
+ <div class="lp-app pho"></div>
+ <div class="lp-app wa">
+ <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.6 6.32A7.85 7.85 0 0 0 12.05 4a7.94 7.94 0 0 0-6.88 11.9L4 20l4.2-1.1a7.93 7.93 0 0 0 3.85.98h.01A7.94 7.94 0 0 0 20 12.94a7.86 7.86 0 0 0-2.4-6.62Zm-5.55 12.2h-.01a6.6 6.6 0 0 1-3.36-.92l-.24-.14-2.5.65.67-2.43-.16-.25a6.59 6.59 0 1 1 12.2-3.49 6.6 6.6 0 0 1-6.6 6.58Zm3.62-4.93c-.2-.1-1.17-.58-1.36-.64-.18-.07-.31-.1-.45.1-.13.2-.51.64-.62.77-.12.13-.23.15-.43.05-.2-.1-.84-.31-1.6-.99a6 6 0 0 1-1.1-1.38c-.12-.2-.01-.31.09-.41.09-.09.2-.23.3-.35.1-.12.13-.2.2-.33.06-.13.03-.25-.02-.35l-.6-1.46c-.16-.39-.33-.34-.45-.34h-.39c-.13 0-.35.05-.53.25s-.7.69-.7 1.67c0 .99.71 1.94.81 2.07.1.13 1.4 2.13 3.4 2.99.47.2.84.33 1.13.42.48.15.91.13 1.25.08.38-.06 1.17-.48 1.34-.94.16-.46.16-.86.11-.94-.05-.08-.18-.13-.38-.23Z"/></svg>
  </div>
- <div class="lp-table-h"><div class="t">Upcoming appointments</div><a href="#/auth">View all</a></div>
- <div class="lp-table">
- ${patients.map((name, i) => `<div class="lp-trow"><span class="t">${slots[i]}</span><span>${name}</span><span>${services[i]}</span><span class="lp-pill ${statuses[i] === 'OK' ? 'green' : 'amber'}">${statuses[i]}</span></div>`).join('')}
+ </div>
+ </div>
+
+ <div class="lp-wa-screen">
+ <div class="lp-wa-head2">
+ <span class="lp-wa-back">‹</span>
+ <div class="lp-wa-avatar2">N</div>
+ <div class="lp-wa-meta">
+ <div class="lp-wa-name2">Nova AI</div>
+ <div class="lp-wa-online">online</div>
+ </div>
+ <div class="lp-wa-icons">⌕ ⋮</div>
+ </div>
+ <div class="lp-wa-chat">
+ <div class="lp-bubble out lp-msg-1">Ahla, nheb maw3ed ${chatService} ghodwa<span class="t">9:40</span></div>
+ <div class="lp-typing lp-typing-1"><span></span><span></span><span></span></div>
+ <div class="lp-bubble in lp-msg-2">Marhba ${notifPatient.split(' ')[0]} ! Pour ${chatService} avec ${heroDoctor}, j'ai 10:00 ou 14:30 demain — laquelle ?<span class="t">9:40</span></div>
+ <div class="lp-bubble out lp-msg-3">10h svp<span class="t">9:41</span></div>
+ <div class="lp-typing lp-typing-2"><span></span><span></span><span></span></div>
+ <div class="lp-bubble in lp-msg-4">Parfait. Confirmation : demain à 10:00 avec ${heroDoctor}.<span class="t">9:41</span></div>
+ <div class="lp-bubble in lp-msg-5">Je vous envoie un rappel 24h avant.<span class="t">9:41</span></div>
+ <div class="lp-bubble out lp-msg-6">Merci !<span class="t">9:41</span></div>
+ </div>
+ <div class="lp-wa-input">
+ <div class="lp-wa-input-box">Type a message...</div>
+ <div class="lp-wa-mic">●</div>
+ </div>
  </div>
  </div>
  </div>
  <div class="lp-notif">
- <div class="lp-notif-icon"></div>
+ <div class="lp-notif-icon">N</div>
  <div>
  <div class="lp-notif-t">New appointment</div>
  <div class="lp-notif-d">${notifPatient.split(' ')[0]} booked with ${notifDoctor} · 2 min ago</div>
- </div>
- </div>
- <div class="lp-wa">
- <div class="lp-wa-head">
- <div class="lp-wa-avatar">N</div>
- <div><div class="lp-wa-name">Nova AI</div><div class="lp-wa-status">Online</div></div>
- </div>
- <div class="lp-wa-body">
- <div class="lp-bubble in">Ahla ! Comment je peux vous aider ?</div>
- <div class="lp-bubble out">Nheb maw3ed ${chatService} ghodwa</div>
- <div class="lp-bubble in">Bien sûr ! ${heroDoctor} est libre à 10:00 ou 14:30 — laquelle vous convient ?</div>
- <div class="lp-bubble out">10:00 svp</div>
- <div class="lp-bubble in"> Confirmé pour demain 10:00.</div>
  </div>
  </div>
  </div>
