@@ -2004,6 +2004,7 @@ async function renderDashboard(route){
  ${navItem('demandfill','Demand Fill','◐')}
  ${navItem('insights','Schedule Insights','◧')}
  ${biz.type !== 'laboratoire' ? navItem('rxcheck','Prescribe','℞') : ''}
+ ${navItem('birthdays','Birthdays','✦')}
  ${navItem('messages','Messages','')}
  ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
  ${navItem('test','Test assistant','▶')}
@@ -2032,7 +2033,7 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',vehicles:'Vehicles',vehicle:'Vehicle profile',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',vehicles:'Vehicles',vehicle:'Vehicle profile',birthdays:'Birthdays',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
@@ -2045,6 +2046,7 @@ function pageSub(s){return ({
  demandfill:'Auto-pinging — turn empty slots into bookings',
  insights:'Self-learning durations: Nova adjusts your schedule based on real visit times',
  rxcheck:'AI drug-interaction & allergy checker — your malpractice safety net',
+ birthdays:'AI birthday surprises — auto-send personalised vouchers, build word-of-mouth',
  vehicles:'Per-car profiles: VIN, mileage, service history, photos',
  vehicle:'Full service log + photo timeline for this vehicle',
  messages:'WhatsApp conversation history',
@@ -2100,6 +2102,7 @@ async function bindDashboard(route){
  if (sub==='demandfill') bindDemandFill();
  if (sub==='insights') bindInsights();
  if (sub==='rxcheck') bindRxCheck();
+ if (sub==='birthdays') bindBirthdays();
  if (sub==='vehicles') bindVehicles();
  if (sub==='vehicle') bindVehicleDetail();
  if (sub==='appointments') await bindAppointments();
@@ -2157,12 +2160,204 @@ async function renderPage(sub){
  if (sub==='demandfill') return await renderDemandFill();
  if (sub==='insights') return await renderInsights();
  if (sub==='rxcheck') return await renderRxCheck();
+ if (sub==='birthdays') return await renderBirthdays();
  if (sub==='messages') return await renderMessages();
  if (sub==='notifications') return await renderNotifications();
  if (sub==='test') return renderTest();
  if (sub==='activity') return await renderActivity();
  if (sub==='settings') return renderSettings();
  return await renderOverview();
+}
+
+// ============================================================
+// BIRTHDAYS — auto-send personalised vouchers on the patient's birthday
+// ============================================================
+async function renderBirthdays(){
+ const biz = SESSION.business;
+ const cfg = biz.birthday_config || { enabled:false, voucher_label:'Free 30-min add-on of your choice', validity_days:30, voucher_value:0, message_template:'' };
+
+ const [vouchersResp, kpiResp, todayResp] = await Promise.all([
+   sb.from('birthday_vouchers').select('*, clients(name, phone)').eq('business_id', biz.id).order('issued_at',{ascending:false}).limit(40),
+   sb.from('v_birthday_kpis').select('*').eq('business_id', biz.id).maybeSingle(),
+   sb.from('clients').select('id, name, phone, birthday').eq('business_id', biz.id).not('birthday','is',null),
+ ]);
+ if (vouchersResp.error && (vouchersResp.error.message||'').toLowerCase().includes('does not exist')) {
+   return `<div class="panel"><div class="panel-head"><h3>One-time setup needed</h3></div>
+     <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+       Birthday surprises need a one-time SQL migration.<br><br>
+       1. Open <a href="https://supabase.com/dashboard/project/${escapeHtml((CFG.supabaseUrl||'').match(/\/\/(.+?)\./)?.[1]||'')}/sql/new" target="_blank" style="color:var(--primary-2)">Supabase Studio → SQL Editor</a><br>
+       2. Paste <span class="code">supabase/migrations/birthday_pack.sql</span> from your repo<br>
+       3. Click <b>Run</b>, then deploy <span class="code">supabase functions deploy birthday-runner --no-verify-jwt</span>
+     </div></div>`;
+ }
+ const vouchers = vouchersResp.data || [];
+ const kpi = kpiResp.data || { issued_12m:0, redeemed_12m:0, active_now:0, total_redeemed_value:0, redemption_rate_pct:0 };
+ const allClients = todayResp.data || [];
+ // Compute today's birthday folks
+ const now = new Date();
+ const m = now.getMonth() + 1, d = now.getDate();
+ const todays = allClients.filter(c => {
+   if (!c.birthday) return false;
+   const dt = new Date(c.birthday + 'T00:00:00Z');
+   return (dt.getUTCMonth()+1) === m && dt.getUTCDate() === d;
+ });
+ const upcoming = allClients.map(c => {
+   const dt = new Date(c.birthday + 'T00:00:00Z');
+   const next = new Date(now.getFullYear(), dt.getUTCMonth(), dt.getUTCDate());
+   if (next < new Date(now.getFullYear(), now.getMonth(), now.getDate())) next.setFullYear(now.getFullYear()+1);
+   return { ...c, daysUntil: Math.ceil((next - now)/(86400*1000)) };
+ }).filter(c => c.daysUntil > 0 && c.daysUntil <= 30).sort((a,b) => a.daysUntil - b.daysUntil);
+
+ const statusPill = (v) => {
+   if (v.redeemed_at) return '<span class="pill green">REDEEMED</span>';
+   if (new Date(v.expires_at) < new Date()) return '<span class="pill gray">EXPIRED</span>';
+   return '<span class="pill blue">ACTIVE</span>';
+ };
+
+ return `<div class="stats" style="margin-bottom:18px">
+   <div class="stat"><div class="lbl">Issued (12m)</div><div class="val">${kpi.issued_12m||0}</div><div class="delta">vouchers</div></div>
+   <div class="stat"><div class="lbl">Redeemed</div><div class="val" style="color:var(--accent)">${kpi.redeemed_12m||0}</div><div class="delta">visits driven</div></div>
+   <div class="stat"><div class="lbl">Redemption rate</div><div class="val">${Math.round(kpi.redemption_rate_pct||0)}%</div><div class="delta">of issued</div></div>
+   <div class="stat"><div class="lbl">Active now</div><div class="val">${kpi.active_now||0}</div><div class="delta">unredeemed</div></div>
+ </div>
+
+ <div class="panel" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(236,72,153,0.10),rgba(99,102,241,0.08));border:1px solid color-mix(in srgb,#ec4899 30%,transparent)">
+   <div class="panel-head"><h3 style="display:flex;align-items:center;gap:10px">✦ Birthday config</h3>
+     <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+       <input type="checkbox" id="bd-enabled" ${cfg.enabled?'checked':''} style="width:18px;height:18px" />
+       <span><b>${cfg.enabled?'Active':'Off'}</b> — ${cfg.enabled?'Nova will send today\'s birthdays at 9am':'turn on to start sending'}</span>
+     </label>
+   </div>
+   <div class="panel-body">
+     <div class="row" style="gap:14px;align-items:flex-start;flex-wrap:wrap">
+       <div class="field grow" style="min-width:280px"><label>Voucher description</label><input id="bd-label" value="${escapeHtml(cfg.voucher_label||'')}" placeholder="e.g. Free 30-min add-on, 20% off, Free coffee" /></div>
+       <div class="field" style="width:130px"><label>Value (TND)</label><input id="bd-value" type="number" step="0.01" value="${cfg.voucher_value||0}" /></div>
+       <div class="field" style="width:130px"><label>Valid for (days)</label><input id="bd-validity" type="number" value="${cfg.validity_days||30}" /></div>
+     </div>
+     <div class="field"><label>Message template (optional)</label>
+       <textarea id="bd-tpl" rows="4" placeholder="Leave blank to use Nova's default. Placeholders: {name} {business} {voucher_label} {voucher_code} {valid_until}">${escapeHtml(cfg.message_template||'')}</textarea>
+       <div style="font-size:11.5px;color:var(--text-faint);margin-top:4px">Auto-translates to French / Arabic from the customer's saved language when no template is set.</div>
+     </div>
+     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px">
+       <button class="btn btn-secondary btn-sm" id="bd-test" ${todays.length===0?'disabled':''} title="${todays.length===0?'No birthdays today — add a test patient with today\'s birthday':'Send to today\'s birthdays now'}">Send to today's ${todays.length>0?`(${todays.length})`:''}</button>
+       <button class="btn btn-primary btn-sm" id="bd-save">Save</button>
+     </div>
+   </div>
+ </div>
+
+ ${todays.length > 0 ? `<div class="panel" style="margin-bottom:18px">
+   <div class="panel-head"><h3>🎂 Today (${todays.length})</h3></div>
+   <div class="panel-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+     ${todays.map(c => `<div style="padding:12px;background:var(--card-2);border-radius:10px;border:1px solid var(--border)">
+       <div style="font-weight:600;font-size:14px">${escapeHtml(c.name)}</div>
+       <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${escapeHtml(c.phone||'')}</div>
+       <button class="btn btn-secondary btn-sm" data-bd-send="${c.id}" style="margin-top:8px;width:100%">Send now</button>
+     </div>`).join('')}
+   </div>
+ </div>` : ''}
+
+ ${upcoming.length > 0 ? `<div class="panel" style="margin-bottom:18px">
+   <div class="panel-head"><h3>Coming up (next 30 days)</h3></div>
+   <div class="panel-body no-pad">
+     <table class="responsive-stack">
+       <thead><tr><th>Patient</th><th>When</th><th>Days</th></tr></thead>
+       <tbody>${upcoming.slice(0,15).map(c => `<tr>
+         <td data-l="Patient"><b>${escapeHtml(c.name)}</b></td>
+         <td data-l="When">${new Date(c.birthday+'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric'})}</td>
+         <td data-l="Days"><span class="pill ${c.daysUntil<=7?'amber':'gray'}">in ${c.daysUntil}d</span></td>
+       </tr>`).join('')}</tbody>
+     </table>
+   </div>
+ </div>` : ''}
+
+ <div class="panel">
+   <div class="panel-head"><h3>Voucher history (${vouchers.length})</h3></div>
+   <div class="panel-body no-pad">${vouchers.length === 0 ?
+     '<div class="empty"><div class="ic">✦</div>No vouchers issued yet — toggle this on and Nova will start sending tomorrow morning.</div>' :
+     `<table class="responsive-stack">
+       <thead><tr><th>Issued</th><th>Patient</th><th>Code</th><th>Reward</th><th>Expires</th><th>Status</th></tr></thead>
+       <tbody>${vouchers.map(v => `<tr>
+         <td data-l="Issued" style="font-size:12px;color:var(--text-dim)">${new Date(v.issued_at).toLocaleDateString()}</td>
+         <td data-l="Patient"><b>${escapeHtml(v.clients?.name||'—')}</b></td>
+         <td data-l="Code" style="font-family:'JetBrains Mono',Consolas,monospace;font-weight:700">${escapeHtml(v.code)}</td>
+         <td data-l="Reward" style="font-size:12.5px">${escapeHtml(v.label||'')}${v.value_amount?` (${v.value_amount} TND)`:''}</td>
+         <td data-l="Expires" style="font-size:12px;color:var(--text-dim)">${new Date(v.expires_at).toLocaleDateString()}</td>
+         <td data-l="Status">${statusPill(v)}${!v.redeemed_at && new Date(v.expires_at) > new Date() ? `<button class="btn btn-secondary btn-sm" data-bd-redeem="${v.code}" style="margin-left:6px;font-size:11px;padding:3px 8px">Redeem</button>` : ''}</td>
+       </tr>`).join('')}</tbody>
+     </table>`
+   }</div>
+ </div>`;
+}
+
+function bindBirthdays(){
+ const en = document.getElementById('bd-enabled');
+ const lab = document.getElementById('bd-label');
+ const val = document.getElementById('bd-value');
+ const vd = document.getElementById('bd-validity');
+ const tpl = document.getElementById('bd-tpl');
+ const save = document.getElementById('bd-save');
+ const test = document.getElementById('bd-test');
+
+ if (save) save.onclick = async () => {
+   const cfg = {
+     enabled: en.checked,
+     voucher_label: lab.value.trim() || 'Free birthday gift',
+     voucher_value: Number(val.value) || 0,
+     validity_days: Math.max(1, parseInt(vd.value, 10) || 30),
+     message_template: tpl.value.trim() || null,
+   };
+   const { error } = await sb.from('businesses').update({ birthday_config: cfg }).eq('id', SESSION.business.id);
+   if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
+   SESSION.business.birthday_config = cfg;
+   toast({title:'Saved', message: cfg.enabled ? 'Nova will send birthday vouchers tomorrow at 9am.' : 'Birthday auto-send is OFF.', type:'info'});
+ };
+
+ if (test) test.onclick = async () => {
+   if (!confirm('Send today\'s birthday vouchers now? (Skips the daily-cron wait.)')) return;
+   test.disabled = true; test.textContent = 'Sending...';
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/birthday-runner`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ mode:'run', business_id: SESSION.business.id, force: true }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'Run failed');
+     toast({title: j.sent ? `Sent ${j.sent}` : 'No vouchers sent', message: j.sent ? 'Vouchers delivered via WhatsApp.' : (j.candidates ? 'Already issued today.' : 'No birthdays match today.'), type:'info'});
+     render();
+   } catch (e) {
+     toast({title:'Send failed', message:e.message, urgent:true});
+   } finally { test.disabled = false; test.textContent = 'Send to today\'s'; }
+ };
+
+ // Per-row "Send now" buttons (forces a single client)
+ document.querySelectorAll('[data-bd-send]').forEach(b => b.onclick = async () => {
+   b.disabled = true; b.textContent = '...';
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/birthday-runner`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ mode:'send_test', business_id: SESSION.business.id, client_id: b.dataset.bdSend }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'Send failed');
+     toast({title: j.sent ? 'Voucher sent' : 'Already issued today', message: j.sent ? 'WhatsApp delivered.' : '', type:'info'});
+     render();
+   } catch (e) {
+     toast({title:'Send failed', message:e.message, urgent:true});
+     b.disabled = false; b.textContent = 'Send now';
+   }
+ });
+
+ // Manual redemption
+ document.querySelectorAll('[data-bd-redeem]').forEach(b => b.onclick = async () => {
+   if (!confirm('Mark this voucher as redeemed?')) return;
+   const { data, error } = await sb.rpc('redeem_birthday_voucher', { p_code: b.dataset.bdRedeem });
+   if (error) { toast({title:'Redeem failed', message:error.message, urgent:true}); return; }
+   const r = data?.[0];
+   if (r?.ok) { toast({title:'Redeemed', type:'booking'}); render(); }
+   else toast({title: r?.status || 'Failed', urgent:true});
+ });
 }
 
 // ============================================================
@@ -4940,14 +5135,17 @@ function modalShell(title, body, submit='Save'){
 function addClientModal(){
  window.__modalSubmit = async (d)=>{
  if (!d.name||!d.phone){alert('Name and phone are required');return;}
- const {error} = await sb.from('clients').insert({business_id: SESSION.business.id, name:d.name, phone:d.phone, email:d.email||null});
+ const payload = {business_id: SESSION.business.id, name:d.name, phone:d.phone, email:d.email||null};
+ if (d.birthday) payload.birthday = d.birthday;
+ const {error} = await sb.from('clients').insert(payload);
  if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
  closeModal(); render();
  };
  return modalShell('Add client',
  `<div class="field"><label>Name</label><input name="name" required /></div>
  <div class="field"><label>Phone</label><input name="phone" placeholder="+212…" required /></div>
- <div class="field"><label>Email (optional)</label><input name="email" type="email" /></div>`);
+ <div class="field"><label>Email (optional)</label><input name="email" type="email" /></div>
+ <div class="field"><label>Birthday (optional — used for AI birthday surprises)</label><input name="birthday" type="date" /></div>`);
 }
 function addDoctorModal(){
  window.__modalSubmit = async (d)=>{

@@ -392,6 +392,32 @@ Reply with valid JSON ONLY (no prose, no code fences):
  continue;
  }
 
+ // === BIRTHDAY VOUCHER REDEMPTION ===
+ // If the customer messages a bare 6-char alphanumeric code matching one of our vouchers, redeem it.
+ const bdCodeMatch = text.trim().match(/^[A-HJ-NPR-Z2-9]{6}$/i);
+ if (bdCodeMatch) {
+   const { data: vRow } = await sb.rpc('find_birthday_voucher', { p_code: bdCodeMatch[0] });
+   const v = Array.isArray(vRow) && vRow[0];
+   if (v && v.business_id === biz.id) {
+     if (v.status === 'active') {
+       await sb.rpc('redeem_birthday_voucher', { p_code: bdCodeMatch[0] });
+       await sb.from('notifications').insert({
+         business_id: biz.id, type: 'info',
+         title: 'Birthday voucher redeemed',
+         message: `${v.client_name || from} just redeemed ${v.label} via WhatsApp.`,
+       });
+       await sendText(from, `Voucher *${bdCodeMatch[0]}* redeemed — ${v.label}. Enjoy!`);
+       continue;
+     } else if (v.status === 'redeemed') {
+       await sendText(from, `That voucher was already redeemed. Get in touch if you think this is a mistake.`);
+       continue;
+     } else if (v.status === 'expired') {
+       await sendText(from, `Sorry, that voucher has expired.`);
+       continue;
+     }
+   }
+ }
+
  if (text.startsWith("rev:")) {
  const [, rating, aptId] = text.split(":");
  const r = parseInt(rating || "0", 10);
