@@ -659,6 +659,30 @@ serve(async (req) => {
  // Update client with collected data
  await sb.from("clients").update({ name: collected.name, age: collected.age }).eq("id", clientId);
  await sb.from("booking_drafts").delete().eq("id", draft.id);
+
+ // Birthday capture — ASK ONCE if the business runs birthday surprises and we don't have one yet.
+ // This lands as a friendly PS after the booking confirmation; the customer can ignore it.
+ try {
+   const cfg = (biz as any).birthday_config || {};
+   const { data: cliRow } = await sb.from("clients").select("birthday").eq("id", clientId).maybeSingle();
+   if (cfg.enabled && !cliRow?.birthday) {
+     const askLang = collected.language || (collected as any).lang || lang || "en";
+     const ask = askLang === "fr"
+       ? "PS: Quelle est votre date de naissance ? On vous prépare un petit cadeau le jour de votre anniversaire 🎂 (ex. 1990-05-23 ou ignorez si vous préférez)"
+       : askLang === "ar"
+       ? "ملاحظة: ما هو تاريخ ميلادك؟ لدينا هدية صغيرة لك في يوم ميلادك 🎂 (مثلا 1990-05-23 أو تجاهل الرسالة)"
+       : "PS: What's your date of birth? We've got a little surprise for you on your birthday 🎂 (e.g. 1990-05-23 — or ignore if you'd rather not)";
+     await sendWhatsApp(channel, phone, ask);
+     // Mark the draft state so the NEXT inbound message can be parsed as a birthday.
+     // We use the booking_drafts table, repurposing it briefly with state='await_birthday'.
+     await sb.from("booking_drafts").insert({
+       business_id, client_id: clientId, channel,
+       state: "await_birthday",
+       collected: { client_id: clientId },
+       last_user_text: "",
+     });
+   }
+ } catch (_e) { /* best-effort, never blocks booking confirmation */ }
  // Build the patient's check-in link (token was auto-minted by the trigger)
  const PWA_BASE = Deno.env.get("PWA_BASE_URL") || "https://nova-ai-s8i6.vercel.app";
  const checkinLink = apt?.checkin_token ? `${PWA_BASE}/pwa/check.html?a=${encodeURIComponent(apt.checkin_token)}` : "";

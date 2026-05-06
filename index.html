@@ -3596,6 +3596,11 @@ async function renderClients(){
 
  const search = `<input id="cli-search" placeholder=" Search by name, phone or email..." style="width:100%;padding:8px 10px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:inherit;margin:8px 0" />`;
 
+ const fmtBd = (b) => {
+   if (!b) return '<span class="sub">—</span>';
+   const d = new Date(b + 'T00:00:00');
+   return `<span style="font-weight:600">${d.toLocaleDateString(undefined,{day:'2-digit',month:'short'})}</span> <span class="sub">${d.getFullYear()}</span>`;
+ };
  const rows = cls.map(c => {
  const s = stat[c.id] || {visits:0, last:null, spent:0, msgs:0, upcoming:0};
  const lang = (c.profile && c.profile.language) ? c.profile.language : '—';
@@ -3603,24 +3608,39 @@ async function renderClients(){
  <td><b>${escapeHtml(c.name||'—')}</b>${c.age?` <span class="sub">(${c.age})</span>`:''}</td>
  <td>${escapeHtml(c.phone||'—')}</td>
  <td>${escapeHtml(c.email||'—')}</td>
+ <td onclick="event.stopPropagation()">${c.birthday ? fmtBd(c.birthday) : `<button class="btn btn-ghost btn-sm" data-cli-bd="${c.id}" style="font-size:11px;padding:3px 8px;color:var(--primary-2)">+ add</button>`}</td>
  <td><span class="pill blue">${s.visits}</span>${s.upcoming?` <span class="pill green">${s.upcoming} upcoming</span>`:''}</td>
  <td>${s.last||'—'}</td>
  <td>${s.spent>0?`${s.spent.toFixed(0)} TND`:'—'}</td>
  <td>${s.msgs}</td>
  <td><span class="pill gray">${lang}</span></td>
- <td>${new Date(c.created_at).toLocaleDateString()}</td>
+ <td onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" data-cli-edit="${c.id}" title="Edit" style="font-size:13px;padding:4px 8px">✎</button></td>
  </tr>`;
  }).join('');
 
  return `<div class="panel"><div class="panel-head"><h3>Patients (${cls.length})</h3><button class="btn btn-primary btn-sm" id="add-cli">+ New client</button></div>
  <div class="panel-body">${search}</div>
  <div class="panel-body no-pad">${cls.length===0?`<div class="empty"><div class="ic">◉</div>No patients yet</div>`:`
- <table class="data"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Visits</th><th>Last visit</th><th>Total spent</th><th>Messages</th><th>Lang</th><th>Joined</th></tr></thead>
+ <table class="data"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Birthday</th><th>Visits</th><th>Last visit</th><th>Spent</th><th>Msgs</th><th>Lang</th><th></th></tr></thead>
  <tbody>${rows}</tbody></table>`}</div></div>`;
 }
 
 async function bindClients(){
  $('#add-cli').onclick = ()=>openModal(addClientModal());
+ // Inline "+ add birthday" buttons — quick birthday-only edit
+ document.querySelectorAll('[data-cli-bd]').forEach(b => b.onclick = async () => {
+   const id = b.dataset.cliBd;
+   const newDate = prompt('Birthday (YYYY-MM-DD):');
+   if (!newDate) return;
+   if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) { toast({title:'Invalid format', message:'Use YYYY-MM-DD (e.g. 1990-05-23).', urgent:true}); return; }
+   const { error } = await sb.from('clients').update({ birthday: newDate }).eq('id', id);
+   if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
+   toast({title:'Birthday saved', type:'info'}); render();
+ });
+ // Pencil edit buttons — full edit modal
+ document.querySelectorAll('[data-cli-edit]').forEach(b => b.onclick = async () => {
+   await openEditClientModal(b.dataset.cliEdit);
+ });
 
  /* Live search filter */
  const search = $('#cli-search');
@@ -5132,6 +5152,35 @@ document.addEventListener('click', async (e)=>{
 function modalShell(title, body, submit='Save'){
  return `<h3>${title}</h3><form>${body}<div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">${submit}</button></div></form>`;
 }
+async function openEditClientModal(clientId){
+ const { data: c } = await sb.from('clients').select('*').eq('id', clientId).maybeSingle();
+ if (!c) return;
+ const html = `<h3>Edit ${escapeHtml(c.name||'client')}</h3>
+   <form>
+     <div class="field"><label>Name</label><input name="name" value="${escapeHtml(c.name||'')}" required /></div>
+     <div class="row" style="gap:8px"><div class="field grow"><label>Phone</label><input name="phone" value="${escapeHtml(c.phone||'')}" required /></div>
+       <div class="field" style="width:100px"><label>Age</label><input name="age" type="number" value="${c.age||''}" /></div></div>
+     <div class="field"><label>Email</label><input name="email" type="email" value="${escapeHtml(c.email||'')}" /></div>
+     <div class="field"><label>Birthday <span style="color:var(--text-faint);font-weight:400">(unlocks AI birthday surprises)</span></label><input name="birthday" type="date" value="${c.birthday||''}" /></div>
+     <div class="field"><label>Notes</label><textarea name="notes" rows="2">${escapeHtml(c.notes||'')}</textarea></div>
+     <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit" style="margin-left:8px">Save</button></div>
+   </form>`;
+ window.__modalSubmit = async (d) => {
+   const upd = {
+     name: d.name?.trim() || null,
+     phone: d.phone?.trim() || null,
+     email: d.email?.trim() || null,
+     notes: d.notes?.trim() || null,
+     birthday: d.birthday || null,
+     age: d.age ? parseInt(d.age, 10) : null,
+   };
+   const { error } = await sb.from('clients').update(upd).eq('id', clientId);
+   if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
+   closeModal(); toast({title:'Saved', type:'info'}); render();
+ };
+ openModal(html);
+}
+
 function addClientModal(){
  window.__modalSubmit = async (d)=>{
  if (!d.name||!d.phone){alert('Name and phone are required');return;}
