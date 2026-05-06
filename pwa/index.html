@@ -738,7 +738,7 @@ async function renderDoctorMyDay() {
  <h1>${apts.length} appointment${apts.length===1?'':'s'}</h1>
  <div style="font-size:13px;opacity:.85;margin-top:4px">${escapeHtml(DOCTOR.businesses?.name || '')}</div>
  </div>
- <button class="btn btn-primary btn-block" id="doc-scan-btn" style="margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;padding:16px"><span style="font-size:20px">▦</span> Scan patient QR to start visit</button>
+ ${DOCTOR.businesses?.type !== 'laboratoire' ? `<button class="btn btn-primary btn-block" id="doc-scan-btn" style="margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;padding:16px"><span style="font-size:20px">▦</span> Scan patient QR to start visit</button>` : ''}
  <div class="section-h"><span>Today's schedule</span></div>
  ${apts.length===0?`<div class="card"><div class="empty"><div class="ic"></div>No appointments today.</div></div>`:apts.map(aptCard).join('')}
  </div>${renderNav('home')}`;

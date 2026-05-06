@@ -2017,7 +2017,7 @@ async function renderDashboard(route){
  </div>
  <div class="topbar-actions">
  <button class="icon-btn" id="theme-btn" title="Toggle theme">${currentThemeIcon()}</button>
- <button class="icon-btn" id="dash-scan-btn" title="Scan patient QR to start consultation" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:0;font-size:16px">▦</button>
+ ${biz.type !== 'laboratoire' ? `<button class="icon-btn" id="dash-scan-btn" title="Scan patient QR to start consultation" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:0;font-size:16px">▦</button>` : ''}
  <button class="icon-btn bell" id="bell-btn" title="Notifications">♪<span class="dot" id="bell-dot" style="display:none">0</span></button>
  ${userPill()}
  </div>
@@ -2108,6 +2108,8 @@ async function bindDashboard(route){
 function bindOverview(){
  // Wire up the embedded calendar (nav arrows, doctor filter, day-click)
  if (document.getElementById('ov-calendar')) { try { bindCalendar(); } catch (e) { console.warn('bindCalendar in overview:', e); } }
+ const ovScan = document.getElementById('ov-scan-btn');
+ if (ovScan) ovScan.onclick = () => openDashScanner();
  const btn = $('#ai-receptionist-switch');
  if (!btn) return;
  btn.onclick = async ()=>{
@@ -2446,7 +2448,23 @@ async function renderOverview(){
  // Embed the FULL month calendar at the top of the dashboard
  const calendarHtml = await renderCalendar();
 
- return `<div id="ov-calendar">${calendarHtml}</div>${aiBanner}${integ}
+ // Big consultation-start card (hidden for laboratoires — no per-patient timer there)
+ const isLab = biz.type === 'laboratoire';
+ const consultCard = isLab ? '' : `<div class="panel" id="ov-consult-card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.12),rgba(34,211,238,0.10));border:1px solid color-mix(in srgb,var(--primary) 40%,transparent);position:relative;overflow:hidden">
+   <div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:24px;flex-wrap:wrap">
+     <div style="display:flex;align-items:center;gap:18px;min-width:0">
+       <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);display:grid;place-items:center;color:white;font-size:26px;font-weight:800;flex-shrink:0;box-shadow:0 10px 24px rgba(99,102,241,0.45)">▦</div>
+       <div style="min-width:0">
+         <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-2);font-weight:700;margin-bottom:4px">QR CHECK-IN</div>
+         <div style="font-size:18px;font-weight:700;letter-spacing:-.2px;margin-bottom:2px">Start a consultation</div>
+         <div style="font-size:13px;color:var(--text-dim);line-height:1.5">Scan the patient's QR — Nova starts the timer and logs the actual visit length.</div>
+       </div>
+     </div>
+     <button class="btn btn-primary btn-lg" id="ov-scan-btn" style="display:flex;align-items:center;gap:10px;font-size:15px;padding:14px 24px;flex-shrink:0"><span style="font-size:18px">▦</span> Scan patient QR</button>
+   </div>
+ </div>`;
+
+ return `${consultCard}<div id="ov-calendar">${calendarHtml}</div>${aiBanner}${integ}
  <div class="stats">
  <div class="stat"><div class="lbl">Today's appointments</div><div class="val">${aptToday.count||0}</div><div class="delta">scheduled</div></div>
  <div class="stat"><div class="lbl">Total clients</div><div class="val">${clients.count||0}</div><div class="delta">all-time</div></div>
@@ -3932,7 +3950,7 @@ async function renderDoctorView(){
  </aside>
  <main class="main">
  <div class="topbar"><div><h1>Welcome, ${escapeHtml(doc.name)}</h1><div class="sub">${upcoming.length} upcoming appointment${upcoming.length===1?'':'s'}</div></div></div>
- <button class="btn btn-primary btn-lg" id="dash-doc-scan" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-size:15px;padding:16px;margin-bottom:18px"><span style="font-size:20px">▦</span> Scan patient QR to start visit</button>
+ ${SESSION.business.type !== 'laboratoire' ? `<button class="btn btn-primary btn-lg" id="dash-doc-scan" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-size:15px;padding:16px;margin-bottom:18px"><span style="font-size:20px">▦</span> Scan patient QR to start visit</button>` : ''}
  <div id="ct-overlay-host"></div>
  <div class="dash-2col">
  <div class="panel"><div class="panel-head"><h3>My appointments</h3></div>
