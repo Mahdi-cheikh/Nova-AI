@@ -724,7 +724,8 @@ serve(async (req) => {
  : `Confirmed, ${collected.name}! Your appointment is on ${collected.date} at ${collected.time}.${packageSessionInfo}`) + linkLine;
  // Insert the message first so we have a row id to attach the TTS audio to
  const { data: msgRow } = await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply }).select().single();
- const bizForVoice = (biz as any).voice_enabled && (biz as any).voice_clone_status === "ready" ? business_id : undefined;
+ // Voice replies disabled (paused — re-enable by setting voice_feature_enabled=true on the business)
+ const bizForVoice = (biz as any).voice_feature_enabled && (biz as any).voice_enabled && (biz as any).voice_clone_status === "ready" ? business_id : undefined;
  await sendWhatsApp(channel, phone, reply, { business_id: bizForVoice });
  return new Response(JSON.stringify({ ok: true, step: "booked", message_id: msgRow?.id }), { headers: { ...cors, "Content-Type": "application/json" } });
  } else if (answer === "no") {

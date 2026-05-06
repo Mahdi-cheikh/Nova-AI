@@ -2005,7 +2005,7 @@ async function renderDashboard(route){
  ${navItem('insights','Schedule Insights','◧')}
  ${biz.type !== 'laboratoire' ? navItem('rxcheck','Prescribe','℞') : ''}
  ${navItem('birthdays','Birthdays','✦')}
- ${navItem('voice','Voice avatar','◔')}
+ ${biz.voice_feature_enabled ? navItem('voice','Voice avatar','◔') : ''}
  ${navItem('messages','Messages','')}
  ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
  ${navItem('test','Test assistant','▶')}
@@ -2164,7 +2164,15 @@ async function renderPage(sub){
  if (sub==='insights') return await renderInsights();
  if (sub==='rxcheck') return await renderRxCheck();
  if (sub==='birthdays') return await renderBirthdays();
- if (sub==='voice') return await renderVoiceAvatar();
+ if (sub==='voice') {
+   if (!SESSION.business.voice_feature_enabled) {
+     return `<div class="panel"><div class="panel-head"><h3>Voice avatars — coming back soon</h3></div>
+       <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+         This feature is paused for now. To re-enable it later: set <span class="code">voice_feature_enabled = true</span> on your business row in Supabase Studio, and add an <span class="code">ELEVENLABS_API_KEY</span> secret with a Creator-plan key.
+       </div></div>`;
+   }
+   return await renderVoiceAvatar();
+ }
  if (sub==='messages') return await renderMessages();
  if (sub==='notifications') return await renderNotifications();
  if (sub==='test') return renderTest();
