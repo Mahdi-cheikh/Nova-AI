@@ -2017,10 +2017,12 @@ async function renderDashboard(route){
  </div>
  <div class="topbar-actions">
  <button class="icon-btn" id="theme-btn" title="Toggle theme">${currentThemeIcon()}</button>
+ <button class="icon-btn" id="dash-scan-btn" title="Scan patient QR to start consultation" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:0;font-size:16px">▦</button>
  <button class="icon-btn bell" id="bell-btn" title="Notifications">♪<span class="dot" id="bell-dot" style="display:none">0</span></button>
  ${userPill()}
  </div>
  </div>
+ <div id="ct-overlay-host"></div>
  <div id="page-body">${await renderPage(sub)}</div>
  </main>
  </div>`;
@@ -2063,8 +2065,15 @@ async function bindDashboard(route){
  const closeSb = ()=>{ sb && sb.classList.remove('open'); bd && bd.classList.remove('open'); };
  if (tog) tog.onclick = ()=>{ sb.classList.toggle('open'); bd.classList.toggle('open'); };
  if (bd) bd.onclick = closeSb;
- // Auto-close drawer when a nav item is clicked
  document.querySelectorAll('.sidebar .nav-item').forEach(n => n.addEventListener('click', closeSb));
+ // Topbar QR scan button — works from any dashboard page
+ const scanBtn = document.getElementById('dash-scan-btn');
+ if (scanBtn) scanBtn.onclick = () => openDashScanner();
+ // Deep-link from native camera scan: ?qr=<token>
+ const qrTok = new URLSearchParams(location.search).get('qr');
+ if (qrTok) { history.replaceState({}, '', location.pathname + location.hash); startDashConsultation(qrTok); }
+ // Restore in-progress consultation panel after re-render (tick keeps running across renders)
+ if (DASH_CT_STATE) renderDashConsultation();
  $$('.nav-item[data-go]').forEach(b=>b.onclick=()=>navigate('#'+b.dataset.go));
  $('#logout').onclick = async ()=>{ await sb.auth.signOut(); SESSION=null; navigate('#/'); };
  const viewDocBtn = $('#view-doctor');
