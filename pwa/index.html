@@ -263,9 +263,9 @@ function hardReset() {
  try { sessionStorage.clear(); } catch (_e) {}
  // Best-effort signOut — fire and forget; don't await.
  sb.auth.signOut().catch(() => {});
- location.hash = '';
- // Bust any cached version when reloading
- location.replace(location.pathname + '?reset=' + Date.now());
+ // Redirect to the marketing home page (with cache-buster) so the user lands
+ // on the public landing instead of staying inside the PWA shell.
+ location.replace('/?signedout=' + Date.now());
 }
 sb.auth.onAuthStateChange(async (event) => {
  await loadSession();
