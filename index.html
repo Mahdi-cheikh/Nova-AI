@@ -3041,7 +3041,64 @@ async function renderLabPipeline(){
  <div class="panel-body" style="max-height:65vh;overflow:auto">${list.length?list.map(groupCard).join(''):'<div class="empty"><div class="ic">⌀</div>Empty</div>'}${bulkBtn}</div></div>`;
  };
 
- return `<div class="panel" style="margin-bottom:14px"><div class="panel-body" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
+ // ---- Live patient queue (queue_pack.sql) ----
+ let queueData = [];
+ let queueAvg = 8;
+ let queueAvailable = true;
+ try {
+   const qr = await sb.from('v_queue_today').select('*').eq('business_id', bizId);
+   if (qr.error) { queueAvailable = false; }
+   else queueData = qr.data || [];
+   if (queueData.length) {
+     const completedDurations = queueData.filter(q=>q.served_min!=null).map(q=>q.served_min);
+     if (completedDurations.length) queueAvg = Math.round(completedDurations.reduce((a,b)=>a+b,0)/completedDurations.length);
+   }
+ } catch (_e) { queueAvailable = false; }
+
+ const waiting = queueData.filter(q => q.status === 'waiting').sort((a,b)=>a.position-b.position);
+ const inProgress = queueData.find(q => q.status === 'in_progress');
+ const queueUrl = `${location.origin}/pwa/queue.html?b=${encodeURIComponent(bizId)}`;
+ const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=${encodeURIComponent(queueUrl)}`;
+
+ const queuePanel = !queueAvailable
+   ? `<div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>Live queue — setup needed</h3></div>
+      <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+        Apply <span class="code">supabase/migrations/queue_pack.sql</span> in Supabase Studio → SQL Editor to enable the live waiting-room queue.
+      </div></div>`
+   : `<div class="panel" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(99,102,241,0.10),rgba(34,211,238,0.06));border:1px solid color-mix(in srgb,var(--primary) 30%,transparent)">
+        <div class="panel-head" style="border-bottom:1px solid var(--border)">
+          <h3 style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">◷</span> Live queue · ${waiting.length} waiting${inProgress ? ' · 1 with technician' : ''}</h3>
+          <div class="row" style="gap:8px">
+            <button class="btn btn-secondary btn-sm" id="lq-show-qr">Show reception QR</button>
+            <button class="btn btn-primary btn-sm" id="lq-call-next" ${waiting.length===0 || inProgress ? 'disabled':''}>Call next →</button>
+          </div>
+        </div>
+        <div class="panel-body" style="padding:12px 18px">
+          ${inProgress ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border-radius:11px;background:color-mix(in srgb,var(--accent) 12%,var(--card));border:1px solid var(--accent);margin-bottom:10px">
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);font-weight:700">CURRENTLY WITH TECHNICIAN</div>
+              <div style="font-weight:700;font-size:15px;margin-top:3px">${escapeHtml(inProgress.name||'')}</div>
+              <div style="font-size:12px;color:var(--text-dim)">${escapeHtml(inProgress.phone||'')} · called at ${new Date(inProgress.called_at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</div>
+            </div>
+            <button class="btn btn-primary btn-sm" id="lq-complete" data-id="${inProgress.id}">Mark done</button>
+          </div>` : ''}
+          ${waiting.length === 0 ? `<div class="empty" style="padding:18px"><div class="ic">⌀</div>Nobody waiting. Patients scan the reception QR to join.</div>` :
+            `<div style="display:grid;grid-template-columns:1fr;gap:6px">
+              ${waiting.slice(0,8).map((q,i) => {
+                const eta = i * queueAvg;
+                return `<div style="display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:9px;background:var(--card-2);border:1px solid var(--border)">
+                  <div style="font-size:18px;font-weight:700;color:var(--primary-2);text-align:center">#${q.position}</div>
+                  <div style="min-width:0"><div style="font-weight:600;font-size:13.5px">${escapeHtml(q.name||'')}</div>
+                    <div style="font-size:11.5px;color:var(--text-dim)">${escapeHtml(q.phone||'')} · waiting ${Math.max(0,Math.round((Date.now()-new Date(q.joined_at).getTime())/60000))} min</div>
+                  </div>
+                  <span class="pill ${i===0?'green':'blue'}">~${eta} min</span>
+                </div>`;
+              }).join('')}
+              ${waiting.length>8?`<div class="sub" style="padding:6px 4px">+ ${waiting.length-8} more waiting</div>`:''}
+            </div>`}
+        </div>
+      </div>`;
+
+ return queuePanel + `<div class="panel" style="margin-bottom:14px"><div class="panel-body" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
  <div><div class="sub">Awaiting collection</div><div style="font-size:1.6em;font-weight:600">${kpi?.awaiting_collection||0}</div></div>
  <div><div class="sub">Awaiting analysis</div><div style="font-size:1.6em;font-weight:600">${kpi?.awaiting_analysis||0}</div></div>
  <div><div class="sub">In analysis</div><div style="font-size:1.6em;font-weight:600">${kpi?.in_analysis||0}</div></div>
@@ -3066,6 +3123,52 @@ async function renderLabPipeline(){
 }
 
 async function bindLabPipeline(){
+ const bizId = SESSION.business.id;
+ // Reception QR modal
+ const showQrBtn = document.getElementById('lq-show-qr');
+ if (showQrBtn) showQrBtn.onclick = () => {
+   const queueUrl = `${location.origin}/pwa/queue.html?b=${encodeURIComponent(bizId)}`;
+   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=12&data=${encodeURIComponent(queueUrl)}`;
+   openModal(`<div style="text-align:center">
+     <h3 style="margin:0 0 6px">Reception QR</h3>
+     <p class="sub" style="margin:0 0 14px;font-size:13.5px">Print this and stick it at the reception desk. Patients scan it to join the queue and watch their position update live.</p>
+     <div style="background:white;display:inline-block;padding:14px;border-radius:14px;box-shadow:0 8px 24px rgba(99,102,241,0.3)">
+       <img src="${qrSrc}" alt="Reception QR" style="display:block;width:300px;height:300px" />
+     </div>
+     <div class="sub" style="margin:14px 0 4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px">Or share this link directly</div>
+     <div class="code" style="word-break:break-all;font-size:11.5px;padding:8px 10px">${queueUrl}</div>
+     <div class="row" style="margin-top:18px;justify-content:flex-end">
+       <button class="btn btn-secondary" onclick="window.print()">Print</button>
+       <button class="btn btn-secondary" onclick="closeModal()" style="margin-left:8px">Close</button>
+     </div>
+   </div>`);
+ };
+ // Call next: claim the oldest waiting entry
+ const callBtn = document.getElementById('lq-call-next');
+ if (callBtn) callBtn.onclick = async () => {
+   callBtn.disabled = true; callBtn.textContent = 'Calling...';
+   const { data, error } = await sb.rpc('queue_call_next', { p_business_id: bizId });
+   if (error) { toast({title:'Could not call next', message:error.message, urgent:true}); callBtn.disabled = false; callBtn.textContent = 'Call next →'; return; }
+   const next = Array.isArray(data) && data[0];
+   if (next) toast({title:'Calling ' + (next.name||'next patient'), message:'Their PWA just lit up.', type:'booking'});
+   render();
+ };
+ // Mark done
+ const doneBtn = document.getElementById('lq-complete');
+ if (doneBtn) doneBtn.onclick = async () => {
+   doneBtn.disabled = true;
+   const { error } = await sb.rpc('queue_complete', { p_entry_id: doneBtn.dataset.id });
+   if (error) { toast({title:'Could not mark done', message:error.message, urgent:true}); doneBtn.disabled = false; return; }
+   toast({title:'Visit completed', message:'Queue moved up.', type:'info'});
+   render();
+ };
+ // Realtime: re-render the lab page whenever the queue changes
+ if (window.__labQueueChan) { try { sb.removeChannel(window.__labQueueChan); } catch(_e){} }
+ window.__labQueueChan = sb.channel('lab-queue:'+bizId)
+   .on('postgres_changes', { event:'*', schema:'public', table:'queue_entries', filter:`business_id=eq.${bizId}` },
+       () => { if (location.hash.includes('/dashboard/lab')) render(); })
+   .subscribe();
+
  const setStatus = async (id, to) => {
  const upd = {status: to};
  if (to === 'sample_collected') upd.collected_at = new Date().toISOString();

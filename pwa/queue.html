@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6366f1">
+<title>Nova — Live queue</title>
+<style>
+:root {
+  --bg:#0a0b10; --card:#13151c; --card-2:#1a1d27; --border:rgba(99,102,241,0.18);
+  --text:#f3f4f6; --dim:#9ca3af; --accent:#6366f1; --grad:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);
+  --green:#22c55e; --red:#ef4444; --yellow:#eab308;
+}
+*,*::before,*::after { box-sizing:border-box }
+html,body { margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased; }
+body { min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px; }
+.bg-orbs { position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden; }
+.orb { position:absolute;border-radius:50%;filter:blur(70px);opacity:.45;will-change:transform; }
+.orb1 { width:340px;height:340px;background:radial-gradient(circle,#6366f1,transparent 70%);top:-12%;left:-15%;animation:drift1 22s ease-in-out infinite; }
+.orb2 { width:300px;height:300px;background:radial-gradient(circle,#8b5cf6,transparent 70%);bottom:-12%;right:-15%;animation:drift2 28s ease-in-out infinite; }
+@keyframes drift1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(50px,80px) scale(1.1)} }
+@keyframes drift2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-60px,-50px) scale(1.08)} }
+.card { position:relative;z-index:1;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:30px 24px;width:100%;max-width:420px;text-align:center;box-shadow:0 20px 60px -10px rgba(99,102,241,0.45);animation:lev 6s ease-in-out infinite; }
+@keyframes lev { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+.logo { width:48px;height:48px;margin:0 auto 14px;border-radius:13px;background:var(--grad);display:grid;place-items:center;color:white;font-weight:800;font-size:22px;box-shadow:0 8px 20px rgba(99,102,241,0.4); }
+h1 { margin:0 0 6px;font-size:18px;font-weight:700;letter-spacing:-.2px; }
+.sub { margin:0 0 20px;font-size:13.5px;color:var(--dim);line-height:1.55; }
+.field { display:block;margin-bottom:12px;text-align:left; }
+.field label { display:block;font-size:11.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--dim);margin-bottom:5px; }
+.field input { width:100%;padding:13px 14px;background:var(--card-2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-size:15px;font:inherit; }
+.field input:focus { outline:2px solid var(--accent);outline-offset:1px; }
+.btn { display:inline-flex;align-items:center;justify-content:center;width:100%;padding:14px 20px;border-radius:12px;font-weight:700;font-size:15px;border:0;cursor:pointer;transition:transform .08s; }
+.btn:active { transform:scale(0.97); }
+.btn-primary { background:var(--grad);color:white;box-shadow:0 6px 18px rgba(99,102,241,0.4); }
+.btn-secondary { background:var(--card-2);color:var(--text);border:1px solid var(--border); }
+.btn[disabled] { opacity:.55;pointer-events:none; }
+
+/* Status card */
+.pos-pill { display:inline-block;padding:6px 16px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase; }
+.pos-pill.waiting { background:rgba(99,102,241,0.18);color:#a5b4fc; }
+.pos-pill.now { background:rgba(34,197,94,0.18);color:#86efac; animation:flash 1.5s ease-in-out infinite; }
+.pos-pill.done { background:rgba(34,197,94,0.18);color:#86efac; }
+.pos-pill.left { background:rgba(156,163,175,0.18);color:var(--dim); }
+@keyframes flash { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.06)} }
+.big-num { font-size:96px;font-weight:200;letter-spacing:-4px;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;margin:14px 0 4px; }
+.eta { font-size:32px;font-weight:300;letter-spacing:-1px;color:var(--text);margin:6px 0; }
+.eta b { font-weight:700; }
+.kv { display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;background:var(--card-2);padding:12px 14px;border-radius:12px;margin:18px 0 8px;font-size:12.5px; }
+.kv .l { color:var(--dim);font-weight:500; }
+.kv .v { font-weight:600;text-align:right; }
+
+.err { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:14px;border-radius:12px;font-size:13px;line-height:1.5;text-align:left; }
+.foot { font-size:11.5px;color:var(--dim);margin-top:14px;line-height:1.55; }
+
+@media (prefers-color-scheme:light) {
+  :root { --bg:#f8fafc;--card:#ffffff;--card-2:#f1f5f9;--text:#0f172a;--dim:#64748b;--border:rgba(99,102,241,0.18); }
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb orb1"></div><div class="orb orb2"></div></div>
+<div class="card" id="root"></div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+const SUPABASE_URL = "https://blhvzuhufygdcnxpcwqx.supabase.co";
+const ANON = "sb_publishable_B07mS2iUZWuFEygDZIyhVg_KW86VgKh";
+const sb = createClient(SUPABASE_URL, ANON);
+
+const params = new URLSearchParams(location.search);
+const businessId = params.get('b') || '';
+const root = document.getElementById('root');
+const STORAGE_KEY = 'nova_queue_entry_' + businessId;
+const escapeHtml = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let realtimeChan = null;
+let pollHandle = null;
+
+// Lookup business name (purely cosmetic — page works without it)
+let bizName = '';
+async function loadBizName() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/businesses?id=eq.${businessId}&select=name,type`, {
+      headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+    });
+    const d = await r.json();
+    if (Array.isArray(d) && d[0]) bizName = d[0].name || '';
+  } catch (_e) {}
+}
+
+if (!businessId) {
+  root.innerHTML = `<div class="logo">N</div><h1>Invalid link</h1><p class="sub">This QR is missing a business id. Please ask the receptionist for the correct one.</p>`;
+} else {
+  await loadBizName();
+  // If we have an entry already saved on this device, jump straight to status view
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) showStatus(saved);
+  else showJoin();
+}
+
+function showJoin() {
+  root.innerHTML = `
+    <div class="logo">N</div>
+    <h1>${escapeHtml(bizName) || 'Live queue'}</h1>
+    <p class="sub">Drop your name and phone — Nova will tell you when it's your turn so you can step out for a coffee.</p>
+    <form id="join">
+      <div class="field"><label>Your name</label><input name="name" required autocomplete="name" placeholder="e.g. Mehdi" /></div>
+      <div class="field"><label>Phone (so we can text if needed)</label><input name="phone" type="tel" inputmode="tel" placeholder="+216 ..." autocomplete="tel" /></div>
+      <button class="btn btn-primary" type="submit">Get my position →</button>
+      <div class="foot">By joining, you agree your phone number can be used to update you about your visit only.</div>
+    </form>`;
+  document.getElementById('join').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target).entries());
+    const btn = e.target.querySelector('button');
+    btn.disabled = true; btn.textContent = 'Joining...';
+    const { data, error } = await sb.rpc('queue_join', {
+      p_business_id: businessId,
+      p_name: fd.name,
+      p_phone: fd.phone || null,
+    });
+    if (error) {
+      btn.disabled = false; btn.textContent = 'Get my position →';
+      root.querySelector('#join').insertAdjacentHTML('afterbegin',
+        `<div class="err" style="margin-bottom:14px">${escapeHtml(error.message || 'Could not join')}</div>`);
+      return;
+    }
+    const entry = Array.isArray(data) ? data[0] : data;
+    localStorage.setItem(STORAGE_KEY, entry.entry_id);
+    showStatus(entry.entry_id, entry);
+  };
+}
+
+async function showStatus(entryId, initial) {
+  const renderShell = () => {
+    root.innerHTML = `
+      <div class="logo">N</div>
+      <h1>${escapeHtml(bizName) || 'Your spot in line'}</h1>
+      <div id="state"></div>
+      <div class="foot" id="foot"></div>`;
+  };
+  renderShell();
+
+  const update = (s) => {
+    const stateEl = document.getElementById('state');
+    if (!stateEl) return;
+    if (s.status === 'waiting' && s.position > 0) {
+      const pillText = s.position === 1 ? 'You\\'re next' : `Position ${s.position}`;
+      const etaText = s.eta_minutes <= 0 ? 'any moment now' : (s.eta_minutes < 1 ? '< 1 min' : `${s.eta_minutes} min`);
+      stateEl.innerHTML = `
+        <div class="pos-pill waiting">${pillText}</div>
+        <div class="big-num">#${s.position}</div>
+        <div class="sub" style="margin:0 0 14px">in front of you: ${s.ahead_count}</div>
+        <div class="eta"><b>~ ${etaText}</b></div>
+        <div class="sub">based on the last ${Math.round(s.avg_serve_min || 8)} min average. We\\'ll update this live as the queue moves — feel free to step out.</div>
+        <div class="kv">
+          <span class="l">Joined</span><span class="v">${new Date(s.joined_at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</span>
+          <span class="l">Average wait</span><span class="v">${Math.round(s.avg_serve_min||8)} min/person</span>
+        </div>
+        <button class="btn btn-secondary" id="leave-btn" style="margin-top:8px">Leave the queue</button>`;
+      const leave = document.getElementById('leave-btn');
+      if (leave) leave.onclick = leaveQueue;
+    } else if (s.status === 'in_progress') {
+      stateEl.innerHTML = `
+        <div class="pos-pill now">It's your turn</div>
+        <div class="big-num" style="font-size:64px;letter-spacing:-2px">→ Reception</div>
+        <p class="sub" style="font-size:14px;color:var(--text)">Please come to the reception now.</p>`;
+      stopRealtime(); // visit started; webhook handles the rest
+    } else if (s.status === 'completed') {
+      stateEl.innerHTML = `
+        <div class="pos-pill done">Done</div>
+        <div class="big-num" style="font-size:48px;letter-spacing:-1.5px">✓</div>
+        <p class="sub">Thanks for visiting. Your samples are being processed — Nova will WhatsApp you when results are ready.</p>
+        <button class="btn btn-secondary" onclick="localStorage.removeItem('${STORAGE_KEY}'); location.reload()" style="margin-top:8px">Close</button>`;
+      stopRealtime();
+    } else { // left / no_show
+      stateEl.innerHTML = `
+        <div class="pos-pill left">${s.status === 'left' ? 'You left the queue' : 'Marked no-show'}</div>
+        <p class="sub" style="margin-top:14px">No problem — scan the QR again whenever you're ready.</p>
+        <button class="btn btn-primary" onclick="localStorage.removeItem('${STORAGE_KEY}'); location.reload()">Rejoin queue</button>`;
+      stopRealtime();
+    }
+  };
+
+  // Initial render
+  if (initial && initial.position) {
+    update({
+      status: 'waiting',
+      position: initial.position,
+      eta_minutes: initial.eta_minutes,
+      ahead_count: Math.max(0, initial.position - 1),
+      avg_serve_min: initial.avg_serve_min || 8,
+      joined_at: new Date().toISOString(),
+    });
+  }
+
+  // Refetch full state immediately
+  await refresh();
+
+  // Realtime subscription — update whenever ANY entry in this business changes
+  realtimeChan = sb.channel('queue:' + businessId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_entries', filter: `business_id=eq.${businessId}` },
+        () => refresh())
+    .subscribe();
+
+  // Belt-and-braces: poll every 20s in case realtime drops
+  pollHandle = setInterval(refresh, 20000);
+
+  async function refresh() {
+    try {
+      const { data, error } = await sb.rpc('queue_status', { p_entry_id: entryId });
+      if (error) throw error;
+      const s = Array.isArray(data) ? data[0] : data;
+      if (!s) return;
+      update(s);
+    } catch (e) {
+      console.warn('queue_status failed', e);
+    }
+  }
+
+  async function leaveQueue() {
+    if (!confirm('Leave the queue? You\\'ll need to scan the QR again to rejoin.')) return;
+    await sb.rpc('queue_leave', { p_entry_id: entryId });
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+}
+
+function stopRealtime() {
+  if (realtimeChan) { sb.removeChannel(realtimeChan); realtimeChan = null; }
+  if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
+}
+</script>
+</body>
+</html>
