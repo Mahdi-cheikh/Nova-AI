@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6366f1">
+<title>Nova — Your check-in QR</title>
+<style>
+:root {
+  --bg:#0a0b10; --card:#13151c; --card-2:#1a1d27; --border:rgba(99,102,241,0.18);
+  --text:#f3f4f6; --dim:#9ca3af; --accent:#6366f1; --grad:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);
+}
+*,*::before,*::after { box-sizing:border-box }
+html,body { margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased; }
+body { min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px; }
+.bg-orbs { position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden; }
+.orb { position:absolute;border-radius:50%;filter:blur(70px);opacity:.45;will-change:transform; }
+.orb1 { width:340px;height:340px;background:radial-gradient(circle,#6366f1,transparent 70%);top:-12%;left:-15%;animation:drift1 22s ease-in-out infinite; }
+.orb2 { width:300px;height:300px;background:radial-gradient(circle,#8b5cf6,transparent 70%);bottom:-12%;right:-15%;animation:drift2 28s ease-in-out infinite; }
+@keyframes drift1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(50px,80px) scale(1.1)} }
+@keyframes drift2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-60px,-50px) scale(1.08)} }
+.card { position:relative;z-index:1;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:28px 22px 32px;width:100%;max-width:420px;text-align:center;box-shadow:0 20px 60px -10px rgba(99,102,241,0.4);animation:lev 6s ease-in-out infinite; }
+@keyframes lev { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+.logo { width:48px;height:48px;margin:0 auto 14px;border-radius:13px;background:var(--grad);display:grid;place-items:center;color:white;font-weight:800;font-size:22px;box-shadow:0 8px 20px rgba(99,102,241,0.4); }
+h1 { margin:0 0 6px;font-size:18px;font-weight:700;letter-spacing:-.2px; }
+.sub { margin:0 0 20px;font-size:13px;color:var(--dim);line-height:1.55; }
+.qr-frame { background:white;border-radius:18px;padding:14px;margin:0 auto 18px;display:inline-block;box-shadow:0 12px 30px rgba(99,102,241,0.3); }
+.qr-frame img { display:block;width:240px;height:240px;border-radius:6px; }
+.kv { display:grid;grid-template-columns:auto 1fr;gap:8px 14px;text-align:left;background:var(--card-2);padding:14px 16px;border-radius:12px;margin-top:10px;font-size:13.5px; }
+.kv .l { color:var(--dim);font-weight:500; }
+.kv .v { font-weight:600; }
+.status-pill { display:inline-block;padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase; }
+.status-pill.scheduled { background:rgba(99,102,241,0.18);color:#a5b4fc; }
+.status-pill.arrived   { background:rgba(234,179,8,0.18);color:#fde047; }
+.status-pill.completed { background:rgba(34,197,94,0.18);color:#86efac; }
+.status-pill.cancelled { background:rgba(239,68,68,0.18);color:#fca5a5; }
+.foot { font-size:11.5px;color:var(--dim);margin-top:14px;line-height:1.5; }
+.err { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:18px;border-radius:14px;font-size:13.5px;line-height:1.55; }
+@media (prefers-color-scheme:light) {
+  :root { --bg:#f8fafc;--card:#ffffff;--card-2:#f1f5f9;--text:#0f172a;--dim:#64748b;--border:rgba(99,102,241,0.18); }
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb orb1"></div><div class="orb orb2"></div></div>
+<div class="card">
+  <div class="logo">N</div>
+  <h1>Your check-in code</h1>
+  <p class="sub">Show this QR to your doctor or the receptionist when you arrive.</p>
+  <div id="content"></div>
+  <div class="foot">Powered by Nova AI</div>
+</div>
+
+<script type="module">
+const SUPABASE_URL = "https://blhvzuhufygdcnxpcwqx.supabase.co";
+const ANON = "sb_publishable_B07mS2iUZWuFEygDZIyhVg_KW86VgKh";
+const params = new URLSearchParams(location.search);
+const token = params.get('a') || params.get('t') || '';
+const content = document.getElementById('content');
+
+if (!token) {
+  content.innerHTML = '<div class="err">No check-in token in this link. Please open the link sent to you in WhatsApp.</div>';
+} else {
+  // Fetch the appointment by token (anon RPC, returns nothing sensitive)
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/apt_by_token`, {
+      method: 'POST',
+      headers: { 'apikey': ANON, 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON}` },
+      body: JSON.stringify({ p_token: token }),
+    });
+    const data = await r.json();
+    if (!r.ok || !Array.isArray(data) || data.length === 0) throw new Error('Not found');
+    const a = data[0];
+
+    // Build the QR payload — same URL but with a marker so the doctor scanner
+    // recognises the format. The token is the only sensitive part and is
+    // already scoped to this single visit.
+    const qrPayload = `${location.origin}/pwa/?qr=${encodeURIComponent(token)}`;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=${encodeURIComponent(qrPayload)}`;
+
+    const statusKey = a.completed_at ? 'completed' : a.arrived_at ? 'arrived' : (a.status === 'cancelled' ? 'cancelled' : 'scheduled');
+    const statusLabel = { scheduled:'Scheduled', arrived:'Visit started', completed:'Completed', cancelled:'Cancelled' }[statusKey];
+
+    content.innerHTML = `
+      <div class="qr-frame"><img src="${qrSrc}" alt="QR check-in code" /></div>
+      <div class="kv">
+        <span class="l">Patient</span><span class="v">${escapeHtml(a.client_name || '—')}</span>
+        ${a.doctor_name ? `<span class="l">Doctor</span><span class="v">${escapeHtml(a.doctor_name)}</span>` : ''}
+        ${a.service_name ? `<span class="l">Service</span><span class="v">${escapeHtml(a.service_name)}</span>` : ''}
+        ${a.business_name ? `<span class="l">Where</span><span class="v">${escapeHtml(a.business_name)}</span>` : ''}
+        <span class="l">When</span><span class="v">${escapeHtml(a.scheduled_at || '—')}</span>
+        <span class="l">Status</span><span class="v"><span class="status-pill ${statusKey}">${statusLabel}</span></span>
+      </div>`;
+  } catch (e) {
+    content.innerHTML = `<div class="err">We couldn't find this check-in. The link may be expired, or your appointment was cancelled.</div>`;
+  }
+}
+
+function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>

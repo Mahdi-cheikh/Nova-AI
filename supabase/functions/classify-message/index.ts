@@ -659,9 +659,17 @@ serve(async (req) => {
  // Update client with collected data
  await sb.from("clients").update({ name: collected.name, age: collected.age }).eq("id", clientId);
  await sb.from("booking_drafts").delete().eq("id", draft.id);
- const reply = lang==="fr" ? `C'est confirmé, ${collected.name} ! Votre rendez-vous est le ${collected.date} à ${collected.time}.${packageSessionInfo}`
+ // Build the patient's check-in link (token was auto-minted by the trigger)
+ const PWA_BASE = Deno.env.get("PWA_BASE_URL") || "https://nova-ai-s8i6.vercel.app";
+ const checkinLink = apt?.checkin_token ? `${PWA_BASE}/pwa/check.html?a=${encodeURIComponent(apt.checkin_token)}` : "";
+ const linkLine = checkinLink ? (lang === "fr"
+   ? `\n\nVotre code de check-in (à montrer à l'arrivée) : ${checkinLink}`
+   : lang === "ar"
+   ? `\n\nرمز الدخول (أعرضه عند وصولك): ${checkinLink}`
+   : `\n\nYour check-in code (show this when you arrive): ${checkinLink}`) : "";
+ const reply = (lang==="fr" ? `C'est confirmé, ${collected.name} ! Votre rendez-vous est le ${collected.date} à ${collected.time}.${packageSessionInfo}`
  : lang==="ar" ? `تم التأكيد ${collected.name}! موعدك يوم ${collected.date} على الساعة ${collected.time}.${packageSessionInfo}`
- : `Confirmed, ${collected.name}! Your appointment is on ${collected.date} at ${collected.time}.${packageSessionInfo}`;
+ : `Confirmed, ${collected.name}! Your appointment is on ${collected.date} at ${collected.time}.${packageSessionInfo}`) + linkLine;
  await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply });
  await sendWhatsApp(channel, phone, reply);
  return new Response(JSON.stringify({ ok: true, step: "booked" }), { headers: { ...cors, "Content-Type": "application/json" } });
