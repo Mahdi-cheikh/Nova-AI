@@ -1726,6 +1726,7 @@ function renderCreateBusiness(){
  <option value="doctor">Independent doctor</option>
  <option value="company">Company</option>
  <option value="salon">Salon / Spa</option>
+ <option value="garage">Garage / Mécanique</option>
  </select>
  </div>
 
@@ -1959,6 +1960,8 @@ function bizLabels(type){
  return { team: null, single: 'doctor', viewSelf: false };
  case 'salon':
  return { team: 'Stylists', single: 'stylist', viewSelf: false };
+ case 'garage':
+ return { team: 'Mechanics', single: 'mechanic', viewSelf: false };
  case 'company':
  return { team: 'Team', single: 'team member', viewSelf: false };
  default:
@@ -1992,6 +1995,7 @@ async function renderDashboard(route){
  ${navItem('appointments','Appointments','◷')}
  ${navItem('calendar','Calendar','⌗')}
  ${navItem('clients','Clients','◉')}
+ ${biz.type === 'garage' ? navItem('vehicles','Vehicles','▣') : ''}
  ${L.team ? navItem('doctors', L.team, '◊') : ''}
  ${biz.type==='laboratoire' ? navItem('lab','Lab pipeline','⚗') : ''}
  ${biz.type==='laboratoire' ? navItem('tests','Test catalog','') : ''}
@@ -2028,7 +2032,7 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',vehicles:'Vehicles',vehicle:'Vehicle profile',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
@@ -2041,6 +2045,8 @@ function pageSub(s){return ({
  demandfill:'Auto-pinging — turn empty slots into bookings',
  insights:'Self-learning durations: Nova adjusts your schedule based on real visit times',
  rxcheck:'AI drug-interaction & allergy checker — your malpractice safety net',
+ vehicles:'Per-car profiles: VIN, mileage, service history, photos',
+ vehicle:'Full service log + photo timeline for this vehicle',
  messages:'WhatsApp conversation history',
  notifications:'Real-time alerts triggered by AI actions',
  test:'Send a real message to verify your AI pipeline works end-to-end',
@@ -2094,6 +2100,8 @@ async function bindDashboard(route){
  if (sub==='demandfill') bindDemandFill();
  if (sub==='insights') bindInsights();
  if (sub==='rxcheck') bindRxCheck();
+ if (sub==='vehicles') bindVehicles();
+ if (sub==='vehicle') bindVehicleDetail();
  if (sub==='appointments') await bindAppointments();
  if (sub==='calendar') await bindCalendar();
  if (sub==='clients') await bindClients();
@@ -2139,6 +2147,8 @@ async function renderPage(sub){
  if (sub==='appointments') return await renderAppointments();
  if (sub==='calendar') return await renderCalendar();
  if (sub==='clients') return await renderClients();
+ if (sub==='vehicles') return await renderVehicles();
+ if (sub==='vehicle') return await renderVehicleDetail();
  if (sub==='doctors') return await renderDoctors();
  if (sub==='lab') return await renderLabPipeline();
  if (sub==='tests') return await renderTestCatalog();
@@ -2153,6 +2163,294 @@ async function renderPage(sub){
  if (sub==='activity') return await renderActivity();
  if (sub==='settings') return renderSettings();
  return await renderOverview();
+}
+
+// ============================================================
+// VEHICLES — per-car profiles for garage businesses
+// ============================================================
+async function renderVehicles(){
+ const biz = SESSION.business;
+ const [vResp, kResp] = await Promise.all([
+   sb.from('v_vehicle_profile').select('*').eq('business_id', biz.id).order('updated_at',{ascending:false}),
+   sb.from('v_vehicle_kpis').select('*').eq('business_id', biz.id).maybeSingle(),
+ ]);
+ if (vResp.error && (vResp.error.message||'').toLowerCase().includes('does not exist')) {
+   return `<div class="panel"><div class="panel-head"><h3>One-time setup needed</h3></div>
+     <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+       Vehicle profiles need a one-time SQL migration.<br><br>
+       1. Open <a href="https://supabase.com/dashboard/project/${escapeHtml((CFG.supabaseUrl||'').match(/\/\/(.+?)\./)?.[1]||'')}/sql/new" target="_blank" style="color:var(--primary-2)">Supabase Studio → SQL Editor</a><br>
+       2. Paste <span class="code">supabase/migrations/vehicle_pack.sql</span> from your repo<br>
+       3. Click <b>Run</b>, then reload this page
+     </div></div>`;
+ }
+ const vehicles = vResp.data || [];
+ const kpi = kResp.data || { vehicles_total:0, new_30d:0, oil_change_due:0, insurance_due:0, inspection_due:0 };
+
+ const flagPill = (label, n, cls) => n > 0 ? `<span class="pill ${cls}">${n} ${label}</span>` : '';
+
+ return `<div class="stats" style="margin-bottom:18px">
+   <div class="stat"><div class="lbl">Vehicles</div><div class="val">${kpi.vehicles_total||0}</div><div class="delta">tracked</div></div>
+   <div class="stat"><div class="lbl">New (30d)</div><div class="val">${kpi.new_30d||0}</div><div class="delta">added</div></div>
+   <div class="stat"><div class="lbl">Oil change due</div><div class="val" style="color:${kpi.oil_change_due?'var(--warn)':'inherit'}">${kpi.oil_change_due||0}</div><div class="delta">overdue</div></div>
+   <div class="stat"><div class="lbl">Insurance &lt;30d</div><div class="val" style="color:${kpi.insurance_due?'var(--danger)':'inherit'}">${kpi.insurance_due||0}</div><div class="delta">expiring</div></div>
+   <div class="stat"><div class="lbl">Inspection &lt;30d</div><div class="val" style="color:${kpi.inspection_due?'var(--danger)':'inherit'}">${kpi.inspection_due||0}</div><div class="delta">expiring</div></div>
+ </div>
+
+ <div class="panel">
+   <div class="panel-head"><h3>All vehicles (${vehicles.length})</h3>
+     <button class="btn btn-primary btn-sm" id="add-vehicle">+ Add vehicle</button>
+   </div>
+   <div class="panel-body no-pad">${vehicles.length === 0 ?
+     `<div class="empty"><div class="ic">▣</div>No vehicles yet — tap <b>+ Add vehicle</b> to register your first car.</div>` :
+     `<table class="responsive-stack">
+       <thead><tr><th>Vehicle</th><th>Plate / VIN</th><th>Owner</th><th>Mileage</th><th>Last service</th><th>Flags</th><th></th></tr></thead>
+       <tbody>${vehicles.map(v => {
+         const oilOverdue = v.km_until_oil != null && v.km_until_oil <= 0;
+         const insSoon = v.insurance_days != null && v.insurance_days <= 30;
+         const inspSoon = v.inspection_days != null && v.inspection_days <= 30;
+         return `<tr style="cursor:pointer" data-veh-open="${v.id}">
+           <td data-l="Vehicle"><b>${escapeHtml(v.make||'—')} ${escapeHtml(v.model||'')}</b>${v.year?` <span style="color:var(--text-faint);font-size:12px">(${v.year})</span>`:''}</td>
+           <td data-l="Plate / VIN" style="font-family:'JetBrains Mono',Consolas,monospace;font-size:12.5px">${escapeHtml(v.license_plate || v.vin || '—')}</td>
+           <td data-l="Owner">${escapeHtml(v.owner_name||'—')}</td>
+           <td data-l="Mileage">${v.current_mileage_km ? v.current_mileage_km.toLocaleString()+' km' : '—'}</td>
+           <td data-l="Last service" style="font-size:12.5px;color:var(--text-dim)">${v.last_service_at ? new Date(v.last_service_at).toLocaleDateString() : '—'}</td>
+           <td data-l="Flags">${flagPill('OIL DUE', oilOverdue?1:0, 'amber')} ${flagPill('INS', insSoon?1:0, 'red')} ${flagPill('INSPECT', inspSoon?1:0, 'red')}</td>
+           <td data-l="" class="text-right"><button class="btn btn-secondary btn-sm" data-veh-open="${v.id}">Open →</button></td>
+         </tr>`;
+       }).join('')}</tbody>
+     </table>`
+   }</div>
+ </div>`;
+}
+
+async function bindVehicles(){
+ const add = $('#add-vehicle');
+ if (add) add.onclick = () => addVehicleModal();
+ document.querySelectorAll('[data-veh-open]').forEach(b => b.onclick = (e) => {
+   e.stopPropagation();
+   sessionStorage.setItem('view_vehicle_id', b.dataset.vehOpen);
+   navigate('#/dashboard/vehicle');
+ });
+}
+
+function addVehicleModal(){
+ sb.from('clients').select('id,name,phone').eq('business_id', SESSION.business.id).order('name').then(({data: clients=[]}) => {
+   const html = `<h3>Add vehicle</h3>
+     <form>
+       <div class="field"><label>Owner *</label>
+         <select name="client_id" required>
+           <option value="">Select owner...</option>
+           ${clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.phone||'')}</option>`).join('')}
+         </select>
+       </div>
+       <div class="row" style="gap:8px"><div class="field grow"><label>Make</label><input name="make" placeholder="Renault" /></div>
+         <div class="field grow"><label>Model</label><input name="model" placeholder="Clio" /></div>
+         <div class="field" style="width:100px"><label>Year</label><input name="year" type="number" placeholder="2018" /></div></div>
+       <div class="row" style="gap:8px"><div class="field grow"><label>License plate</label><input name="license_plate" placeholder="123 TUN 4567" /></div>
+         <div class="field grow"><label>Color</label><input name="color" placeholder="Silver" /></div></div>
+       <div class="field"><label>VIN</label><input name="vin" placeholder="17-character chassis number" maxlength="17" /></div>
+       <div class="row" style="gap:8px"><div class="field grow"><label>Current mileage (km)</label><input name="current_mileage_km" type="number" placeholder="65000" /></div>
+         <div class="field grow"><label>Fuel</label><select name="fuel_type"><option value="">—</option><option>petrol</option><option>diesel</option><option>hybrid</option><option>electric</option><option>lpg</option></select></div>
+         <div class="field grow"><label>Trans.</label><select name="transmission"><option value="">—</option><option>manual</option><option>automatic</option></select></div></div>
+       <div class="row" style="gap:8px"><div class="field grow"><label>Insurance expires</label><input name="insurance_expires_at" type="date" /></div>
+         <div class="field grow"><label>Inspection expires</label><input name="inspection_expires_at" type="date" /></div></div>
+       <div class="field"><label>Notes</label><textarea name="notes" rows="2" placeholder="Any quirks, history, owner preferences..."></textarea></div>
+       <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">Add vehicle</button></div>
+     </form>`;
+   window.__modalSubmit = async (d) => {
+     if (!d.client_id) { alert('Select an owner first.'); return; }
+     // Strip empty strings; coerce numbers
+     const payload = { business_id: SESSION.business.id, client_id: d.client_id };
+     ['vin','license_plate','make','model','color','fuel_type','transmission','notes'].forEach(k => { if (d[k] && d[k].trim()) payload[k] = d[k].trim(); });
+     ['year','current_mileage_km'].forEach(k => { if (d[k]) payload[k] = parseInt(d[k],10); });
+     ['insurance_expires_at','inspection_expires_at'].forEach(k => { if (d[k]) payload[k] = d[k]; });
+     const { data: v, error } = await sb.from('vehicles').insert(payload).select().single();
+     if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
+     closeModal();
+     toast({title:'Vehicle added', message:`${v.make||''} ${v.model||''} ${v.license_plate?'· '+v.license_plate:''}`, type:'booking'});
+     render();
+   };
+   openModal(html);
+ });
+}
+
+async function renderVehicleDetail(){
+ const id = sessionStorage.getItem('view_vehicle_id');
+ if (!id) { navigate('#/dashboard/vehicles'); return ''; }
+ const [vResp, sResp, pResp] = await Promise.all([
+   sb.from('v_vehicle_profile').select('*').eq('id', id).maybeSingle(),
+   sb.from('vehicle_services').select('*, users:technician_id(name)').eq('vehicle_id', id).order('performed_at',{ascending:false}),
+   sb.from('vehicle_photos').select('*').eq('vehicle_id', id).order('taken_at',{ascending:false}).limit(40),
+ ]);
+ const v = vResp.data;
+ if (!v) { navigate('#/dashboard/vehicles'); return ''; }
+ const services = sResp.data || [];
+ const photos   = pResp.data || [];
+
+ const oilOverdue = v.km_until_oil != null && v.km_until_oil <= 0;
+ const oilSoon = v.km_until_oil != null && v.km_until_oil > 0 && v.km_until_oil <= 1500;
+ const insSoon = v.insurance_days != null && v.insurance_days <= 30;
+ const insExpired = v.insurance_days != null && v.insurance_days < 0;
+ const inspSoon = v.inspection_days != null && v.inspection_days <= 30;
+ const inspExpired = v.inspection_days != null && v.inspection_days < 0;
+
+ const fmtMoney = (n) => n != null ? Number(n).toFixed(2) + ' TND' : '—';
+
+ return `<div class="row" style="gap:8px;margin-bottom:14px"><a href="#/dashboard/vehicles" class="btn btn-ghost btn-sm">← All vehicles</a></div>
+
+ <div class="panel" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(99,102,241,0.10),rgba(34,211,238,0.06));border:1px solid color-mix(in srgb,var(--primary) 30%,transparent)">
+   <div class="panel-body" style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+     <div style="flex:1;min-width:240px">
+       <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-2);font-weight:700;margin-bottom:4px">VEHICLE</div>
+       <h2 style="margin:0 0 4px;font-size:24px;font-weight:700;letter-spacing:-.3px">${escapeHtml(v.make||'—')} ${escapeHtml(v.model||'')}${v.year?` <span style="color:var(--text-faint);font-weight:400">${v.year}</span>`:''}</h2>
+       <div style="color:var(--text-dim);font-size:13.5px;margin-bottom:10px">
+         ${v.license_plate?`<b style="color:var(--text);font-family:'JetBrains Mono',Consolas,monospace">${escapeHtml(v.license_plate)}</b>`:''}
+         ${v.color?` · ${escapeHtml(v.color)}`:''}${v.fuel_type?` · ${escapeHtml(v.fuel_type)}`:''}${v.transmission?` · ${escapeHtml(v.transmission)}`:''}
+       </div>
+       ${v.vin?`<div style="font-size:11.5px;color:var(--text-faint);font-family:'JetBrains Mono',Consolas,monospace">VIN ${escapeHtml(v.vin)}</div>`:''}
+       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+         ${oilOverdue?'<span class="pill amber">OIL CHANGE OVERDUE</span>':oilSoon?'<span class="pill amber">Oil change soon</span>':''}
+         ${insExpired?'<span class="pill red">INSURANCE EXPIRED</span>':insSoon?'<span class="pill red">Insurance expires soon</span>':''}
+         ${inspExpired?'<span class="pill red">INSPECTION EXPIRED</span>':inspSoon?'<span class="pill red">Inspection expires soon</span>':''}
+       </div>
+     </div>
+     <div style="text-align:right;min-width:200px">
+       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);font-weight:600;margin-bottom:4px">CURRENT MILEAGE</div>
+       <div style="font-size:36px;font-weight:200;letter-spacing:-1px;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">${v.current_mileage_km ? v.current_mileage_km.toLocaleString() : '—'}<span style="font-size:14px;color:var(--text-dim)"> km</span></div>
+       ${v.km_until_oil!=null?`<div style="font-size:12px;color:${oilOverdue?'var(--warn)':'var(--text-dim)'};margin-top:6px">${oilOverdue?Math.abs(v.km_until_oil).toLocaleString()+' km overdue':v.km_until_oil.toLocaleString()+' km until next oil'}</div>`:''}
+       <div class="row" style="justify-content:flex-end;margin-top:12px;gap:6px"><button class="btn btn-secondary btn-sm" id="veh-edit">Edit</button><button class="btn btn-primary btn-sm" id="veh-add-svc">+ Add service</button></div>
+     </div>
+   </div>
+   ${v.owner_name?`<div class="panel-body" style="border-top:1px solid var(--border);padding:12px 18px;display:flex;gap:14px;align-items:center">
+     <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);font-weight:600">OWNER</div>
+     <div><b>${escapeHtml(v.owner_name)}</b>${v.owner_phone?` <span style="color:var(--text-dim)">· ${escapeHtml(v.owner_phone)}</span>`:''}</div>
+     ${v.owner_phone?`<a href="https://wa.me/${v.owner_phone.replace(/\D/g,'')}" target="_blank" class="pill blue" style="margin-left:auto;text-decoration:none">WhatsApp</a>`:''}
+   </div>`:''}
+ </div>
+
+ <div class="dash-2col">
+   <div class="panel">
+     <div class="panel-head"><h3>Service history (${services.length})</h3></div>
+     <div class="panel-body no-pad">${services.length === 0 ?
+       '<div class="empty"><div class="ic">⌀</div>No services logged yet.</div>' :
+       services.map(s => `
+         <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px">
+             <div>
+               <div style="font-weight:600;font-size:14px">${escapeHtml((s.service_type||'service').replace(/_/g,' '))}${s.description?': '+escapeHtml(s.description):''}</div>
+               <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${new Date(s.performed_at).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric'})}${s.users?.name?' · '+escapeHtml(s.users.name):''}${s.mileage_km?' · '+s.mileage_km.toLocaleString()+' km':''}</div>
+             </div>
+             <b style="white-space:nowrap;color:var(--accent)">${fmtMoney(s.total_cost)}</b>
+           </div>
+           ${(s.parts_used||[]).length?`<div style="font-size:12px;color:var(--text-dim);margin-top:6px;padding:6px 8px;background:var(--card-2);border-radius:6px">Parts: ${(s.parts_used||[]).map(p=>escapeHtml(p.name||'')+(p.qty?' ×'+p.qty:'')).join(', ')}</div>`:''}
+           ${s.notes?`<div style="font-size:12.5px;margin-top:6px;color:var(--text-dim)">${escapeHtml(s.notes)}</div>`:''}
+         </div>`).join('')
+     }</div>
+   </div>
+   <div class="panel">
+     <div class="panel-head"><h3>Photos (${photos.length})</h3></div>
+     <div class="panel-body" style="padding:14px">${photos.length === 0 ?
+       '<div class="empty" style="padding:20px"><div class="ic">▣</div>No photos yet.<br><span style="font-size:12px">Photos sent on WhatsApp will appear here.</span></div>' :
+       `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${photos.map(p => `
+         <a href="${escapeHtml(p.url)}" target="_blank" style="display:block;aspect-ratio:1;background:var(--card-2) center/cover no-repeat url('${escapeHtml(p.url)}');border-radius:8px;border:1px solid var(--border);position:relative;overflow:hidden" title="${escapeHtml(p.caption||'')}">
+           ${p.kind && p.kind !== 'general' ? `<span class="pill ${p.kind==='damage'?'red':'blue'}" style="position:absolute;top:6px;left:6px;font-size:9.5px">${p.kind}</span>` : ''}
+         </a>`).join('')}</div>`
+     }</div>
+   </div>
+ </div>`;
+}
+
+function bindVehicleDetail(){
+ const id = sessionStorage.getItem('view_vehicle_id');
+ const editBtn = $('#veh-edit');
+ const addSvc = $('#veh-add-svc');
+ if (editBtn) editBtn.onclick = () => editVehicleModal(id);
+ if (addSvc) addSvc.onclick = () => addServiceModal(id);
+}
+
+function editVehicleModal(vehicleId){
+ sb.from('vehicles').select('*').eq('id', vehicleId).maybeSingle().then(({data: v}) => {
+   if (!v) return;
+   const html = `<h3>Edit vehicle</h3>
+     <form>
+       <div class="row" style="gap:8px"><div class="field grow"><label>Make</label><input name="make" value="${escapeHtml(v.make||'')}" /></div>
+         <div class="field grow"><label>Model</label><input name="model" value="${escapeHtml(v.model||'')}" /></div>
+         <div class="field" style="width:100px"><label>Year</label><input name="year" type="number" value="${v.year||''}" /></div></div>
+       <div class="row" style="gap:8px"><div class="field grow"><label>License plate</label><input name="license_plate" value="${escapeHtml(v.license_plate||'')}" /></div>
+         <div class="field grow"><label>Color</label><input name="color" value="${escapeHtml(v.color||'')}" /></div></div>
+       <div class="field"><label>VIN</label><input name="vin" value="${escapeHtml(v.vin||'')}" maxlength="17" /></div>
+       <div class="field"><label>Current mileage (km)</label><input name="current_mileage_km" type="number" value="${v.current_mileage_km||''}" /></div>
+       <div class="row" style="gap:8px"><div class="field grow"><label>Insurance expires</label><input name="insurance_expires_at" type="date" value="${v.insurance_expires_at||''}" /></div>
+         <div class="field grow"><label>Inspection expires</label><input name="inspection_expires_at" type="date" value="${v.inspection_expires_at||''}" /></div></div>
+       <div class="field"><label>Notes</label><textarea name="notes" rows="3">${escapeHtml(v.notes||'')}</textarea></div>
+       <div class="row mt-2" style="justify-content:space-between"><button type="button" class="btn btn-danger btn-sm" id="veh-del">Delete vehicle</button>
+         <div><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit" style="margin-left:8px">Save</button></div></div>
+     </form>`;
+   window.__modalSubmit = async (d) => {
+     const upd = {};
+     ['vin','license_plate','make','model','color','notes'].forEach(k => upd[k] = d[k] ? d[k].trim() : null);
+     ['year','current_mileage_km'].forEach(k => upd[k] = d[k] ? parseInt(d[k],10) : null);
+     ['insurance_expires_at','inspection_expires_at'].forEach(k => upd[k] = d[k] || null);
+     const { error } = await sb.from('vehicles').update(upd).eq('id', vehicleId);
+     if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
+     closeModal(); toast({title:'Saved', type:'info'}); render();
+   };
+   openModal(html);
+   const del = document.getElementById('veh-del');
+   if (del) del.onclick = async () => {
+     if (!confirm('Delete this vehicle and all its history? This cannot be undone.')) return;
+     const { error } = await sb.from('vehicles').delete().eq('id', vehicleId);
+     if (error) { toast({title:'Delete failed', message:error.message, urgent:true}); return; }
+     closeModal(); navigate('#/dashboard/vehicles');
+   };
+ });
+}
+
+function addServiceModal(vehicleId){
+ const html = `<h3>Add service entry</h3>
+   <form>
+     <div class="field"><label>Service type</label>
+       <select name="service_type" required>
+         <option value="oil_change">Oil change</option>
+         <option value="brake_pads">Brake pads</option>
+         <option value="tyre_rotation">Tyre rotation</option>
+         <option value="tyres_replacement">Tyre replacement</option>
+         <option value="battery">Battery</option>
+         <option value="diagnostic">Diagnostic</option>
+         <option value="ac_recharge">A/C recharge</option>
+         <option value="timing_belt">Timing belt</option>
+         <option value="general_inspection">General inspection</option>
+         <option value="repair">Repair</option>
+         <option value="other">Other</option>
+       </select>
+     </div>
+     <div class="field"><label>Short description</label><input name="description" placeholder="e.g. 5W30 + filter" /></div>
+     <div class="row" style="gap:8px"><div class="field grow"><label>Mileage at service (km)</label><input name="mileage_km" type="number" /></div>
+       <div class="field grow"><label>Parts total (TND)</label><input name="parts_total" type="number" step="0.01" /></div>
+       <div class="field grow"><label>Labour total (TND)</label><input name="labour_total" type="number" step="0.01" /></div></div>
+     <div class="field"><label>Parts (one per line: name | qty)</label><textarea name="parts_text" rows="3" placeholder="Oil filter | 1&#10;Engine oil 5W30 | 4"></textarea></div>
+     <div class="field"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
+     <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">Save</button></div>
+   </form>`;
+ window.__modalSubmit = async (d) => {
+   const parts = (d.parts_text||'').split(/\n/).map(l => l.trim()).filter(Boolean).map(line => {
+     const [name, qty] = line.split('|').map(x => (x||'').trim());
+     return { name, qty: qty ? Number(qty) : 1 };
+   });
+   const { error } = await sb.rpc('add_vehicle_service', {
+     p_vehicle_id: vehicleId,
+     p_service_type: d.service_type,
+     p_description: d.description || null,
+     p_parts_used: parts,
+     p_parts_total: d.parts_total ? Number(d.parts_total) : 0,
+     p_labour_total: d.labour_total ? Number(d.labour_total) : 0,
+     p_mileage_km: d.mileage_km ? parseInt(d.mileage_km,10) : null,
+     p_notes: d.notes || null,
+   });
+   if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
+   closeModal(); toast({title:'Service logged', type:'booking'}); render();
+ };
+ openModal(html);
 }
 
 // ============================================================

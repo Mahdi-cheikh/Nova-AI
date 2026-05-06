@@ -282,6 +282,70 @@ Reply with valid JSON ONLY (no prose, no code fences):
  }
  }
 
+ // === GARAGE: image of a car, damage, dashboard, document => attach to vehicle file ===
+ // Garage messages are NOT short-circuited — we tag the photo, then let the
+ // text (if any) continue through classify-message so Nova can still answer.
+ if ((msg.type === "image" || msg.type === "document") && (msg.image?.id || msg.document?.id) && (biz.type||"").trim() === "garage") {
+   try {
+     const mediaId = msg.image?.id || msg.document?.id;
+     const metaRes2 = await fetch(`https://graph.facebook.com/v20.0/${mediaId}`, {
+       headers: { Authorization: `Bearer ${WA_ACCESS_TOKEN}` },
+     });
+     const metaJson2 = await metaRes2.json();
+     if (metaJson2.url) {
+       const imgRes2 = await fetch(metaJson2.url, { headers: { Authorization: `Bearer ${WA_ACCESS_TOKEN}` } });
+       const imgBuf2 = new Uint8Array(await imgRes2.arrayBuffer());
+       const path2 = `${biz.id}/${Date.now()}_${mediaId}.jpg`;
+       // Storage bucket "vehicle-photos" should exist (idempotent: ignore "already exists" errors)
+       const up = await sb.storage.from("vehicle-photos").upload(path2, imgBuf2, { contentType: "image/jpeg", upsert: false });
+       const { data: urlData } = sb.storage.from("vehicle-photos").getPublicUrl(up.data?.path || path2);
+       const photoUrl = urlData?.publicUrl || "";
+
+       // Find a vehicle for this client. RPC tries plate / VIN / fallback to most-recent.
+       let vehicleId: string | null = null;
+       let matchType = "";
+       const { data: vmatch } = await sb.rpc("find_vehicle_for_message", {
+         p_business_id: biz.id, p_client_id: clientId, p_text: text || msg.image?.caption || msg.document?.caption || null,
+       });
+       if (vmatch && (vmatch as any[]).length) {
+         vehicleId = (vmatch as any[])[0].vehicle_id;
+         matchType = (vmatch as any[])[0].match_type;
+       }
+
+       // Heuristic: damage if the message mentions specific keywords
+       const lc = (text || "").toLowerCase();
+       let kind = "general";
+       if (/(damage|d[ée]g[aâ]t|cog|broken|cass[ée]|accident|scratch|dent|rayure|bosse|noise|bruit|leak|fuite)/i.test(lc)) kind = "damage";
+       else if (/(dashboard|tableau|warning|voyant|temoin|t[eé]moin)/i.test(lc)) kind = "dashboard";
+       else if (/(document|carte\s*gris|insurance|assurance|registration)/i.test(lc)) kind = "document";
+
+       if (vehicleId && photoUrl) {
+         await sb.from("vehicle_photos").insert({
+           business_id: biz.id, vehicle_id: vehicleId, url: photoUrl,
+           caption: text || null, kind,
+         });
+         await sb.from("notifications").insert({
+           business_id: biz.id, type: "info",
+           title: "Vehicle photo attached",
+           message: `${matchType === "plate" ? "Plate-matched" : matchType === "vin" ? "VIN-matched" : "Best-guess"} photo (${kind}) added to a vehicle file.`,
+           urgent: kind === "damage",
+         });
+       } else if (photoUrl) {
+         // No vehicle yet — drop a notification asking the owner to register one
+         await sb.from("notifications").insert({
+           business_id: biz.id, type: "info",
+           title: "Vehicle photo received — no matching car",
+           message: `${from} sent a photo but isn't linked to a registered vehicle. Add the car in Vehicles to start a service file.`,
+         });
+       }
+     }
+   } catch (e) {
+     console.error("Garage photo handler failed:", (e as Error).message);
+   }
+   // Note: we DO NOT `continue;` here — let the text flow through classify-message
+   // so Nova can answer "my Clio is making a noise" and offer a diagnosis booking.
+ }
+
  // INTERACTIVE LIST: patient tapped a list option — we receive the row id
  // (e.g. doctor UUID) and the title. Forward the id as the "text" so the
  // multi-turn handler can validate it directly without ambiguity.
