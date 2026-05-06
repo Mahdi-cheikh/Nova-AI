@@ -846,19 +846,13 @@ function renderLanding(){
  .lp-phone-status .r { padding-top:6px;letter-spacing:1px; }
 
  /* HOME screen — Nova-branded wallpaper */
- .lp-home { position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,#312e81 0%,#1e1b4b 35%,#0a0820 100%);padding:44px 18px 22px;display:flex;flex-direction:column;animation:lp-show-home 14s ease-in-out infinite;z-index:3;overflow:hidden; }
- .lp-home::before { content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 80%,rgba(99,102,241,0.4),transparent 50%),radial-gradient(circle at 20% 70%,rgba(34,211,238,0.25),transparent 45%);pointer-events:none; }
- .lp-home-time { color:#fff;font-size:60px;font-weight:200;text-align:center;letter-spacing:-2px;line-height:1;margin-top:14px;position:relative;text-shadow:0 2px 20px rgba(99,102,241,0.4); }
- .lp-home-date { color:rgba(255,255,255,0.85);font-size:12.5px;text-align:center;margin-top:6px;font-weight:500;position:relative; }
-
- /* Nova logo wallpaper widget — pulsing brand mark in center */
- .lp-home-logo { margin:24px auto 0;width:130px;height:130px;border-radius:30px;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#22d3ee 100%);display:grid;place-items:center;position:relative;box-shadow:0 16px 50px -10px rgba(139,92,246,0.7),0 0 0 1px rgba(255,255,255,0.15) inset;animation:lp-logo-pulse 3s ease-in-out infinite; }
- .lp-home-logo::before { content:'';position:absolute;inset:-20px;border-radius:50px;background:radial-gradient(closest-side,rgba(139,92,246,0.5),transparent 70%);filter:blur(20px);z-index:-1;animation:lp-logo-halo 3s ease-in-out infinite; }
- .lp-home-logo-n { color:#fff;font-size:64px;font-weight:900;letter-spacing:-3px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-shadow:0 4px 12px rgba(0,0,0,0.3); }
- .lp-home-logo-name { text-align:center;color:#fff;font-size:15px;font-weight:700;letter-spacing:.5px;margin-top:14px;position:relative; }
- .lp-home-logo-tag { text-align:center;color:rgba(255,255,255,0.65);font-size:10.5px;font-weight:500;margin-top:2px;position:relative;letter-spacing:.3px; }
-
- .lp-home-grid { margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:12px 10px;padding:12px 4px 26px;position:relative; }
+ .lp-home { position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,#312e81 0%,#1e1b4b 40%,#0a0820 100%);padding:44px 18px 22px;display:flex;flex-direction:column;align-items:center;animation:lp-show-home 14s ease-in-out infinite;z-index:3; }
+ .lp-home-time { color:#fff;font-size:58px;font-weight:200;text-align:center;letter-spacing:-2px;line-height:1;margin-top:10px;text-shadow:0 2px 16px rgba(99,102,241,0.4); }
+ .lp-home-date { color:rgba(255,255,255,0.85);font-size:12.5px;text-align:center;margin-top:6px;font-weight:500; }
+ .lp-home-logo { margin:18px auto 0;width:104px;height:104px;border-radius:24px;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#22d3ee 100%);display:grid;place-items:center;color:#fff;font-size:50px;font-weight:900;letter-spacing:-2px;box-shadow:0 12px 40px -8px rgba(139,92,246,0.7); }
+ .lp-home-brand { color:#fff;font-size:14px;font-weight:700;margin-top:12px;letter-spacing:.4px; }
+ .lp-home-tag { color:rgba(255,255,255,0.65);font-size:10.5px;font-weight:500;margin-top:2px; }
+ .lp-home-grid { margin-top:auto;width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:14px 10px;padding:12px 4px 30px; }
  .lp-app { aspect-ratio:1;border-radius:12px;display:grid;place-items:center;font-size:18px;color:#fff;font-weight:700;position:relative; }
  .lp-app.wa { background:linear-gradient(135deg,#25d366,#128c7e);animation:lp-tap-wa 14s ease-in-out infinite;box-shadow:0 4px 12px rgba(37,211,102,0.4); }
  .lp-app.wa::before { content:'';position:absolute;inset:0;border-radius:12px;border:2px solid rgba(255,255,255,0.6);opacity:0;animation:lp-tap-ring 14s ease-out infinite; }
@@ -918,14 +912,6 @@ function renderLanding(){
  @keyframes lp-levitate {
   0%,100% { transform:translateY(0) rotate(-1.5deg) }
   50% { transform:translateY(-18px) rotate(1.5deg) }
- }
- @keyframes lp-logo-pulse {
-  0%,100% { transform:scale(1) }
-  50% { transform:scale(1.06) }
- }
- @keyframes lp-logo-halo {
-  0%,100% { opacity:.6;transform:scale(1) }
-  50% { opacity:1;transform:scale(1.15) }
  }
  @keyframes lp-glow-pulse {
   0%,100% { opacity:.6;transform:scale(1) }
@@ -1117,49 +1103,6 @@ function renderLanding(){
  @media (prefers-color-scheme:light) { .lp-particle{background:radial-gradient(circle,rgba(99,102,241,0.6),transparent);opacity:0.5} }
  @keyframes lp-rise { 0%{transform:translateY(0) translateX(0);opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{transform:translateY(-120vh) translateX(40px);opacity:0} }
 
- /* Floating WhatsApp message bubbles — drift upward with appointment snippets */
- .lp-msg-float { position:absolute;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;font-size:12px;font-weight:600;padding:8px 13px;border-radius:14px;border-bottom-left-radius:3px;box-shadow:0 8px 24px -4px rgba(37,211,102,0.4),0 0 0 1px rgba(255,255,255,0.08) inset;white-space:nowrap;pointer-events:none;will-change:transform,opacity;opacity:0; }
- .lp-msg-float.alt { background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 8px 24px -4px rgba(99,102,241,0.4),0 0 0 1px rgba(255,255,255,0.08) inset;border-bottom-left-radius:14px;border-bottom-right-radius:3px; }
- .lp-msg-float::before { content:'';position:absolute;left:-5px;bottom:0;width:10px;height:10px;background:inherit;clip-path:polygon(0 0,100% 100%,100% 0); }
- .lp-msg-float.alt::before { left:auto;right:-5px;clip-path:polygon(0 0,100% 0,0 100%); }
- @keyframes lp-msg-rise {
-  0% { transform:translateY(0) translateX(0) rotate(-3deg) scale(0.7);opacity:0 }
-  10% { opacity:.85;transform:translateY(-8vh) translateX(8px) rotate(0deg) scale(1) }
-  50% { opacity:.85;transform:translateY(-50vh) translateX(-12px) rotate(2deg) scale(1.02) }
-  90% { opacity:.7;transform:translateY(-100vh) translateX(20px) rotate(-1deg) scale(1) }
-  100% { transform:translateY(-115vh) translateX(30px) rotate(0deg) scale(0.9);opacity:0 }
- }
-
- /* Orbital constellation behind hero — appointment workflow nodes orbiting a center */
- .lp-orbit { position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;height:560px;pointer-events:none;z-index:1;opacity:.55; }
- @media (prefers-color-scheme:light) { .lp-orbit{ opacity:.35 } }
- @media (max-width:1080px) { .lp-orbit{ width:420px;height:420px } }
- @media (max-width:560px) { .lp-orbit{ width:340px;height:340px;opacity:.3 } }
- .lp-orbit-ring { position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(99,102,241,0.35);animation:lp-orbit-spin 40s linear infinite; }
- .lp-orbit-ring.r2 { inset:50px;border-color:rgba(34,211,238,0.3);animation:lp-orbit-spin 28s linear infinite reverse; }
- .lp-orbit-ring.r3 { inset:100px;border-color:rgba(236,72,153,0.25);animation:lp-orbit-spin 50s linear infinite; }
- .lp-orbit-node { position:absolute;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,0.25);background:linear-gradient(135deg,#6366f1,#8b5cf6);transform:translate(-50%,-50%); }
- .lp-orbit-node.wa { background:linear-gradient(135deg,#25d366,#128c7e); }
- .lp-orbit-node.cal { background:linear-gradient(135deg,#22d3ee,#3b82f6); }
- .lp-orbit-node.bell { background:linear-gradient(135deg,#f59e0b,#ef4444); }
- .lp-orbit-node.check { background:linear-gradient(135deg,#10b981,#059669); }
- .lp-orbit-node.doc { background:linear-gradient(135deg,#ec4899,#8b5cf6); }
- .lp-orbit-node.clock { background:linear-gradient(135deg,#a855f7,#6366f1); }
- .lp-orbit-n1 { animation:lp-node-orbit-1 22s linear infinite; }
- .lp-orbit-n2 { animation:lp-node-orbit-2 28s linear infinite reverse; }
- .lp-orbit-n3 { animation:lp-node-orbit-3 18s linear infinite; }
- .lp-orbit-n4 { animation:lp-node-orbit-4 34s linear infinite reverse; }
- .lp-orbit-n5 { animation:lp-node-orbit-5 25s linear infinite; }
- .lp-orbit-n6 { animation:lp-node-orbit-6 30s linear infinite reverse; }
- @keyframes lp-orbit-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
- @keyframes lp-node-orbit-1 { from{transform:translate(-50%,-50%) rotate(0deg) translateX(280px) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg) translateX(280px) rotate(-360deg)} }
- @keyframes lp-node-orbit-2 { from{transform:translate(-50%,-50%) rotate(60deg) translateX(280px) rotate(-60deg)} to{transform:translate(-50%,-50%) rotate(420deg) translateX(280px) rotate(-420deg)} }
- @keyframes lp-node-orbit-3 { from{transform:translate(-50%,-50%) rotate(120deg) translateX(230px) rotate(-120deg)} to{transform:translate(-50%,-50%) rotate(480deg) translateX(230px) rotate(-480deg)} }
- @keyframes lp-node-orbit-4 { from{transform:translate(-50%,-50%) rotate(200deg) translateX(230px) rotate(-200deg)} to{transform:translate(-50%,-50%) rotate(560deg) translateX(230px) rotate(-560deg)} }
- @keyframes lp-node-orbit-5 { from{transform:translate(-50%,-50%) rotate(40deg) translateX(180px) rotate(-40deg)} to{transform:translate(-50%,-50%) rotate(400deg) translateX(180px) rotate(-400deg)} }
- @keyframes lp-node-orbit-6 { from{transform:translate(-50%,-50%) rotate(220deg) translateX(180px) rotate(-220deg)} to{transform:translate(-50%,-50%) rotate(580deg) translateX(180px) rotate(-580deg)} }
- @media (max-width:1080px) { .lp-orbit { display:none } }
-
  /* All landing content sits ABOVE the orb layer */
  .lp-nav, .lp-hero, .lp-features-row, .lp-section, .lp-install-card, .lp-footer { position:relative;z-index:1; }
 
@@ -1208,8 +1151,7 @@ function renderLanding(){
 
  /* Respect users who prefer reduced motion — disable all anti-gravity animations */
  @media (prefers-reduced-motion: reduce) {
- .lp-orb, .lp-particle, .lp-msg-float, .lp-orbit-ring, .lp-orbit-node,
- .lp-feature, .lp-step, .lp-num-opt, .lp-who, .lp-mockup, .lp-phone-mockup,
+ .lp-orb, .lp-particle, .lp-feature, .lp-step, .lp-num-opt, .lp-who, .lp-mockup,
  .lp-btn-primary, .lp-hero h1 .lp-grad-text, .lp-brand .lp-logo-mark { animation: none !important }
  }
  </style>
@@ -1270,17 +1212,6 @@ function renderLanding(){
  </div>
 
  <div class="lp-hero-visual">
- <div class="lp-orbit" aria-hidden="true">
- <div class="lp-orbit-ring"></div>
- <div class="lp-orbit-ring r2"></div>
- <div class="lp-orbit-ring r3"></div>
- <div class="lp-orbit-node wa lp-orbit-n1">WA</div>
- <div class="lp-orbit-node cal lp-orbit-n2">31</div>
- <div class="lp-orbit-node bell lp-orbit-n3">!</div>
- <div class="lp-orbit-node check lp-orbit-n4">OK</div>
- <div class="lp-orbit-node clock lp-orbit-n5">10h</div>
- <div class="lp-orbit-node doc lp-orbit-n6">Dr</div>
- </div>
  <div class="lp-phone-mockup">
  <div class="lp-phone-glow"></div>
  <div class="lp-phone-screen">
@@ -1290,9 +1221,9 @@ function renderLanding(){
  <div class="lp-home">
  <div class="lp-home-time">9:41</div>
  <div class="lp-home-date">Wednesday, May 6</div>
- <div class="lp-home-logo"><span class="lp-home-logo-n">N</span></div>
- <div class="lp-home-logo-name">Nova AI</div>
- <div class="lp-home-logo-tag">your 24/7 receptionist</div>
+ <div class="lp-home-logo">N</div>
+ <div class="lp-home-brand">Nova AI</div>
+ <div class="lp-home-tag">your 24/7 receptionist</div>
  <div class="lp-home-grid">
  <div class="lp-app cal">31</div>
  <div class="lp-app msg"></div>
@@ -1500,34 +1431,6 @@ function bindLanding(){
  p.style.cssText = `left:${left}vw;bottom:-10vh;width:${size}px;height:${size}px;animation:lp-rise ${dur}s linear ${delay}s infinite`;
  orbs.appendChild(p);
  }
- }
-
- /* ANTI-GRAVITY: floating WhatsApp message bubbles drifting upward with appointment snippets */
- if (orbs && !document.querySelector('.lp-msg-float')) {
- const snippets = [
- { t:"Nheb maw3ed ghodwa", alt:false },
- { t:"Confirmé pour 10:00", alt:true },
- { t:"Rappel 24h envoyé", alt:true },
- { t:"Cabinet Dr. Mehdi", alt:false },
- { t:"Maw3ed mte3ek confirmed", alt:true },
- { t:"10:00 ✓", alt:false },
- { t:"Analyse de sang demain", alt:false },
- { t:"+216 22 123 456", alt:false },
- { t:"Reschedule pour 14:30 ?", alt:true },
- { t:"Merci, à demain !", alt:false },
- { t:"Dr. Bouazizi libre 11h", alt:true },
- { t:"شكرا على الموعد", alt:false }
- ];
- snippets.forEach((s, i) => {
- const m = document.createElement('div');
- m.className = 'lp-msg-float' + (s.alt ? ' alt' : '');
- m.textContent = s.t;
- const delay = -Math.random() * 24;
- const dur = 22 + Math.random() * 14;
- const left = (i * 8.3 + Math.random() * 4) % 100;
- m.style.cssText = `left:${left}vw;bottom:-15vh;animation:lp-msg-rise ${dur}s ease-in ${delay}s infinite`;
- orbs.appendChild(m);
- });
  }
 
  /* Reverse parallax: orbs drift slower than scroll, deepening the "depth" feel */
@@ -3627,4 +3530,126 @@ async function renderProfile(){
  <div style="margin-bottom:14px">${escapeHtml(biz.phone||'—')} ${biz.whatsapp_verified ? '<span class="pill green">verified</span>' : '<span class="pill amber">unverified</span>'}</div>
  ${biz.description ? `<div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Description</div><div style="margin-bottom:14px">${escapeHtml(biz.description)}</div>` : ''}
  <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Plan</div>
- <div style="margin-bottom:14px"><span class="pill blue">${esc
+ <div style="margin-bottom:14px"><span class="pill blue">${escapeHtml(PLANS[biz.subscription_plan]?.name||'Trial')}</span></div>
+ <a class="btn btn-ghost btn-sm" href="#/dashboard/settings">Edit in settings</a>
+ </div>
+ </div>
+ </div>
+ </main>
+ </div>`;
+}
+function bindProfile(){
+ $('#back-dash').onclick = ()=>navigate('#/dashboard');
+ $('#signout-btn').onclick = async ()=>{ await sb.auth.signOut(); SESSION=null; navigate('#/'); };
+}
+
+/* ---------- DOCTOR VIEW ---------- */
+async function renderDoctorView(){
+ const docId = sessionStorage.getItem('view_doctor_id');
+ const {data:doc} = await sb.from('users').select('*').eq('id', docId).maybeSingle();
+ if (!doc){ navigate('#/dashboard'); return ''; }
+ const today = isoDate(0);
+ const [{data:upcoming=[]}, {data:notifs=[]}] = await Promise.all([
+ sb.from('appointments').select('*, clients(name), services(name)').eq('business_id', SESSION.business.id).eq('doctor_id', doc.id).gte('date', today).neq('status','cancelled').order('date').order('time'),
+ sb.from('notifications').select('*').eq('business_id', SESSION.business.id).or(`doctor_id.eq.${doc.id},doctor_id.is.null`).order('created_at',{ascending:false}).limit(20)
+ ]);
+ return `<div class="app">
+ <aside class="sidebar">
+ <div class="logo"><div class="logo-mark">N</div> Nova AI</div>
+ <div class="biz-pill"><div class="name">${escapeHtml(doc.name)}</div><div class="type">${escapeHtml(doc.specialty||doc.role)}</div></div>
+ <button class="nav-item active"><span class="ic">◷</span>My day</button>
+ <div class="sidebar-foot">
+ <button class="nav-item" id="theme-btn-d">${currentThemeIcon()} Theme</button>
+ <button class="nav-item" id="back-admin"><span class="ic">←</span>Back to admin</button>
+ </div>
+ </aside>
+ <main class="main">
+ <div class="topbar"><div><h1>Welcome, ${escapeHtml(doc.name)}</h1><div class="sub">${upcoming.length} upcoming appointment${upcoming.length===1?'':'s'}</div></div></div>
+ <div style="display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start">
+ <div class="panel"><div class="panel-head"><h3>My appointments</h3></div>
+ <div class="panel-body no-pad">${upcoming.length===0?`<div class="empty"><div class="ic">◷</div>Nothing scheduled</div>`:`
+ <table><thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Service</th><th>Status</th></tr></thead>
+ <tbody>${upcoming.map(a=>`<tr><td>${a.date}</td><td>${a.time}</td><td>${escapeHtml(a.clients?.name||'')}</td><td>${escapeHtml(a.services?.name||'')}</td><td><span class="pill ${a.status==='confirmed'?'green':'amber'}">${a.status}</span></td></tr>`).join('')}</tbody></table>`}</div>
+ </div>
+ <div class="panel"><div class="panel-head"><h3>Alerts for me</h3></div>
+ <div class="panel-body no-pad">${notifs.length===0?`<div class="empty"><div class="ic">♪</div>All quiet</div>`:`<div class="notif-list">${notifs.map(notifRow).join('')}</div>`}</div>
+ </div>
+ </div>
+ </main>
+ </div>`;
+}
+function bindDoctorView(){
+ $('#back-admin').onclick = ()=>{ sessionStorage.removeItem('view_doctor_id'); navigate('#/dashboard'); };
+ $('#theme-btn-d').onclick = ()=>{ cycleTheme(); render(); };
+}
+
+/* ---------- MODALS ---------- */
+function openModal(html){
+ const root = $('#modal-root');
+ root.innerHTML = `<div class="modal-bg" id="modal-bg"><div class="modal" onclick="event.stopPropagation()">${html}</div></div>`;
+ $('#modal-bg').onclick = closeModal;
+ const f = root.querySelector('form');
+ if (f) f.onsubmit = (e)=>{e.preventDefault();window.__modalSubmit && window.__modalSubmit(Object.fromEntries(new FormData(f).entries()));};
+}
+window.closeModal = ()=>{ $('#modal-root').innerHTML=''; window.__modalSubmit=null; };
+document.addEventListener('click', async (e)=>{
+ // Click a row in the day-list popup → open the detail modal for that appointment
+ const row = e.target.closest('.day-list-row[data-id]');
+ if (row){
+ const apt = window.__apts?.[row.dataset.id];
+ if (apt){ closeModal(); setTimeout(()=>openModal(apptDetailModal(apt)),10); }
+ return;
+ }
+ // Cancel button inside detail modal
+ const t = e.target.closest('#apt-cancel-modal');
+ if (!t) return;
+ if (!confirm('Cancel this appointment?')) return;
+ const {error} = await sb.from('appointments').update({status:'cancelled'}).eq('id', t.dataset.id);
+ if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ closeModal(); render();
+});
+function modalShell(title, body, submit='Save'){
+ return `<h3>${title}</h3><form>${body}<div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">${submit}</button></div></form>`;
+}
+function addClientModal(){
+ window.__modalSubmit = async (d)=>{
+ if (!d.name||!d.phone){alert('Name and phone are required');return;}
+ const {error} = await sb.from('clients').insert({business_id: SESSION.business.id, name:d.name, phone:d.phone, email:d.email||null});
+ if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ closeModal(); render();
+ };
+ return modalShell('Add client',
+ `<div class="field"><label>Name</label><input name="name" required /></div>
+ <div class="field"><label>Phone</label><input name="phone" placeholder="+212…" required /></div>
+ <div class="field"><label>Email (optional)</label><input name="email" type="email" /></div>`);
+}
+function addDoctorModal(){
+ window.__modalSubmit = async (d)=>{
+ if (!d.name){alert('Name required');return;}
+ const {error} = await sb.from('users').insert({business_id: SESSION.business.id, name:d.name, role:d.role||'doctor', specialty:d.specialty||null, phone:d.phone||null, email:d.email||null});
+ if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ closeModal(); render();
+ };
+ return modalShell('Add team member',
+ `<div class="field"><label>Name</label><input name="name" required /></div>
+ <div class="field"><label>Role</label><select name="role"><option value="doctor">Doctor</option><option value="staff">Staff</option></select></div>
+ <div class="field"><label>Specialty</label><input name="specialty" /></div>
+ <div class="field"><label>Phone</label><input name="phone" /></div>
+ <div class="field"><label>Email</label><input name="email" type="email" /></div>`);
+}
+async function addAppointmentModal(){
+ const [cls, docs, svcs] = await Promise.all([
+ sb.from('clients').select('id,name').eq('business_id',SESSION.business.id),
+ sb.from('users').select('id,name').eq('business_id',SESSION.business.id).eq('role','doctor'),
+ sb.from('services').select('id,name').eq('business_id',SESSION.business.id)
+ ]);
+ window.__modalSubmit = async (d)=>{
+ if (!d.client_id||!d.doctor_id||!d.date||!d.time){alert('Fill all fields');return;}
+ const {data:apt, error} = await sb.from('appointments').insert({business_id:SESSION.business.id, client_id:d.client_id, doctor_id:d.doctor_id, service_id:d.service_id||null, date:d.date, time:d.time, status:'confirmed', source:'manual'}).select().single();
+ if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ closeModal(); render();
+ };
+ /* Trick: addAppointmentModal is async, but openModal expects sync html. We'll just openModal here. */
+ const html = modalShell('New appointment',
+ `<div class="field"><label>Client</label><select name="client_id" required>${(cls.data||[]).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Doctor</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}
