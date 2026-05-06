@@ -2156,12 +2156,27 @@ async function renderPage(sub){
 // ============================================================
 async function renderInsights(){
  const biz = SESSION.business;
- const [suggestionsResp, {data: services = []}] = await Promise.all([
-   sb.rpc('duration_suggestions', { p_business_id: biz.id }),
-   sb.from('services').select('id,name,duration_min,auto_adjust_duration,last_duration_review,users:doctor_id(name)')
-     .eq('business_id', biz.id).order('name'),
- ]);
+ const suggestionsResp = await sb.rpc('duration_suggestions', { p_business_id: biz.id });
+ if (suggestionsResp.error) {
+   const msg = (suggestionsResp.error.message || '').toLowerCase();
+   const missing = msg.includes('does not exist') || msg.includes('function') || suggestionsResp.error.code === '42883';
+   if (missing) {
+     return `<div class="panel">
+       <div class="panel-head"><h3>One-time setup needed</h3></div>
+       <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+         Schedule Insights needs a one-time SQL migration on your Supabase project.<br><br>
+         <b style="color:var(--text)">How to apply:</b><br>
+         1. Open <a href="https://supabase.com/dashboard/project/${escapeHtml((CFG.supabaseUrl||'').match(/\/\/(.+?)\./)?.[1] || '')}/sql/new" target="_blank" style="color:var(--primary-2)">Supabase Studio → SQL Editor</a><br>
+         2. Paste <span class="code">supabase/migrations/duration_learning_pack.sql</span> from your repo<br>
+         3. Click <b>Run</b>, then reload this page
+       </div>
+     </div>`;
+   }
+ }
  const suggestions = suggestionsResp.data || [];
+ const {data: services = []} = await sb.from('services')
+   .select('id,name,duration_min,auto_adjust_duration,last_duration_review,users:doctor_id(name)')
+   .eq('business_id', biz.id).order('name');
  const driftMap = Object.fromEntries(suggestions.map(s => [s.service_id, s]));
 
  const driftPill = (s) => {
@@ -2268,15 +2283,33 @@ function bindInsights(){
 // ============================================================
 async function renderDemandFill(){
  const biz = SESSION.business;
- const [{data: campaigns = []}, {data: kpiRow}] = await Promise.all([
-   sb.from('demand_fill_campaigns')
-     .select('*, users:doctor_id(name), services(name)')
-     .eq('business_id', biz.id)
-     .order('created_at', {ascending: false})
-     .limit(40),
-   sb.from('v_demand_fill_kpis').select('*').eq('business_id', biz.id).maybeSingle(),
- ]);
- const kpi = kpiRow || { campaigns_sent:0, last_7d:0, slots_filled_total:0, slots_pinged:0, fill_rate_pct:0 };
+ // Defensive: if the demand-fill tables haven't been migrated yet, show a setup card.
+ const cResp = await sb.from('demand_fill_campaigns')
+   .select('*, users:doctor_id(name), services(name)')
+   .eq('business_id', biz.id)
+   .order('created_at', {ascending: false})
+   .limit(40);
+ if (cResp.error) {
+   const msg = (cResp.error.message || '').toLowerCase();
+   const missing = msg.includes('does not exist') || msg.includes('relation') || cResp.error.code === '42P01';
+   return `<div class="panel">
+     <div class="panel-head"><h3>${missing ? 'One-time setup needed' : 'Could not load'}</h3></div>
+     <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+       ${missing
+         ? `The Demand Fill feature needs a one-time SQL migration on your Supabase project.<br><br>
+            <b style="color:var(--text)">How to apply:</b><br>
+            1. Open <a href="https://supabase.com/dashboard/project/${escapeHtml((CFG.supabaseUrl||'').match(/\/\/(.+?)\./)?.[1] || '')}/sql/new" target="_blank" style="color:var(--primary-2)">Supabase Studio → SQL Editor</a><br>
+            2. Open the file <span class="code">supabase/migrations/demand_fill_pack.sql</span> from your repo<br>
+            3. Paste it into the editor and click <b>Run</b><br>
+            4. Reload this page<br><br>
+            That migration creates the tables, views and RPCs the Demand Fill page reads from.`
+         : `<b>Error:</b> ${escapeHtml(cResp.error.message || 'unknown')}`}
+     </div>
+   </div>`;
+ }
+ const campaigns = cResp.data || [];
+ const kResp = await sb.from('v_demand_fill_kpis').select('*').eq('business_id', biz.id).maybeSingle();
+ const kpi = kResp.data || { campaigns_sent:0, last_7d:0, slots_filled_total:0, slots_pinged:0, fill_rate_pct:0 };
  const pendingCount = campaigns.filter(c => c.status === 'pending_approval').length;
 
  const statusLabel = (s) => ({
