@@ -16,6 +16,28 @@ const WA_ACCESS_TOKEN = Deno.env.get("WA_ACCESS_TOKEN") || "";
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || "";
 
 
+// Send a plain WhatsApp text reply (used by demand-fill / waitlist confirmations)
+async function sendText(toPhone: string, body: string): Promise<boolean> {
+ const phoneId = Deno.env.get("WA_PHONE_ID");
+ const token = Deno.env.get("WA_ACCESS_TOKEN");
+ if (!phoneId || !token || !toPhone) return false;
+ const to = String(toPhone).replace(/^\+/, "");
+ try {
+   const res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+     method: "POST",
+     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+     body: JSON.stringify({
+       messaging_product: "whatsapp",
+       recipient_type: "individual",
+       to,
+       type: "text",
+       text: { body: String(body || "").slice(0, 4096) },
+     }),
+   });
+   return res.ok;
+ } catch { return false; }
+}
+
 // Download a WhatsApp media object and transcribe via OpenAI Whisper.
 // Returns the transcript string, or empty string on failure.
 async function transcribeVoice(mediaId: string): Promise<string> {
@@ -322,6 +344,87 @@ Reply with valid JSON ONLY (no prose, no code fences):
  });
  }
  continue;
+ }
+
+ // === DEMAND-FILL: patient replied to "We have open slots" ping ===
+ if (text.startsWith("df_yes:")) {
+   const [, campaignId] = text.split(":");
+   const { data: campaign } = await sb.from("demand_fill_campaigns")
+     .select("*, services(name), users:doctor_id(name)")
+     .eq("id", campaignId).maybeSingle();
+   if (!campaign) { continue; }
+   if (campaign.status === "filled" || (campaign.slot_times || []).length === 0) {
+     // No slots left — politely tell patient
+     await sendText(from, "Sorry — those slots just got booked. We'll keep you posted on the next opening.");
+     continue;
+   }
+   // Find or create the client by phone
+   let { data: client } = await sb.from("clients")
+     .select("*").eq("business_id", biz.id).eq("phone", from).maybeSingle();
+   if (!client) {
+     const { data: newClient } = await sb.from("clients")
+       .insert({ business_id: biz.id, phone: from, name: from }).select().single();
+     client = newClient;
+   }
+   const claimedTime = campaign.slot_times[0];
+   // Atomically book: insert appointment + remove slot from campaign
+   const { data: apt, error: aptErr } = await sb.from("appointments").insert({
+     business_id: biz.id,
+     client_id: client.id,
+     doctor_id: campaign.doctor_id,
+     service_id: campaign.service_id,
+     date: campaign.date,
+     time: claimedTime,
+     status: "confirmed",
+     source: "whatsapp_ai",
+     notes: "Booked via demand-fill campaign",
+   }).select().single();
+   if (aptErr) {
+     console.error("df_yes booking failed:", aptErr);
+     await sendText(from, "Sorry — could not book that slot. Please try again.");
+     continue;
+   }
+   // Update campaign: pop the claimed slot, increment filled_count
+   const remaining = (campaign.slot_times || []).filter((t: string) => t !== claimedTime);
+   await sb.from("demand_fill_campaigns").update({
+     slot_times: remaining,
+     filled_count: (campaign.filled_count || 0) + 1,
+     status: remaining.length === 0 ? "filled" : campaign.status,
+   }).eq("id", campaignId);
+   // Update target status
+   await sb.from("demand_fill_targets").update({
+     status: "filled",
+     responded_at: new Date().toISOString(),
+   }).eq("campaign_id", campaignId).eq("client_id", client.id);
+   // Notify owner
+   await sb.from("notifications").insert({
+     business_id: biz.id, type: "booking",
+     title: "Demand-fill slot claimed",
+     message: `${client.name || from} grabbed the ${campaign.date} ${claimedTime} slot with ${campaign.users?.name || "your provider"}.`,
+   });
+   // Confirm to patient
+   const lang = client?.profile?.language || "en";
+   const conf = lang === "fr"
+     ? `Confirmé ! Vous avez ${campaign.date} à ${claimedTime}${campaign.users?.name ? " avec " + campaign.users.name : ""}. À bientôt !`
+     : lang === "ar"
+     ? `تم التأكيد! موعدك يوم ${campaign.date} على الساعة ${claimedTime}.`
+     : `Confirmed! You're booked for ${campaign.date} at ${claimedTime}${campaign.users?.name ? " with " + campaign.users.name : ""}. See you then.`;
+   await sendText(from, conf);
+   continue;
+ }
+ if (text.startsWith("df_no:")) {
+   const [, campaignId] = text.split(":");
+   const { data: client } = await sb.from("clients")
+     .select("id").eq("business_id", biz.id).eq("phone", from).maybeSingle();
+   if (client) {
+     await sb.from("demand_fill_targets").update({
+       status: "declined",
+       responded_at: new Date().toISOString(),
+     }).eq("campaign_id", campaignId).eq("client_id", client.id);
+   }
+   const lang = "en";
+   await sendText(from, "No problem — we'll let you know about the next opening.");
+   continue;
  }
 
  if (text.startsWith("wl_no:")) {

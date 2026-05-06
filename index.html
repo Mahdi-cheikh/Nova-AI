@@ -1997,6 +1997,7 @@ async function renderDashboard(route){
  ${biz.type==='laboratoire' ? navItem('tests','Test catalog','') : ''}
  ${navItem('services','Services','★')}
  ${navItem('packages','Packages','')}
+ ${navItem('demandfill','Demand Fill','◐')}
  ${navItem('messages','Messages','')}
  ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
  ${navItem('test','Test assistant','▶')}
@@ -2023,7 +2024,7 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
@@ -2033,6 +2034,7 @@ function pageSub(s){return ({
  lab:'Sample-collection and analysis pipeline',
  tests:'Curate the tests you offer with prices, fasting and turnaround',
  services:'Services or products you offer',
+ demandfill:'Auto-pinging — turn empty slots into bookings',
  messages:'WhatsApp conversation history',
  notifications:'Real-time alerts triggered by AI actions',
  test:'Send a real message to verify your AI pipeline works end-to-end',
@@ -2076,6 +2078,7 @@ async function bindDashboard(route){
 
  const sub=route.replace('/dashboard','').replace(/^\//,'')||'overview';
  if (sub==='overview') bindOverview();
+ if (sub==='demandfill') bindDemandFill();
  if (sub==='appointments') await bindAppointments();
  if (sub==='calendar') await bindCalendar();
  if (sub==='clients') await bindClients();
@@ -2124,12 +2127,154 @@ async function renderPage(sub){
  if (sub==='tests') return await renderTestCatalog();
  if (sub==='services') return await renderServices();
  if (sub==='packages') return await renderPackages();
+ if (sub==='demandfill') return await renderDemandFill();
  if (sub==='messages') return await renderMessages();
  if (sub==='notifications') return await renderNotifications();
  if (sub==='test') return renderTest();
  if (sub==='activity') return await renderActivity();
  if (sub==='settings') return renderSettings();
  return await renderOverview();
+}
+
+// ============================================================
+// DEMAND FILL — empty-slot auto-pinging
+// ============================================================
+async function renderDemandFill(){
+ const biz = SESSION.business;
+ const [{data: campaigns = []}, {data: kpiRow}] = await Promise.all([
+   sb.from('demand_fill_campaigns')
+     .select('*, users:doctor_id(name), services(name)')
+     .eq('business_id', biz.id)
+     .order('created_at', {ascending: false})
+     .limit(40),
+   sb.from('v_demand_fill_kpis').select('*').eq('business_id', biz.id).maybeSingle(),
+ ]);
+ const kpi = kpiRow || { campaigns_sent:0, last_7d:0, slots_filled_total:0, slots_pinged:0, fill_rate_pct:0 };
+ const pendingCount = campaigns.filter(c => c.status === 'pending_approval').length;
+
+ const statusLabel = (s) => ({
+   pending_approval: 'Awaiting approval',
+   approved: 'Approved',
+   sent: 'Pinged',
+   filled: 'Filled',
+   expired: 'Expired',
+   cancelled: 'Cancelled',
+ })[s] || s;
+ const statusPill = (s) => {
+   const cls = s === 'filled' ? 'green' : s === 'sent' ? 'blue' : s === 'pending_approval' ? 'amber' : 'gray';
+   return `<span class="pill ${cls}">${statusLabel(s)}</span>`;
+ };
+
+ return `<div class="stats" style="margin-bottom:18px">
+   <div class="stat"><div class="lbl">Campaigns sent</div><div class="val">${kpi.campaigns_sent || 0}</div><div class="delta">all-time</div></div>
+   <div class="stat"><div class="lbl">Last 7 days</div><div class="val">${kpi.last_7d || 0}</div><div class="delta">campaigns</div></div>
+   <div class="stat"><div class="lbl">Slots filled</div><div class="val">${kpi.slots_filled_total || 0}</div><div class="delta">recovered</div></div>
+   <div class="stat"><div class="lbl">Fill rate</div><div class="val">${Math.round(kpi.fill_rate_pct || 0)}%</div><div class="delta">filled / pinged</div></div>
+ </div>
+
+ <div class="panel" style="margin-bottom:18px">
+   <div class="panel-head">
+     <h3>How it works</h3>
+   </div>
+   <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+     Nova scans the next 7 days for empty slots in your calendar. When it finds a long gap (3+ open slots in a row), it builds a ranked list of patients who haven't booked recently, have a low no-show history, and match the service. You approve the list with one tap, and Nova WhatsApps every candidate with the open times. The first ones to say <i>Yes</i> get booked automatically.
+     <div style="margin-top:14px">
+       <button class="btn btn-primary btn-sm" id="df-scan">Scan now</button>
+       <span id="df-scan-status" style="margin-left:10px;color:var(--text-faint);font-size:12.5px"></span>
+     </div>
+   </div>
+ </div>
+
+ ${campaigns.length === 0 ? `<div class="empty"><div class="ic">◐</div>No campaigns yet — tap <b>Scan now</b> to detect empty slots in your schedule.</div>` : `
+ <div class="panel">
+   <div class="panel-head"><h3>Detected opportunities (${campaigns.length})</h3>${pendingCount ? `<span class="pill amber">${pendingCount} awaiting approval</span>` : ''}</div>
+   <div class="panel-body no-pad">
+     <table>
+       <thead><tr><th>Date</th><th>Doctor</th><th>Open slots</th><th>Candidates</th><th>Status</th><th></th></tr></thead>
+       <tbody>${campaigns.map(c => `
+         <tr>
+           <td><b>${c.date}</b></td>
+           <td>${escapeHtml(c.users?.name || '—')}</td>
+           <td>${(c.slot_times || []).slice(0,4).join(', ')}${(c.slot_times || []).length > 4 ? ' +' + ((c.slot_times || []).length - 4) : ''}</td>
+           <td>${c.candidate_count || 0}</td>
+           <td>${statusPill(c.status)}</td>
+           <td class="text-right">
+             <button class="btn btn-sm" data-df-view="${c.id}">View candidates</button>
+             ${c.status === 'pending_approval' ? `<button class="btn btn-primary btn-sm" data-df-send="${c.id}" style="margin-left:6px">Approve &amp; send</button>` : ''}
+           </td>
+         </tr>`).join('')}</tbody>
+     </table>
+   </div>
+ </div>`}`;
+}
+
+function bindDemandFill(){
+ const scan = document.getElementById('df-scan');
+ const statusEl = document.getElementById('df-scan-status');
+ if (scan) scan.onclick = async () => {
+   scan.disabled = true;
+   statusEl.textContent = 'Scanning your calendar...';
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/demand-fill-runner`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ mode:'scan', business_id: SESSION.business.id }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'Scan failed');
+     const found = (j.opportunities || []).length;
+     toast({title:'Scan complete', message: found ? `Found ${found} opportunity${found===1?'':'ies'} — review below.` : 'No empty-slot opportunities right now.', type:'info'});
+     render();
+   } catch (e) {
+     toast({title:'Scan failed', message:e.message, urgent:true});
+     statusEl.textContent = '';
+     scan.disabled = false;
+   }
+ };
+
+ document.querySelectorAll('[data-df-send]').forEach(btn => btn.onclick = async () => {
+   if (!confirm('Send WhatsApp to every matched patient now?')) return;
+   btn.disabled = true; btn.textContent = 'Sending...';
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/demand-fill-runner`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ mode:'send', campaign_id: btn.dataset.dfSend }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'Send failed');
+     toast({title:'Campaign sent', message:`Pinged ${j.sent} patient${j.sent===1?'':'s'}.`, type:'booking'});
+     render();
+   } catch (e) {
+     toast({title:'Send failed', message:e.message, urgent:true});
+     btn.disabled = false; btn.textContent = 'Approve & send';
+   }
+ });
+
+ document.querySelectorAll('[data-df-view]').forEach(btn => btn.onclick = async () => {
+   const id = btn.dataset.dfView;
+   const { data: targets = [] } = await sb.from('demand_fill_targets')
+     .select('*, clients(name, phone, last_visit_at)')
+     .eq('campaign_id', id).order('rank');
+   const html = `<h3>Top ${targets.length} candidates</h3>
+     <div style="max-height:60vh;overflow-y:auto">
+       ${targets.length === 0 ? '<div class="empty">No candidates matched.</div>' : `
+         <table><thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Last visit</th><th>Why</th><th>Status</th></tr></thead>
+         <tbody>${targets.map((t,i) => `
+           <tr>
+             <td>${t.rank || i+1}</td>
+             <td>${escapeHtml(t.clients?.name || '—')}</td>
+             <td style="font-size:12px;color:var(--text-dim)">${escapeHtml(t.clients?.phone || '—')}</td>
+             <td style="font-size:12px;color:var(--text-dim)">${t.clients?.last_visit_at ? new Date(t.clients.last_visit_at).toLocaleDateString() : 'never'}</td>
+             <td style="font-size:12px;color:var(--text-dim)">${escapeHtml(t.reason || '')}</td>
+             <td><span class="pill ${t.status==='filled'?'green':t.status==='declined'?'red':t.status==='sent'?'blue':'gray'}">${t.status}</span></td>
+           </tr>`).join('')}</tbody></table>`}
+     </div>
+     <div class="row" style="margin-top:14px;justify-content:flex-end">
+       <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+     </div>`;
+   openModal(html);
+ });
 }
 
 async function renderOverview(){
