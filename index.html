@@ -1999,6 +1999,7 @@ async function renderDashboard(route){
  ${navItem('packages','Packages','')}
  ${navItem('demandfill','Demand Fill','◐')}
  ${navItem('insights','Schedule Insights','◧')}
+ ${biz.type !== 'laboratoire' ? navItem('rxcheck','Prescribe','℞') : ''}
  ${navItem('messages','Messages','')}
  ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
  ${navItem('test','Test assistant','▶')}
@@ -2027,7 +2028,7 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
@@ -2039,6 +2040,7 @@ function pageSub(s){return ({
  services:'Services or products you offer',
  demandfill:'Auto-pinging — turn empty slots into bookings',
  insights:'Self-learning durations: Nova adjusts your schedule based on real visit times',
+ rxcheck:'AI drug-interaction & allergy checker — your malpractice safety net',
  messages:'WhatsApp conversation history',
  notifications:'Real-time alerts triggered by AI actions',
  test:'Send a real message to verify your AI pipeline works end-to-end',
@@ -2091,6 +2093,7 @@ async function bindDashboard(route){
  if (sub==='overview') bindOverview();
  if (sub==='demandfill') bindDemandFill();
  if (sub==='insights') bindInsights();
+ if (sub==='rxcheck') bindRxCheck();
  if (sub==='appointments') await bindAppointments();
  if (sub==='calendar') await bindCalendar();
  if (sub==='clients') await bindClients();
@@ -2143,12 +2146,243 @@ async function renderPage(sub){
  if (sub==='packages') return await renderPackages();
  if (sub==='demandfill') return await renderDemandFill();
  if (sub==='insights') return await renderInsights();
+ if (sub==='rxcheck') return await renderRxCheck();
  if (sub==='messages') return await renderMessages();
  if (sub==='notifications') return await renderNotifications();
  if (sub==='test') return renderTest();
  if (sub==='activity') return await renderActivity();
  if (sub==='settings') return renderSettings();
  return await renderOverview();
+}
+
+// ============================================================
+// PRESCRIPTION CHECK — drug-interaction + allergy AI
+// ============================================================
+let RX_STATE = { clientId: null, lastVerdict: null, checkId: null };
+
+async function renderRxCheck(){
+ const biz = SESSION.business;
+ const [{data: clients = []}, kpiResp, recentResp] = await Promise.all([
+   sb.from('clients').select('id,name,phone,age,medications,allergies,conditions').eq('business_id', biz.id).order('name').limit(500),
+   sb.from('v_prescription_check_kpis').select('*').eq('business_id', biz.id).maybeSingle(),
+   sb.from('prescription_checks').select('id,client_id,prescription,highest_severity,decision,created_at,clients(name)')
+     .eq('business_id', biz.id).order('created_at',{ascending:false}).limit(20),
+ ]);
+ // Detect missing migration
+ if (kpiResp.error && (kpiResp.error.message||'').toLowerCase().includes('does not exist')) {
+   return `<div class="panel"><div class="panel-head"><h3>One-time setup needed</h3></div>
+     <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+       The drug-interaction checker needs a one-time SQL migration.<br><br>
+       <b style="color:var(--text)">How to apply:</b><br>
+       1. Open <a href="https://supabase.com/dashboard/project/${escapeHtml((CFG.supabaseUrl||'').match(/\/\/(.+?)\./)?.[1] || '')}/sql/new" target="_blank" style="color:var(--primary-2)">Supabase Studio → SQL Editor</a><br>
+       2. Paste <span class="code">supabase/migrations/drug_check_pack.sql</span> from your repo<br>
+       3. Click <b>Run</b>, then deploy <span class="code">supabase functions deploy prescription-check --no-verify-jwt</span>
+     </div></div>`;
+ }
+ const kpi = kpiResp.data || { checks_total:0, checks_30d:0, warnings_caught:0, prescriptions_amended:0, prescriptions_cancelled:0 };
+ const recent = recentResp.data || [];
+ window.__rxClients = Object.fromEntries(clients.map(c => [c.id, c]));
+
+ const sevPill = (s) => {
+   const m = { critical:['red','CRITICAL'], high:['red','HIGH'], medium:['amber','MEDIUM'], low:['blue','LOW'], none:['green','SAFE'] };
+   const [cls, label] = m[s] || ['gray', s||'—'];
+   return `<span class="pill ${cls}">${label}</span>`;
+ };
+
+ return `<div class="stats" style="margin-bottom:18px">
+   <div class="stat"><div class="lbl">Checks (all-time)</div><div class="val">${kpi.checks_total || 0}</div><div class="delta">prescriptions reviewed</div></div>
+   <div class="stat"><div class="lbl">Last 30 days</div><div class="val">${kpi.checks_30d || 0}</div><div class="delta">checks</div></div>
+   <div class="stat"><div class="lbl">High-risk caught</div><div class="val" style="color:var(--danger)">${kpi.warnings_caught || 0}</div><div class="delta">flags raised</div></div>
+   <div class="stat"><div class="lbl">Prescriptions amended</div><div class="val">${(kpi.prescriptions_amended || 0) + (kpi.prescriptions_cancelled || 0)}</div><div class="delta">avoided harm</div></div>
+ </div>
+
+ <div class="panel" style="margin-bottom:18px">
+   <div class="panel-head"><h3>New prescription check</h3></div>
+   <div class="panel-body">
+     <div style="font-size:13.5px;color:var(--text-dim);line-height:1.55;margin-bottom:14px">Paste the prescription you want to write. Nova checks it against the patient's current medications, recorded allergies and conditions before you commit.</div>
+     <div class="field" style="margin-bottom:12px">
+       <label style="display:block;font-size:11.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px">Patient</label>
+       <select id="rx-client" style="width:100%;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:14px">
+         <option value="">— select a patient —</option>
+         ${clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}${c.age?` (${c.age}y)`:''}</option>`).join('')}
+       </select>
+       <div id="rx-patient-snapshot" style="margin-top:10px;font-size:12.5px;color:var(--text-dim)"></div>
+     </div>
+     <div class="field" style="margin-bottom:12px">
+       <label style="display:block;font-size:11.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px">Prescription</label>
+       <textarea id="rx-text" rows="4" placeholder="e.g. Amoxicilline 500mg 3x/day for 7 days&#10;Ibuprofène 400mg as needed for pain" style="width:100%;padding:11px 13px;background:var(--bg-2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:14px;font-family:inherit;resize:vertical"></textarea>
+     </div>
+     <div class="row" style="justify-content:flex-end;gap:8px">
+       <button class="btn btn-secondary btn-sm" id="rx-edit-meds" disabled>Edit patient meds &amp; allergies</button>
+       <button class="btn btn-primary" id="rx-check" disabled>Check with Nova AI →</button>
+     </div>
+     <div id="rx-result" style="margin-top:18px"></div>
+   </div>
+ </div>
+
+ ${recent.length ? `<div class="panel">
+   <div class="panel-head"><h3>Recent checks (${recent.length})</h3></div>
+   <div class="panel-body no-pad">
+     <table class="responsive-stack">
+       <thead><tr><th>When</th><th>Patient</th><th>Prescription</th><th>Severity</th><th>Decision</th></tr></thead>
+       <tbody>${recent.map(r => `<tr>
+         <td data-l="When" style="font-size:12.5px;color:var(--text-dim)">${new Date(r.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+         <td data-l="Patient"><b>${escapeHtml(r.clients?.name || '—')}</b></td>
+         <td data-l="Prescription" style="font-size:12.5px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.prescription)}</td>
+         <td data-l="Severity">${sevPill(r.highest_severity)}</td>
+         <td data-l="Decision" style="font-size:12px;color:var(--text-dim)">${escapeHtml((r.decision||'pending').replace(/_/g,' '))}</td>
+       </tr>`).join('')}</tbody>
+     </table>
+   </div>
+ </div>` : ''}`;
+}
+
+function bindRxCheck(){
+ const sel = document.getElementById('rx-client');
+ const txt = document.getElementById('rx-text');
+ const goBtn = document.getElementById('rx-check');
+ const editBtn = document.getElementById('rx-edit-meds');
+ const snap = document.getElementById('rx-patient-snapshot');
+ const resultEl = document.getElementById('rx-result');
+ if (!sel) return;
+
+ const refreshUi = () => {
+   const c = window.__rxClients?.[sel.value];
+   if (!c) { snap.innerHTML = ''; goBtn.disabled = true; editBtn.disabled = true; return; }
+   editBtn.disabled = false;
+   const meds = Array.isArray(c.medications) ? c.medications : [];
+   const allergies = Array.isArray(c.allergies) ? c.allergies : [];
+   const conds = Array.isArray(c.conditions) ? c.conditions : [];
+   snap.innerHTML = `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px">
+     <span><b style="color:var(--text)">${meds.length}</b> medication${meds.length===1?'':'s'}${meds.length?': ':''}${meds.slice(0,3).map(m => escapeHtml(m.name||'')).join(', ')}${meds.length>3?'...':''}</span>
+     <span><b style="color:var(--text)">${allergies.length}</b> allergy ${allergies.length===1?'':'ies'}${allergies.length?': ':''}${allergies.slice(0,3).map(a => escapeHtml(a.substance||'')).join(', ')}${allergies.length>3?'...':''}</span>
+     ${conds.length?`<span><b style="color:var(--text)">${conds.length}</b> condition${conds.length===1?'':'s'}: ${conds.slice(0,3).map(c => escapeHtml(c.name||'')).join(', ')}</span>`:''}
+   </div>`;
+   goBtn.disabled = !txt.value.trim();
+ };
+ sel.onchange = () => { RX_STATE.clientId = sel.value; refreshUi(); };
+ txt.oninput = () => { goBtn.disabled = !sel.value || !txt.value.trim(); };
+
+ editBtn.onclick = () => openMedAllergyEditor(sel.value);
+
+ goBtn.onclick = async () => {
+   if (!sel.value || !txt.value.trim()) return;
+   goBtn.disabled = true; goBtn.textContent = 'Asking Nova...';
+   resultEl.innerHTML = `<div class="empty"><div class="loading"></div> Checking against ${escapeHtml(window.__rxClients[sel.value]?.name||'patient')}'s history...</div>`;
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/prescription-check`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({
+         client_id: sel.value,
+         prescription: txt.value.trim(),
+         doctor_id: SESSION?.member?.id || null,
+       }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'AI check failed');
+     RX_STATE.lastVerdict = j.verdict;
+     RX_STATE.checkId = j.check_id;
+     renderVerdict(j.verdict, j.check_id);
+   } catch (e) {
+     resultEl.innerHTML = `<div class="empty" style="color:var(--danger)">Could not run check: ${escapeHtml(e.message)}</div>`;
+   } finally {
+     goBtn.disabled = false; goBtn.textContent = 'Check with Nova AI →';
+   }
+ };
+
+ function renderVerdict(v, checkId){
+   const sev = v.highest_severity || 'none';
+   const sevColor = { critical:'#dc2626', high:'#dc2626', medium:'#d97706', low:'#2563eb', none:'#16a34a' }[sev] || '#64748b';
+   const sevBg = { critical:'rgba(239,68,68,0.12)', high:'rgba(239,68,68,0.10)', medium:'rgba(234,179,8,0.10)', low:'rgba(99,102,241,0.10)', none:'rgba(34,197,94,0.10)' }[sev] || 'var(--card-2)';
+   const sevTitle = { critical:'CRITICAL — do not prescribe without amendment', high:'HIGH RISK — review before prescribing', medium:'MEDIUM — monitor closely', low:'Low risk', none:'Looks safe' }[sev] || sev;
+   const items = [];
+   (v.allergy_hits||[]).forEach(h => items.push({ kind:'allergy', sev:h.severity, title:`Allergy: ${h.drug} ↔ ${h.allergy}`, body:h.explanation }));
+   (v.interactions||[]).forEach(h => items.push({ kind:'interaction', sev:h.severity, title:`Interaction: ${h.drug_a} + ${h.drug_b}`, body:`${h.explanation}${h.advice?` — ${h.advice}`:''}` }));
+   (v.cautions||[]).forEach(h => items.push({ kind:'caution', sev:h.severity||'low', title:`Caution: ${h.drug}`, body:h.reason }));
+   const iconFor = (s) => s === 'critical' || s === 'high' ? '⚠' : s === 'medium' ? '◊' : 'i';
+
+   resultEl.innerHTML = `
+     <div style="background:${sevBg};border:1px solid ${sevColor};border-radius:14px;padding:18px;margin-bottom:14px">
+       <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+         <div style="width:36px;height:36px;border-radius:10px;background:${sevColor};color:white;display:grid;place-items:center;font-size:16px;font-weight:800">${iconFor(sev)}</div>
+         <div style="flex:1;min-width:0">
+           <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:${sevColor};font-weight:700">${sevTitle}</div>
+           <div style="font-size:14.5px;font-weight:600;margin-top:2px">${escapeHtml(v.summary || '')}</div>
+         </div>
+       </div>
+       ${items.length === 0 ? '' : `<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">${items.map(it => `
+         <div style="background:var(--card);border-left:3px solid ${sevColor};padding:10px 12px;border-radius:8px;font-size:13px">
+           <div style="font-weight:600;margin-bottom:3px">${escapeHtml(it.title)}</div>
+           <div style="color:var(--text-dim);line-height:1.5">${escapeHtml(it.body)}</div>
+         </div>`).join('')}</div>`}
+     </div>
+     <div class="row" style="justify-content:flex-end;gap:8px">
+       <button class="btn btn-secondary btn-sm" data-rx-decide="warned_cancelled">Cancel prescription</button>
+       <button class="btn btn-secondary btn-sm" data-rx-decide="warned_amended">Amend &amp; recheck</button>
+       <button class="btn ${sev==='none' ? 'btn-primary' : ''} btn-sm" data-rx-decide="${sev==='none'?'safe':'warned_proceeded'}">${sev==='none'?'Proceed':'Override &amp; proceed anyway'}</button>
+     </div>`;
+   document.querySelectorAll('[data-rx-decide]').forEach(b => b.onclick = async () => {
+     const decision = b.dataset.rxDecide;
+     b.disabled = true;
+     try {
+       await fetch(`${CFG.supabaseUrl}/functions/v1/prescription-check`, {
+         method:'POST',
+         headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+         body: JSON.stringify({ check_id: checkId, decision }),
+       });
+       toast({title:'Decision recorded', message: 'Audit trail updated.', type:'info'});
+       if (decision === 'warned_amended') {
+         resultEl.innerHTML = '';
+         document.getElementById('rx-text').focus();
+       } else {
+         render();
+       }
+     } catch (_e) { b.disabled = false; }
+   });
+ }
+}
+
+function openMedAllergyEditor(clientId){
+ const c = window.__rxClients?.[clientId];
+ if (!c) return;
+ const meds = Array.isArray(c.medications) ? c.medications : [];
+ const allergies = Array.isArray(c.allergies) ? c.allergies : [];
+ const conds = Array.isArray(c.conditions) ? c.conditions : [];
+ const html = `<h3>${escapeHtml(c.name)} — medications &amp; allergies</h3>
+   <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px">Keep this current — every prescription check is only as good as what you record here.</div>
+   <div style="margin-bottom:14px">
+     <div style="font-weight:600;font-size:13px;margin-bottom:6px">Current medications</div>
+     <textarea id="rx-meds-json" rows="5" style="width:100%;padding:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',Consolas,monospace;font-size:12px">${escapeHtml(JSON.stringify(meds, null, 2))}</textarea>
+     <div style="font-size:11px;color:var(--text-faint);margin-top:4px">Format: <span class="code">[{"name":"Amoxicilline","dose":"500mg","freq":"3x/day"}]</span></div>
+   </div>
+   <div style="margin-bottom:14px">
+     <div style="font-weight:600;font-size:13px;margin-bottom:6px">Allergies</div>
+     <textarea id="rx-allergies-json" rows="3" style="width:100%;padding:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',Consolas,monospace;font-size:12px">${escapeHtml(JSON.stringify(allergies, null, 2))}</textarea>
+     <div style="font-size:11px;color:var(--text-faint);margin-top:4px">Format: <span class="code">[{"substance":"Penicillin","severity":"high","reaction":"anaphylaxis"}]</span></div>
+   </div>
+   <div style="margin-bottom:14px">
+     <div style="font-weight:600;font-size:13px;margin-bottom:6px">Conditions (optional)</div>
+     <textarea id="rx-conds-json" rows="3" style="width:100%;padding:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',Consolas,monospace;font-size:12px">${escapeHtml(JSON.stringify(conds, null, 2))}</textarea>
+   </div>
+   <div class="row" style="justify-content:flex-end;gap:8px">
+     <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary btn-sm" id="rx-meds-save">Save</button>
+   </div>`;
+ openModal(html);
+ document.getElementById('rx-meds-save').onclick = async () => {
+   try {
+     const m = JSON.parse(document.getElementById('rx-meds-json').value || '[]');
+     const a = JSON.parse(document.getElementById('rx-allergies-json').value || '[]');
+     const co = JSON.parse(document.getElementById('rx-conds-json').value || '[]');
+     const { error } = await sb.from('clients').update({ medications: m, allergies: a, conditions: co }).eq('id', clientId);
+     if (error) throw error;
+     toast({title:'Saved', message:`${c.name}'s record updated.`, type:'info'});
+     closeModal(); render();
+   } catch (e) {
+     toast({title:'Invalid JSON', message:'Check the format — must be valid JSON.', urgent:true});
+   }
+ };
 }
 
 // ============================================================
