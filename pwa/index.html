@@ -324,7 +324,7 @@ async function openScanner() {
   if (!window.Html5Qrcode) {
     await new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.10/html5-qrcode.min.js';
+      s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
       s.onload = res; s.onerror = () => rej(new Error('Could not load scanner library'));
       document.head.appendChild(s);
     }).catch(e => { toast('Could not load scanner. Check your connection.'); throw e; });

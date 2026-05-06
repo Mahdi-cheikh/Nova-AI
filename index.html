@@ -3978,31 +3978,72 @@ function bindDoctorView(){
 // =============== DASHBOARD QR SCANNER + CONSULTATION TIMER ===============
 let DASH_CT_STATE = null;
 
-async function openDashScanner(){
- if (!window.Html5Qrcode){
-   await new Promise((res, rej)=>{
-     const s = document.createElement('script');
-     s.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.10/html5-qrcode.min.js';
-     s.onload = res; s.onerror = ()=>rej(new Error('Could not load scanner library'));
-     document.head.appendChild(s);
-   }).catch(e => { toast({title:'Scanner unavailable', message:'Check your connection.', urgent:true}); throw e; });
+async function loadQrLib(){
+ if (window.Html5Qrcode) return true;
+ const urls = [
+   'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+   'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
+ ];
+ for (const url of urls){
+   try {
+     await new Promise((res, rej) => {
+       const s = document.createElement('script');
+       s.src = url;
+       s.onload = () => { window.Html5Qrcode ? res() : rej(new Error('lib loaded but globals missing')); };
+       s.onerror = () => rej(new Error('failed: ' + url));
+       document.head.appendChild(s);
+     });
+     return true;
+   } catch (_e) { /* try next */ }
  }
- const html = `<div style="text-align:center">
+ return false;
+}
+
+async function openDashScanner(){
+ const html = `<div style="text-align:center;min-width:320px">
    <h3 style="margin:0 0 6px">Scan patient QR</h3>
-   <p style="margin:0 0 16px;color:var(--text-dim);font-size:13.5px">Hold the patient's phone QR up to your webcam.</p>
-   <div id="dash-qr-reader" style="width:100%;max-width:380px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px solid var(--primary)"></div>
-   <div id="dash-qr-msg" style="margin-top:14px;font-size:13px;color:var(--warn);min-height:18px"></div>
-   <div class="row" style="justify-content:center;margin-top:14px"><button class="btn btn-secondary" onclick="closeDashScanner()">Cancel</button></div>
+   <p style="margin:0 0 16px;color:var(--text-dim);font-size:13.5px">Hold the patient's QR up to your camera. No camera? Type the token manually.</p>
+   <div id="dash-qr-reader" style="width:100%;max-width:380px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px solid var(--primary);min-height:60px"></div>
+   <div id="dash-qr-msg" style="margin-top:12px;font-size:13px;color:var(--warn);min-height:18px"></div>
+   <div style="margin:18px auto 0;max-width:380px;text-align:left">
+     <div style="font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600">Or enter the token manually</div>
+     <div class="row" style="gap:8px">
+       <input id="dash-qr-manual" placeholder="Paste check-in token" style="flex:1;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px" />
+       <button class="btn btn-primary btn-sm" id="dash-qr-go">Start</button>
+     </div>
+   </div>
+   <div class="row" style="justify-content:center;margin-top:18px"><button class="btn btn-secondary" onclick="closeDashScanner()">Cancel</button></div>
  </div>`;
  openModal(html);
- const reader = new Html5Qrcode("dash-qr-reader");
- window.__dashQr = reader;
- let scanning = true;
  const setMsg = (text, color) => {
    const el = document.getElementById('dash-qr-msg');
    if (el){ el.textContent = text; el.style.color = color || 'var(--warn)'; }
  };
+ // Wire the manual entry — works even if the camera library can't load
+ const goBtn = document.getElementById('dash-qr-go');
+ const inp = document.getElementById('dash-qr-manual');
+ if (goBtn && inp){
+   const submit = async () => {
+     const token = (inp.value || '').trim();
+     if (!token) { setMsg('Paste a token first.', 'var(--warn)'); return; }
+     await closeDashScanner();
+     startDashConsultation(token);
+   };
+   goBtn.onclick = submit;
+   inp.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') submit(); });
+ }
+
+ // Try to load the camera scanner library
+ const ok = await loadQrLib();
+ if (!ok){
+   setMsg('Camera scanner could not load — use manual entry below.', 'var(--warn)');
+   return;
+ }
  try {
+   const reader = new Html5Qrcode("dash-qr-reader");
+   window.__dashQr = reader;
+   let scanning = true;
    await reader.start(
      { facingMode: 'environment' },
      { fps: 10, qrbox: { width: 240, height: 240 } },
@@ -4018,7 +4059,7 @@ async function openDashScanner(){
      ()=>{}
    );
  } catch (e){
-   setMsg('Could not access camera: ' + (e.message||'permission denied'), 'var(--danger)');
+   setMsg('Could not access camera: ' + (e.message||'permission denied') + ' — use manual entry below.', 'var(--danger)');
  }
 }
 window.closeDashScanner = async function(){
