@@ -57,11 +57,12 @@ Respond in the same language when generating any natural-language reply, but the
 
 
 
-async function sendWhatsApp(channel: string, phone: string|null, body: string): Promise<void> {
+async function sendWhatsApp(channel: string, phone: string|null, body: string, opts?: { business_id?: string }): Promise<void> {
  const WA_PHONE_ID = Deno.env.get("WA_PHONE_ID");
  const WA_ACCESS_TOKEN = Deno.env.get("WA_ACCESS_TOKEN");
  if (!channel?.startsWith("whatsapp") || !phone || !WA_PHONE_ID || !WA_ACCESS_TOKEN) return;
  const to = phone.replace(/^\+/, "");
+ // 1. Send the text message (always — voice is an addition, never a replacement)
  await fetch(`https://graph.facebook.com/v20.0/${WA_PHONE_ID}/messages`, {
  method: "POST",
  headers: { "Authorization": `Bearer ${WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
@@ -70,6 +71,33 @@ async function sendWhatsApp(channel: string, phone: string|null, body: string): 
  type: "text", text: { body },
  }),
  }).catch(()=>{});
+
+ // 2. Optionally send a voice note in the owner's cloned voice
+ // We fire-and-forget so a slow ElevenLabs call doesn't delay the text.
+ if (opts?.business_id) {
+   (async () => {
+     try {
+       const sbUrl = Deno.env.get("SUPABASE_URL"); const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+       if (!sbUrl || !svc) return;
+       const r = await fetch(`${sbUrl}/functions/v1/voice-avatar`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${svc}` },
+         body: JSON.stringify({ mode: "preview", business_id: opts.business_id, text: body }),
+       });
+       const j = await r.json();
+       if (!r.ok || !j.ok || !j.url) return;
+       // Send as WhatsApp audio (link variant — the URL must be public)
+       await fetch(`https://graph.facebook.com/v20.0/${WA_PHONE_ID}/messages`, {
+         method: "POST",
+         headers: { "Authorization": `Bearer ${WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+         body: JSON.stringify({
+           messaging_product: "whatsapp", recipient_type: "individual", to,
+           type: "audio", audio: { link: j.url },
+         }),
+       });
+     } catch (_e) { /* fail silently — text already delivered */ }
+   })();
+ }
 }
 
 // Send a tappable list (WhatsApp Interactive Message). Each row has an id that
@@ -694,9 +722,11 @@ serve(async (req) => {
  const reply = (lang==="fr" ? `C'est confirmé, ${collected.name} ! Votre rendez-vous est le ${collected.date} à ${collected.time}.${packageSessionInfo}`
  : lang==="ar" ? `تم التأكيد ${collected.name}! موعدك يوم ${collected.date} على الساعة ${collected.time}.${packageSessionInfo}`
  : `Confirmed, ${collected.name}! Your appointment is on ${collected.date} at ${collected.time}.${packageSessionInfo}`) + linkLine;
- await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply });
- await sendWhatsApp(channel, phone, reply);
- return new Response(JSON.stringify({ ok: true, step: "booked" }), { headers: { ...cors, "Content-Type": "application/json" } });
+ // Insert the message first so we have a row id to attach the TTS audio to
+ const { data: msgRow } = await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply }).select().single();
+ const bizForVoice = (biz as any).voice_enabled && (biz as any).voice_clone_status === "ready" ? business_id : undefined;
+ await sendWhatsApp(channel, phone, reply, { business_id: bizForVoice });
+ return new Response(JSON.stringify({ ok: true, step: "booked", message_id: msgRow?.id }), { headers: { ...cors, "Content-Type": "application/json" } });
  } else if (answer === "no") {
  await sb.from("booking_drafts").delete().eq("id", draft.id);
  const reply = lang==="fr" ? "Pas de souci, j'ai annulé. Dites-moi quand vous voulez essayer à nouveau."

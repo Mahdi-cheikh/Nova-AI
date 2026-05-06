@@ -2005,6 +2005,7 @@ async function renderDashboard(route){
  ${navItem('insights','Schedule Insights','◧')}
  ${biz.type !== 'laboratoire' ? navItem('rxcheck','Prescribe','℞') : ''}
  ${navItem('birthdays','Birthdays','✦')}
+ ${navItem('voice','Voice avatar','◔')}
  ${navItem('messages','Messages','')}
  ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
  ${navItem('test','Test assistant','▶')}
@@ -2033,7 +2034,7 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',vehicles:'Vehicles',vehicle:'Vehicle profile',birthdays:'Birthdays',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',vehicles:'Vehicles',vehicle:'Vehicle profile',birthdays:'Birthdays',voice:'Voice avatar',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
@@ -2047,6 +2048,7 @@ function pageSub(s){return ({
  insights:'Self-learning durations: Nova adjusts your schedule based on real visit times',
  rxcheck:'AI drug-interaction & allergy checker — your malpractice safety net',
  birthdays:'AI birthday surprises — auto-send personalised vouchers, build word-of-mouth',
+ voice:'Clone your voice — Nova answers WhatsApp in YOUR voice instead of a robot',
  vehicles:'Per-car profiles: VIN, mileage, service history, photos',
  vehicle:'Full service log + photo timeline for this vehicle',
  messages:'WhatsApp conversation history',
@@ -2103,6 +2105,7 @@ async function bindDashboard(route){
  if (sub==='insights') bindInsights();
  if (sub==='rxcheck') bindRxCheck();
  if (sub==='birthdays') bindBirthdays();
+ if (sub==='voice') bindVoiceAvatar();
  if (sub==='vehicles') bindVehicles();
  if (sub==='vehicle') bindVehicleDetail();
  if (sub==='appointments') await bindAppointments();
@@ -2161,12 +2164,254 @@ async function renderPage(sub){
  if (sub==='insights') return await renderInsights();
  if (sub==='rxcheck') return await renderRxCheck();
  if (sub==='birthdays') return await renderBirthdays();
+ if (sub==='voice') return await renderVoiceAvatar();
  if (sub==='messages') return await renderMessages();
  if (sub==='notifications') return await renderNotifications();
  if (sub==='test') return renderTest();
  if (sub==='activity') return await renderActivity();
  if (sub==='settings') return renderSettings();
  return await renderOverview();
+}
+
+// ============================================================
+// VOICE AVATAR — clone the owner's voice via ElevenLabs
+// ============================================================
+async function renderVoiceAvatar(){
+ const biz = SESSION.business;
+ const status = biz.voice_clone_status || 'none';
+ const enabled = biz.voice_enabled || false;
+ const voiceId = biz.voice_clone_id || '';
+ const settings = biz.voice_settings || { stability:0.45, similarity_boost:0.85, style:0.20, speaker_boost:true };
+
+ const { data: kpi } = await sb.from('v_voice_kpis').select('*').eq('business_id', biz.id).maybeSingle();
+ const k = kpi || { voice_replies_30d:0, voice_replies_total:0, patients_reached_30d:0 };
+
+ const stateBadge = {
+   none:     `<span class="pill gray">NOT SET UP</span>`,
+   training: `<span class="pill amber">TRAINING...</span>`,
+   ready:    `<span class="pill green">READY</span>`,
+   failed:   `<span class="pill red">CLONE FAILED</span>`,
+ }[status] || '';
+
+ return `<div class="stats" style="margin-bottom:18px">
+   <div class="stat"><div class="lbl">Voice clone</div><div class="val" style="font-size:18px;text-transform:uppercase;letter-spacing:.4px">${status}</div><div class="delta">${voiceId ? voiceId.slice(0,8)+'...' : 'no clone'}</div></div>
+   <div class="stat"><div class="lbl">Replies last 30d</div><div class="val">${k.voice_replies_30d||0}</div><div class="delta">audio messages</div></div>
+   <div class="stat"><div class="lbl">Patients reached</div><div class="val">${k.patients_reached_30d||0}</div><div class="delta">last 30 days</div></div>
+   <div class="stat"><div class="lbl">All-time</div><div class="val">${k.voice_replies_total||0}</div><div class="delta">total voice notes</div></div>
+ </div>
+
+ <div class="panel" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(99,102,241,0.10),rgba(34,211,238,0.06));border:1px solid color-mix(in srgb,var(--primary) 30%,transparent)">
+   <div class="panel-head">
+     <h3 style="display:flex;align-items:center;gap:10px">◔ Voice setup ${stateBadge}</h3>
+     <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:${status==='ready'?'pointer':'not-allowed'};opacity:${status==='ready'?'1':'.45'}">
+       <input type="checkbox" id="voice-enabled" ${enabled?'checked':''} ${status!=='ready'?'disabled':''} style="width:18px;height:18px" />
+       <span><b>${enabled?'ON':'OFF'}</b> — ${enabled?'Nova replies as you':'enable to make Nova speak'}</span>
+     </label>
+   </div>
+   <div class="panel-body">
+     <p style="font-size:13.5px;color:var(--text-dim);line-height:1.6;margin:0 0 14px">Read the script below into your phone microphone for ~30 seconds. ElevenLabs will clone your voice, and from then on Nova will reply to WhatsApp messages in <b style="color:var(--text)">your actual voice</b>.</p>
+     <div style="background:var(--card-2);border-radius:10px;padding:14px;margin-bottom:14px;font-size:13.5px;line-height:1.6">
+       <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-2);font-weight:700;margin-bottom:6px">SCRIPT (read in a calm, natural voice — about 30 seconds)</div>
+       <i>"Bonjour, c'est ${escapeHtml((SESSION.user.user_metadata?.full_name||'').split(' ')[0]||'le docteur')} de ${escapeHtml(biz.name)}. Merci de votre message. Je vais regarder votre demande tout de suite. Si c'est urgent, n'hésitez pas à m'appeler. Sinon, je vous reviens très vite avec une proposition de rendez-vous. Bonne journée et à très bientôt."</i>
+     </div>
+     <div id="voice-recorder" style="display:flex;flex-direction:column;gap:14px;align-items:center;padding:24px;background:var(--card-2);border-radius:12px;border:2px dashed var(--border)">
+       <div id="voice-recorder-state" style="text-align:center;font-size:13px;color:var(--text-dim)">Tap the button below to start recording.</div>
+       <button class="btn btn-primary" id="voice-rec-btn" style="width:auto;padding:18px 28px;border-radius:999px;display:flex;align-items:center;gap:12px"><span id="voice-rec-icon" style="width:14px;height:14px;border-radius:50%;background:#fff;display:inline-block"></span> <span id="voice-rec-label">Start recording</span></button>
+       <div id="voice-rec-time" style="font-size:32px;font-weight:200;letter-spacing:-1px;line-height:1;font-variant-numeric:tabular-nums;color:var(--text-faint)">00:00</div>
+       <audio id="voice-rec-playback" controls style="display:none;width:100%;max-width:360px"></audio>
+       <div class="row" id="voice-rec-actions" style="display:none;gap:8px">
+         <button class="btn btn-secondary btn-sm" id="voice-rec-discard">Discard &amp; re-record</button>
+         <button class="btn btn-primary btn-sm" id="voice-rec-clone">Send to ElevenLabs &amp; clone →</button>
+       </div>
+     </div>
+     ${status === 'ready' ? `<div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+       <div style="font-weight:600;font-size:13px;margin-bottom:8px">Test your voice</div>
+       <div class="row" style="gap:8px"><input id="voice-test-text" placeholder="Type a sentence to hear..." value="Bonjour ! Votre rendez-vous est confirmé pour demain à dix heures." style="flex:1;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px" />
+         <button class="btn btn-primary btn-sm" id="voice-test-btn">Generate</button></div>
+       <audio id="voice-test-audio" controls style="display:none;width:100%;margin-top:10px"></audio>
+       <div style="margin-top:18px;padding:12px;background:var(--card-2);border-radius:10px">
+         <div style="font-size:12.5px;font-weight:600;margin-bottom:6px">Voice tuning</div>
+         <div class="row" style="gap:14px;flex-wrap:wrap">
+           <div style="flex:1;min-width:140px"><label style="font-size:11.5px;color:var(--text-dim)">Stability <b>${settings.stability}</b></label><input type="range" min="0" max="1" step="0.05" value="${settings.stability}" data-vs="stability" style="width:100%" /></div>
+           <div style="flex:1;min-width:140px"><label style="font-size:11.5px;color:var(--text-dim)">Similarity <b>${settings.similarity_boost}</b></label><input type="range" min="0" max="1" step="0.05" value="${settings.similarity_boost}" data-vs="similarity_boost" style="width:100%" /></div>
+           <div style="flex:1;min-width:140px"><label style="font-size:11.5px;color:var(--text-dim)">Style <b>${settings.style}</b></label><input type="range" min="0" max="1" step="0.05" value="${settings.style}" data-vs="style" style="width:100%" /></div>
+         </div>
+         <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn btn-secondary btn-sm" id="voice-save-settings">Save tuning</button></div>
+       </div>
+       <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn-danger btn-sm" id="voice-delete">Delete voice clone</button></div>
+     </div>` : ''}
+   </div>
+ </div>
+
+ <div class="panel">
+   <div class="panel-head"><h3>How it works</h3></div>
+   <div class="panel-body" style="font-size:13.5px;line-height:1.7;color:var(--text-dim)">
+     <p style="margin:0 0 10px"><b style="color:var(--text)">1. Record</b> — read 30 seconds of natural speech. Quiet room, normal voice, no music.</p>
+     <p style="margin:0 0 10px"><b style="color:var(--text)">2. Clone</b> — ElevenLabs trains your voice clone in about 30 seconds.</p>
+     <p style="margin:0 0 10px"><b style="color:var(--text)">3. Test</b> — generate a sentence to make sure it sounds like you. Tweak stability / similarity / style if needed.</p>
+     <p style="margin:0 0 10px"><b style="color:var(--text)">4. Enable</b> — flip the switch above. From then on, every Nova WhatsApp reply gets sent as <i>both</i> a text message and a voice note in your voice.</p>
+     <p style="margin:0 0 10px;color:var(--text-faint);font-size:12.5px"><b>Cost:</b> ElevenLabs charges ~1 credit per character. A typical reply costs less than 1 cent. Set <span class="code">ELEVENLABS_API_KEY</span> in your Supabase function secrets.</p>
+     <p style="margin:0;color:var(--text-faint);font-size:12.5px"><b>Privacy:</b> Your sample is uploaded to ElevenLabs and to your Supabase storage. Both are private to your project. Delete the clone anytime to wipe it from ElevenLabs.</p>
+   </div>
+ </div>`;
+}
+
+function bindVoiceAvatar(){
+ // Toggle on/off
+ const enabledBox = document.getElementById('voice-enabled');
+ if (enabledBox) enabledBox.onchange = async () => {
+   const { error } = await sb.from('businesses').update({ voice_enabled: enabledBox.checked }).eq('id', SESSION.business.id);
+   if (error) { toast({title:'Save failed', message:error.message, urgent:true}); enabledBox.checked = !enabledBox.checked; return; }
+   SESSION.business.voice_enabled = enabledBox.checked;
+   toast({title: enabledBox.checked ? 'Voice replies ON' : 'Voice replies OFF', message: enabledBox.checked ? 'Nova will now speak in your voice.' : 'Replies will be text-only.', type:'info'});
+ };
+
+ // Recorder state
+ let mediaRecorder = null;
+ let chunks = [];
+ let recordedBlob = null;
+ let recStart = 0;
+ let timerHandle = null;
+
+ const recBtn = document.getElementById('voice-rec-btn');
+ const recIcon = document.getElementById('voice-rec-icon');
+ const recLabel = document.getElementById('voice-rec-label');
+ const recState = document.getElementById('voice-recorder-state');
+ const recTime = document.getElementById('voice-rec-time');
+ const playback = document.getElementById('voice-rec-playback');
+ const actions = document.getElementById('voice-rec-actions');
+
+ const updateTimer = () => {
+   const ms = Date.now() - recStart;
+   const m = Math.floor(ms/60000), s = Math.floor((ms%60000)/1000);
+   recTime.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+   if (s >= 30 && m === 0) recTime.style.color = 'var(--accent)';
+ };
+
+ if (recBtn) recBtn.onclick = async () => {
+   if (mediaRecorder && mediaRecorder.state === 'recording') {
+     mediaRecorder.stop();
+     recBtn.classList.remove('btn-danger'); recBtn.classList.add('btn-primary');
+     recIcon.style.background = '#fff';
+     recLabel.textContent = 'Start recording';
+     clearInterval(timerHandle);
+     return;
+   }
+   try {
+     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+     // Try webm/opus first (most browsers); fall back gracefully
+     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+     mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+     chunks = [];
+     mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+     mediaRecorder.onstop = () => {
+       stream.getTracks().forEach(t => t.stop());
+       recordedBlob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+       playback.src = URL.createObjectURL(recordedBlob);
+       playback.style.display = 'block';
+       actions.style.display = 'flex';
+       recState.textContent = `Recorded ${Math.round(recordedBlob.size/1024)} KB · ${mediaRecorder.mimeType || 'audio'}. Listen, then send to clone.`;
+     };
+     mediaRecorder.start();
+     recStart = Date.now();
+     recBtn.classList.remove('btn-primary'); recBtn.classList.add('btn-danger');
+     recIcon.style.background = '#ef4444';
+     recLabel.textContent = 'Stop recording';
+     recState.textContent = 'Recording... read the script naturally.';
+     playback.style.display = 'none'; actions.style.display = 'none';
+     timerHandle = setInterval(updateTimer, 200);
+   } catch (e) {
+     toast({title:'Mic blocked', message: 'Allow microphone access in your browser to record.', urgent:true});
+   }
+ };
+
+ const discard = document.getElementById('voice-rec-discard');
+ if (discard) discard.onclick = () => {
+   recordedBlob = null; chunks = [];
+   playback.style.display = 'none'; actions.style.display = 'none';
+   recTime.textContent = '00:00'; recTime.style.color = 'var(--text-faint)';
+   recState.textContent = 'Tap the button to start a fresh recording.';
+ };
+
+ const cloneBtn = document.getElementById('voice-rec-clone');
+ if (cloneBtn) cloneBtn.onclick = async () => {
+   if (!recordedBlob) return;
+   cloneBtn.disabled = true; cloneBtn.textContent = 'Uploading & cloning...';
+   try {
+     // Convert blob to base64
+     const buf = await recordedBlob.arrayBuffer();
+     const bytes = new Uint8Array(buf);
+     let bin = '';
+     for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i+0x8000));
+     const b64 = btoa(bin);
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/voice-avatar`, {
+       method: 'POST',
+       headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ mode:'clone', business_id: SESSION.business.id, sample_b64: b64, sample_mime: recordedBlob.type }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'Clone failed');
+     toast({title:'Voice cloned', message:`Voice ID: ${j.voice_id?.slice(0,12)}... — test it below.`, type:'booking'});
+     render();
+   } catch (e) {
+     toast({title:'Clone failed', message:e.message, urgent:true});
+     cloneBtn.disabled = false; cloneBtn.textContent = 'Send to ElevenLabs & clone →';
+   }
+ };
+
+ // Test voice
+ const testBtn = document.getElementById('voice-test-btn');
+ if (testBtn) testBtn.onclick = async () => {
+   const text = document.getElementById('voice-test-text').value.trim();
+   if (!text) return;
+   testBtn.disabled = true; testBtn.textContent = 'Generating...';
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/voice-avatar`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ mode:'preview', business_id: SESSION.business.id, text }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'TTS failed');
+     const a = document.getElementById('voice-test-audio');
+     a.src = j.url; a.style.display = 'block'; a.play().catch(()=>{});
+   } catch (e) {
+     toast({title:'TTS failed', message:e.message, urgent:true});
+   } finally { testBtn.disabled = false; testBtn.textContent = 'Generate'; }
+ };
+
+ // Tuning sliders
+ document.querySelectorAll('[data-vs]').forEach(slider => slider.oninput = (e) => {
+   const label = slider.parentElement.querySelector('label b');
+   if (label) label.textContent = slider.value;
+ });
+ const saveTuning = document.getElementById('voice-save-settings');
+ if (saveTuning) saveTuning.onclick = async () => {
+   const settings = { speaker_boost: true };
+   document.querySelectorAll('[data-vs]').forEach(s => settings[s.dataset.vs] = parseFloat(s.value));
+   const { error } = await sb.from('businesses').update({ voice_settings: settings }).eq('id', SESSION.business.id);
+   if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
+   SESSION.business.voice_settings = settings;
+   toast({title:'Tuning saved', type:'info'});
+ };
+
+ // Delete clone
+ const delBtn = document.getElementById('voice-delete');
+ if (delBtn) delBtn.onclick = async () => {
+   if (!confirm('Delete the voice clone from ElevenLabs? You can always re-record later.')) return;
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/voice-avatar`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ mode:'delete', business_id: SESSION.business.id }),
+     });
+     if (!r.ok) throw new Error((await r.json()).error || 'Delete failed');
+     toast({title:'Voice deleted', type:'info'});
+     render();
+   } catch (e) {
+     toast({title:'Delete failed', message:e.message, urgent:true});
+   }
+ };
 }
 
 // ============================================================
