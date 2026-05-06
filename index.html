@@ -1998,6 +1998,7 @@ async function renderDashboard(route){
  ${navItem('services','Services','★')}
  ${navItem('packages','Packages','')}
  ${navItem('demandfill','Demand Fill','◐')}
+ ${navItem('insights','Schedule Insights','◧')}
  ${navItem('messages','Messages','')}
  ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
  ${navItem('test','Test assistant','▶')}
@@ -2024,7 +2025,7 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
@@ -2035,6 +2036,7 @@ function pageSub(s){return ({
  tests:'Curate the tests you offer with prices, fasting and turnaround',
  services:'Services or products you offer',
  demandfill:'Auto-pinging — turn empty slots into bookings',
+ insights:'Self-learning durations: Nova adjusts your schedule based on real visit times',
  messages:'WhatsApp conversation history',
  notifications:'Real-time alerts triggered by AI actions',
  test:'Send a real message to verify your AI pipeline works end-to-end',
@@ -2079,6 +2081,7 @@ async function bindDashboard(route){
  const sub=route.replace('/dashboard','').replace(/^\//,'')||'overview';
  if (sub==='overview') bindOverview();
  if (sub==='demandfill') bindDemandFill();
+ if (sub==='insights') bindInsights();
  if (sub==='appointments') await bindAppointments();
  if (sub==='calendar') await bindCalendar();
  if (sub==='clients') await bindClients();
@@ -2128,12 +2131,125 @@ async function renderPage(sub){
  if (sub==='services') return await renderServices();
  if (sub==='packages') return await renderPackages();
  if (sub==='demandfill') return await renderDemandFill();
+ if (sub==='insights') return await renderInsights();
  if (sub==='messages') return await renderMessages();
  if (sub==='notifications') return await renderNotifications();
  if (sub==='test') return renderTest();
  if (sub==='activity') return await renderActivity();
  if (sub==='settings') return renderSettings();
  return await renderOverview();
+}
+
+// ============================================================
+// SCHEDULE INSIGHTS — self-learning appointment durations
+// ============================================================
+async function renderInsights(){
+ const biz = SESSION.business;
+ const [suggestionsResp, {data: services = []}] = await Promise.all([
+   sb.rpc('duration_suggestions', { p_business_id: biz.id }),
+   sb.from('services').select('id,name,duration_min,auto_adjust_duration,last_duration_review,users:doctor_id(name)')
+     .eq('business_id', biz.id).order('name'),
+ ]);
+ const suggestions = suggestionsResp.data || [];
+ const driftMap = Object.fromEntries(suggestions.map(s => [s.service_id, s]));
+
+ const driftPill = (s) => {
+   if (!s) return '<span class="pill gray">on track</span>';
+   const cls = s.drift_pct > 15 ? 'amber' : s.drift_pct < -15 ? 'blue' : 'gray';
+   const arrow = s.drift_pct > 0 ? '↑' : '↓';
+   return `<span class="pill ${cls}">${arrow} ${Math.abs(Math.round(s.drift_pct))}% off</span>`;
+ };
+
+ return `<div class="panel" style="margin-bottom:18px">
+   <div class="panel-head"><h3>How it works</h3></div>
+   <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+     Nova logs how long each visit actually takes (from check-in to checkout) and computes a 90-day average per service and per doctor. When reality drifts by more than <b>15%</b> for at least <b>5 visits</b>, it suggests a new duration so your day stops running late. Switch <b>Auto-adjust</b> on for any service to let Nova apply changes automatically every Monday morning.
+     <div style="margin-top:14px">
+       <button class="btn btn-primary btn-sm" id="ins-review">Recompute now</button>
+       <span id="ins-status" style="margin-left:10px;color:var(--text-faint);font-size:12.5px"></span>
+     </div>
+   </div>
+ </div>
+
+ ${suggestions.length > 0 ? `<div class="panel" style="margin-bottom:18px">
+   <div class="panel-head"><h3>Suggestions (${suggestions.length})</h3></div>
+   <div class="panel-body no-pad">
+     <table class="responsive-stack">
+       <thead><tr><th>Service</th><th>Doctor</th><th>Scheduled</th><th>Actual avg</th><th>Sample</th><th>Suggested</th><th></th></tr></thead>
+       <tbody>${suggestions.map(s => `<tr>
+         <td data-l="Service"><b>${escapeHtml(s.service_name || '—')}</b></td>
+         <td data-l="Doctor">${escapeHtml(s.doctor_name || 'Any')}</td>
+         <td data-l="Scheduled">${s.current_duration} min</td>
+         <td data-l="Actual avg" style="color:${s.drift_pct > 0 ? 'var(--warn)' : 'var(--accent)'};font-weight:600">${s.observed_avg} min</td>
+         <td data-l="Sample">${s.sample_size} visits</td>
+         <td data-l="Suggested"><b style="color:var(--primary-2)">${s.suggested_duration} min</b></td>
+         <td data-l="" class="text-right"><button class="btn btn-primary btn-sm" data-ins-apply="${s.service_id}" data-ins-new="${s.suggested_duration}">Apply</button></td>
+       </tr>`).join('')}</tbody>
+     </table>
+   </div>
+ </div>` : ''}
+
+ <div class="panel">
+   <div class="panel-head"><h3>All services (${services.length})</h3></div>
+   <div class="panel-body no-pad">
+     <table class="responsive-stack">
+       <thead><tr><th>Service</th><th>Doctor</th><th>Scheduled</th><th>Drift vs actual</th><th>Auto-adjust</th><th>Last reviewed</th></tr></thead>
+       <tbody>${services.map(s => `<tr>
+         <td data-l="Service"><b>${escapeHtml(s.name)}</b></td>
+         <td data-l="Doctor">${escapeHtml(s.users?.name || 'Any')}</td>
+         <td data-l="Scheduled">${s.duration_min} min</td>
+         <td data-l="Drift">${driftPill(driftMap[s.id])}</td>
+         <td data-l="Auto-adjust"><label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+           <input type="checkbox" data-ins-toggle="${s.id}" ${s.auto_adjust_duration ? 'checked' : ''} style="width:16px;height:16px" />
+           <span style="font-size:12.5px;color:var(--text-dim)">${s.auto_adjust_duration ? 'on' : 'off'}</span>
+         </label></td>
+         <td data-l="Reviewed" style="font-size:12px;color:var(--text-faint)">${s.last_duration_review ? new Date(s.last_duration_review).toLocaleDateString() : '—'}</td>
+       </tr>`).join('')}</tbody>
+     </table>
+   </div>
+ </div>`;
+}
+
+function bindInsights(){
+ const review = document.getElementById('ins-review');
+ const statusEl = document.getElementById('ins-status');
+ if (review) review.onclick = async () => {
+   review.disabled = true;
+   statusEl.textContent = 'Reviewing 90 days of visits...';
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/duration-learner`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ mode:'review', business_id: SESSION.business.id }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'Review failed');
+     const msg = j.applied ? `${j.applied} auto-applied, ${j.suggested} pending review.` : (j.suggested ? `${j.suggested} suggestion${j.suggested===1?'':'s'} ready.` : 'Everything on schedule.');
+     toast({title:'Review done', message: msg, type:'info'});
+     render();
+   } catch (e) {
+     toast({title:'Review failed', message:e.message, urgent:true});
+     statusEl.textContent = '';
+     review.disabled = false;
+   }
+ };
+ document.querySelectorAll('[data-ins-apply]').forEach(btn => btn.onclick = async () => {
+   btn.disabled = true; btn.textContent = '...';
+   const {error} = await sb.rpc('apply_duration_suggestion', {
+     p_service_id: btn.dataset.insApply,
+     p_new_duration: parseInt(btn.dataset.insNew, 10),
+   });
+   if (error) { toast({title:'Could not apply', message:error.message, urgent:true}); btn.disabled = false; btn.textContent = 'Apply'; return; }
+   toast({title:'Duration updated', message:`Future bookings now use ${btn.dataset.insNew} min.`, type:'booking'});
+   render();
+ });
+ document.querySelectorAll('[data-ins-toggle]').forEach(cb => cb.onchange = async () => {
+   const {error} = await sb.from('services')
+     .update({ auto_adjust_duration: cb.checked })
+     .eq('id', cb.dataset.insToggle);
+   if (error) { toast({title:'Could not save', message:error.message, urgent:true}); cb.checked = !cb.checked; return; }
+   toast({title:'Saved', message: cb.checked ? 'Auto-adjust ON for this service.' : 'Auto-adjust OFF.', type:'info'});
+ });
 }
 
 // ============================================================
@@ -2349,7 +2465,7 @@ async function renderOverview(){
 }
 
 async function renderAppointments(){
- const {data:apts=[]} = await sb.from('appointments').select('*, clients(id,name,phone,age,email), users:doctor_id(name,specialty), services(name,duration_min)').eq('business_id', SESSION.business.id).order('date',{ascending:false}).order('time',{ascending:false});
+ const {data:apts=[]} = await sb.from('appointments').select('*, clients(id,name,phone,age,email), users:doctor_id(name,specialty), services(name,duration_min), arrived_at, completed_at, actual_duration_min').eq('business_id', SESSION.business.id).order('date',{ascending:false}).order('time',{ascending:false});
  // stash for the modal opener
  window.__apts = Object.fromEntries((apts||[]).map(a=>[a.id, a]));
  return `<div class="panel">
@@ -2363,10 +2479,31 @@ async function renderAppointments(){
  <td>${escapeHtml(a.services?.name||'—')}</td>
  <td><span class="pill ${a.status==='confirmed'?'green':a.status==='pending'?'amber':'red'}">${a.status}</span></td>
  <td><span class="pill ${a.source==='whatsapp_ai'?'blue':a.source==='whatsapp_voice'?'green':'gray'}">${a.source||'manual'}</span></td>
- <td class="text-right" onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm" data-cancel="${a.id}">Cancel</button></td>
+ <td class="text-right" onclick="event.stopPropagation()" style="white-space:nowrap">
+ ${!a.arrived_at && a.status==='confirmed' ? `<button class="btn btn-secondary btn-sm" data-arrived="${a.id}" title="Mark patient arrived">Arrived</button>` : ''}
+ ${a.arrived_at && !a.completed_at ? `<button class="btn btn-secondary btn-sm" data-done="${a.id}" title="Mark visit completed">Done</button>` : ''}
+ ${a.completed_at ? `<span class="pill green" title="Took ${a.actual_duration_min || '?'} min">✓ ${a.actual_duration_min || '?'} min</span>` : ''}
+ <button class="btn btn-danger btn-sm" data-cancel="${a.id}" style="margin-left:6px">Cancel</button>
+</td>
  </tr>`).join('')}</tbody></table>`}</div></div>`;
 }
 async function bindAppointments(){
+ $$('[data-arrived]').forEach(b => b.onclick = async ()=>{
+   const {error} = await sb.from('appointments')
+     .update({arrived_at: new Date().toISOString(), status: 'confirmed'})
+     .eq('id', b.dataset.arrived);
+   if (error){ toast({title:'Could not mark arrived', message:error.message, urgent:true}); return; }
+   toast({title:'Arrived', message:'Visit started — Nova is timing it.', type:'info'});
+   render();
+ });
+ $$('[data-done]').forEach(b => b.onclick = async ()=>{
+   const {error} = await sb.from('appointments')
+     .update({completed_at: new Date().toISOString(), status: 'completed'})
+     .eq('id', b.dataset.done);
+   if (error){ toast({title:'Could not mark done', message:error.message, urgent:true}); return; }
+   toast({title:'Visit completed', message:'Duration logged for self-learning.', type:'booking'});
+   render();
+ });
  $$('[data-cancel]').forEach(b => b.onclick = async ()=>{
  if (!confirm('Cancel this appointment?')) return;
  const {error} = await sb.from('appointments').update({status:'cancelled'}).eq('id', b.dataset.cancel);
