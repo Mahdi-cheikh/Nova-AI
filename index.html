@@ -2346,43 +2346,137 @@ function bindRxCheck(){
 function openMedAllergyEditor(clientId){
  const c = window.__rxClients?.[clientId];
  if (!c) return;
- const meds = Array.isArray(c.medications) ? c.medications : [];
- const allergies = Array.isArray(c.allergies) ? c.allergies : [];
- const conds = Array.isArray(c.conditions) ? c.conditions : [];
- const html = `<h3>${escapeHtml(c.name)} — medications &amp; allergies</h3>
-   <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px">Keep this current — every prescription check is only as good as what you record here.</div>
-   <div style="margin-bottom:14px">
-     <div style="font-weight:600;font-size:13px;margin-bottom:6px">Current medications</div>
-     <textarea id="rx-meds-json" rows="5" style="width:100%;padding:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',Consolas,monospace;font-size:12px">${escapeHtml(JSON.stringify(meds, null, 2))}</textarea>
-     <div style="font-size:11px;color:var(--text-faint);margin-top:4px">Format: <span class="code">[{"name":"Amoxicilline","dose":"500mg","freq":"3x/day"}]</span></div>
-   </div>
-   <div style="margin-bottom:14px">
-     <div style="font-weight:600;font-size:13px;margin-bottom:6px">Allergies</div>
-     <textarea id="rx-allergies-json" rows="3" style="width:100%;padding:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',Consolas,monospace;font-size:12px">${escapeHtml(JSON.stringify(allergies, null, 2))}</textarea>
-     <div style="font-size:11px;color:var(--text-faint);margin-top:4px">Format: <span class="code">[{"substance":"Penicillin","severity":"high","reaction":"anaphylaxis"}]</span></div>
-   </div>
-   <div style="margin-bottom:14px">
-     <div style="font-weight:600;font-size:13px;margin-bottom:6px">Conditions (optional)</div>
-     <textarea id="rx-conds-json" rows="3" style="width:100%;padding:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',Consolas,monospace;font-size:12px">${escapeHtml(JSON.stringify(conds, null, 2))}</textarea>
-   </div>
-   <div class="row" style="justify-content:flex-end;gap:8px">
-     <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
-     <button class="btn btn-primary btn-sm" id="rx-meds-save">Save</button>
+ // Working copies — edit freely, save commits to DB
+ let meds      = (Array.isArray(c.medications) ? c.medications : []).map(x => ({...x}));
+ let allergies = (Array.isArray(c.allergies)   ? c.allergies   : []).map(x => ({...x}));
+ let conds     = (Array.isArray(c.conditions)  ? c.conditions  : []).map(x => ({...x}));
+
+ const inputStyle = "padding:9px 11px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;width:100%";
+ const sectionStyle = "margin-bottom:18px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--card-2)";
+
+ const renderMedRow = (m, i) => `
+   <div data-row-med="${i}" style="display:grid;grid-template-columns:1.4fr 1fr 1fr 32px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent)">
+     <input value="${escapeHtml(m.name||'')}" data-f="name" placeholder="Drug name" style="${inputStyle}" />
+     <input value="${escapeHtml(m.dose||'')}" data-f="dose" placeholder="Dose (e.g. 500mg)" style="${inputStyle}" />
+     <input value="${escapeHtml(m.freq||'')}" data-f="freq" placeholder="Frequency (e.g. 2x/day)" style="${inputStyle}" />
+     <button class="btn btn-ghost btn-sm" data-del-med="${i}" title="Remove" style="padding:6px;color:var(--danger);font-size:18px;line-height:1">×</button>
    </div>`;
- openModal(html);
- document.getElementById('rx-meds-save').onclick = async () => {
-   try {
-     const m = JSON.parse(document.getElementById('rx-meds-json').value || '[]');
-     const a = JSON.parse(document.getElementById('rx-allergies-json').value || '[]');
-     const co = JSON.parse(document.getElementById('rx-conds-json').value || '[]');
-     const { error } = await sb.from('clients').update({ medications: m, allergies: a, conditions: co }).eq('id', clientId);
-     if (error) throw error;
-     toast({title:'Saved', message:`${c.name}'s record updated.`, type:'info'});
-     closeModal(); render();
-   } catch (e) {
-     toast({title:'Invalid JSON', message:'Check the format — must be valid JSON.', urgent:true});
-   }
+
+ const renderAllergyRow = (a, i) => `
+   <div data-row-al="${i}" style="display:grid;grid-template-columns:1.3fr 1fr 1.2fr 32px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent)">
+     <input value="${escapeHtml(a.substance||'')}" data-f="substance" placeholder="Substance (e.g. Penicillin)" style="${inputStyle}" />
+     <select data-f="severity" style="${inputStyle}">
+       <option value="low"      ${a.severity==='low'?'selected':''}>Low</option>
+       <option value="medium"   ${(a.severity==='medium'||!a.severity)?'selected':''}>Medium</option>
+       <option value="high"     ${a.severity==='high'?'selected':''}>High</option>
+       <option value="critical" ${a.severity==='critical'?'selected':''}>Critical</option>
+     </select>
+     <input value="${escapeHtml(a.reaction||'')}" data-f="reaction" placeholder="Reaction (e.g. rash, anaphylaxis)" style="${inputStyle}" />
+     <button class="btn btn-ghost btn-sm" data-del-al="${i}" title="Remove" style="padding:6px;color:var(--danger);font-size:18px;line-height:1">×</button>
+   </div>`;
+
+ const renderCondRow = (cd, i) => `
+   <div data-row-cd="${i}" style="display:grid;grid-template-columns:1.7fr 1fr 32px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent)">
+     <input value="${escapeHtml(cd.name||'')}" data-f="name" placeholder="Condition (e.g. Hypertension)" style="${inputStyle}" />
+     <input value="${escapeHtml(cd.since||'')}" data-f="since" placeholder="Since (e.g. 2018)" style="${inputStyle}" />
+     <button class="btn btn-ghost btn-sm" data-del-cd="${i}" title="Remove" style="padding:6px;color:var(--danger);font-size:18px;line-height:1">×</button>
+   </div>`;
+
+ const renderAll = () => {
+   const medsHtml = meds.length === 0
+     ? '<div style="font-size:12.5px;color:var(--text-faint);padding:8px 0">No medications recorded yet.</div>'
+     : meds.map(renderMedRow).join('');
+   const alHtml = allergies.length === 0
+     ? '<div style="font-size:12.5px;color:var(--text-faint);padding:8px 0">No allergies recorded yet.</div>'
+     : allergies.map(renderAllergyRow).join('');
+   const cdHtml = conds.length === 0
+     ? '<div style="font-size:12.5px;color:var(--text-faint);padding:8px 0">No conditions recorded.</div>'
+     : conds.map(renderCondRow).join('');
+
+   return `<h3>${escapeHtml(c.name)} — medications &amp; allergies</h3>
+   <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px">Keep this current — every prescription check is only as good as what you record here.</div>
+
+   <div style="${sectionStyle}">
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+       <div style="font-weight:600;font-size:13.5px">Current medications</div>
+       <button class="btn btn-secondary btn-sm" id="add-med">+ Add medication</button>
+     </div>
+     <div id="med-list">${medsHtml}</div>
+   </div>
+
+   <div style="${sectionStyle}">
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+       <div style="font-weight:600;font-size:13.5px">Allergies</div>
+       <button class="btn btn-secondary btn-sm" id="add-al">+ Add allergy</button>
+     </div>
+     <div id="al-list">${alHtml}</div>
+   </div>
+
+   <div style="${sectionStyle}">
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+       <div style="font-weight:600;font-size:13.5px">Conditions <span style="font-weight:400;color:var(--text-faint);font-size:12px">(optional)</span></div>
+       <button class="btn btn-secondary btn-sm" id="add-cd">+ Add condition</button>
+     </div>
+     <div id="cd-list">${cdHtml}</div>
+   </div>
+
+   <div class="row" style="justify-content:flex-end;gap:8px;margin-top:18px">
+     <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary btn-sm" id="rx-meds-save">Save changes</button>
+   </div>`;
  };
+
+ const reBind = () => {
+   const root = document.querySelector('#modal-root .modal');
+   if (!root) return;
+   root.innerHTML = renderAll();
+   // Wire add buttons
+   root.querySelector('#add-med').onclick = () => { meds.push({name:'',dose:'',freq:''}); reBind(); };
+   root.querySelector('#add-al').onclick  = () => { allergies.push({substance:'',severity:'medium',reaction:''}); reBind(); };
+   root.querySelector('#add-cd').onclick  = () => { conds.push({name:'',since:''}); reBind(); };
+   // Wire delete buttons
+   root.querySelectorAll('[data-del-med]').forEach(b => b.onclick = () => { meds.splice(parseInt(b.dataset.delMed,10),1); reBind(); });
+   root.querySelectorAll('[data-del-al]').forEach(b  => b.onclick = () => { allergies.splice(parseInt(b.dataset.delAl,10),1); reBind(); });
+   root.querySelectorAll('[data-del-cd]').forEach(b  => b.onclick = () => { conds.splice(parseInt(b.dataset.delCd,10),1); reBind(); });
+   // Live-sync inputs back into the working arrays
+   root.querySelectorAll('[data-row-med]').forEach(row => {
+     const i = parseInt(row.dataset.rowMed, 10);
+     row.querySelectorAll('[data-f]').forEach(inp => inp.oninput = () => { meds[i][inp.dataset.f] = inp.value.trim(); });
+   });
+   root.querySelectorAll('[data-row-al]').forEach(row => {
+     const i = parseInt(row.dataset.rowAl, 10);
+     row.querySelectorAll('[data-f]').forEach(inp => {
+       const handler = () => { allergies[i][inp.dataset.f] = inp.value.trim(); };
+       inp.oninput = handler; inp.onchange = handler;
+     });
+   });
+   root.querySelectorAll('[data-row-cd]').forEach(row => {
+     const i = parseInt(row.dataset.rowCd, 10);
+     row.querySelectorAll('[data-f]').forEach(inp => inp.oninput = () => { conds[i][inp.dataset.f] = inp.value.trim(); });
+   });
+   // Save
+   root.querySelector('#rx-meds-save').onclick = async () => {
+     // Strip empty rows
+     const cleanMeds = meds.filter(m => (m.name||'').trim());
+     const cleanAl   = allergies.filter(a => (a.substance||'').trim());
+     const cleanCd   = conds.filter(x => (x.name||'').trim());
+     const { error } = await sb.from('clients').update({
+       medications: cleanMeds, allergies: cleanAl, conditions: cleanCd,
+     }).eq('id', clientId);
+     if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
+     // Refresh in-memory cache so the snapshot reads fresh values
+     if (window.__rxClients?.[clientId]) {
+       window.__rxClients[clientId].medications = cleanMeds;
+       window.__rxClients[clientId].allergies   = cleanAl;
+       window.__rxClients[clientId].conditions  = cleanCd;
+     }
+     toast({title:'Saved', message:`${c.name}'s record updated — ${cleanMeds.length} med${cleanMeds.length===1?'':'s'}, ${cleanAl.length} allerg${cleanAl.length===1?'y':'ies'}.`, type:'info'});
+     closeModal(); render();
+   };
+ };
+
+ openModal(renderAll());
+ reBind();
 }
 
 // ============================================================
