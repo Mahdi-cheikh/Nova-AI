@@ -242,7 +242,52 @@
  .mt-2{margin-top:14px}
  .code{font-family:'JetBrains Mono',Consolas,monospace;background:var(--bg-2);padding:2px 6px;border-radius:4px;font-size:12px;border:1px solid var(--border)}
 
- @media (max-width:1024px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.plans{grid-template-columns:1fr}}
+ /* === DASHBOARD MOBILE RESPONSIVENESS ============================
+    On tablet (<1024px) the sidebar collapses to a slide-out drawer.
+    On phone (<640px) we tighten paddings, single-column the stats and
+    convert tables to stacked cards. A hamburger button toggles the drawer.
+    ============================================================== */
+ .menu-fab { display:none;position:fixed;top:14px;left:14px;z-index:90;width:42px;height:42px;border-radius:11px;background:var(--card);border:1px solid var(--border);box-shadow:0 6px 18px rgba(99,102,241,0.3);font-size:20px;color:var(--text);cursor:pointer; }
+ .sb-backdrop { display:none;position:fixed;inset:0;background:rgba(5,8,22,.55);backdrop-filter:blur(4px);z-index:80; }
+ .sb-backdrop.open { display:block; }
+
+ @media (max-width:1024px){
+   .app{ grid-template-columns:1fr }
+   .sidebar{ position:fixed;top:0;left:0;height:100vh;width:280px;z-index:85;transform:translateX(-105%);transition:transform .24s ease;box-shadow:0 0 40px rgba(0,0,0,0.4); }
+   .sidebar.open{ transform:translateX(0); }
+   .menu-fab{ display:grid;place-items:center; }
+   .main{ padding-top:64px; }
+   .plans{ grid-template-columns:1fr }
+   .stats{ grid-template-columns:repeat(2,1fr) }
+ }
+ @media (max-width:640px){
+   .main{ padding:64px 14px 20px }
+   .topbar{ gap:10px;margin-bottom:14px }
+   .topbar h1{ font-size:20px }
+   .topbar .sub{ font-size:12.5px }
+   .user-pill .name{ display:none }
+   .stat{ padding:14px }
+   .stat .val{ font-size:22px }
+   .panel-head{ padding:12px 14px }
+   .panel-body{ padding:12px 14px }
+   th,td{ padding:9px 10px;font-size:12.5px }
+   .stats{ grid-template-columns:1fr;gap:10px;margin-bottom:14px }
+   /* Convert dense tables to stacked cards by hiding extra columns */
+   table.responsive-stack{ display:block }
+   table.responsive-stack thead{ display:none }
+   table.responsive-stack tr{ display:block;background:var(--card-2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--border) }
+   table.responsive-stack td{ display:flex;justify-content:space-between;border:0;padding:5px 0;font-size:13px }
+   table.responsive-stack td::before{ content:attr(data-l);color:var(--text-dim);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;font-weight:600 }
+   .modal{ padding:18px;border-radius:14px;max-height:94vh }
+   .footer{ padding:18px 14px;font-size:12px }
+ }
+
+ /* Anti-gravity tint behind the dashboard too — subtle, doesn't fight content */
+ .app::before{ content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:
+   radial-gradient(circle at 15% 10%, rgba(99,102,241,0.10), transparent 40%),
+   radial-gradient(circle at 85% 90%, rgba(139,92,246,0.10), transparent 45%),
+   radial-gradient(circle at 50% 50%, rgba(34,211,238,0.06), transparent 55%); }
+ .app > *{ position:relative;z-index:1; }
 </style>
 </head>
 <body>
@@ -671,6 +716,11 @@ async function render(){
  return;
  }
 
+ /* MOBILE: signed-in users on small screens get bumped to the dedicated PWA. */
+ if (SESSION && SESSION.business && window.matchMedia('(max-width: 760px)').matches && !route.startsWith('/auth') && !location.search.includes('forceWeb=1')){
+   location.href = '/pwa/';
+   return;
+ }
  if (route==='/' || route===''){ $('#app').innerHTML = renderLanding(); return bindLanding(); }
  if (route.startsWith('/auth')){ $('#app').innerHTML = renderAuth(); return bindAuth(); }
 
@@ -1918,6 +1968,8 @@ async function renderDashboard(route){
  const L = bizLabels(biz.type);
 
  return `<div class="app">
+ <button class="menu-fab" id="sb-toggle" aria-label="Open menu">≡</button>
+ <div class="sb-backdrop" id="sb-bd"></div>
  <aside class="sidebar">
  <div class="logo"><div class="logo-mark">N</div> Nova AI</div>
  <div class="biz-pill">
@@ -1990,6 +2042,14 @@ function userPill(){
 }
 
 async function bindDashboard(route){
+ const sb = document.querySelector('.sidebar');
+ const tog = document.getElementById('sb-toggle');
+ const bd = document.getElementById('sb-bd');
+ const closeSb = ()=>{ sb && sb.classList.remove('open'); bd && bd.classList.remove('open'); };
+ if (tog) tog.onclick = ()=>{ sb.classList.toggle('open'); bd.classList.toggle('open'); };
+ if (bd) bd.onclick = closeSb;
+ // Auto-close drawer when a nav item is clicked
+ document.querySelectorAll('.sidebar .nav-item').forEach(n => n.addEventListener('click', closeSb));
  $$('.nav-item[data-go]').forEach(b=>b.onclick=()=>navigate('#'+b.dataset.go));
  $('#logout').onclick = async ()=>{ await sb.auth.signOut(); SESSION=null; navigate('#/'); };
  const viewDocBtn = $('#view-doctor');
