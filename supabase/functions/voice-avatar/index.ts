@@ -80,7 +80,18 @@ async function clone(sb: any, body: any) {
   const elJson = await elRes.json();
   if (!elRes.ok || !elJson.voice_id) {
     await sb.from("businesses").update({ voice_clone_status: "failed" }).eq("id", body.business_id);
-    throw new Error(`ElevenLabs ${elRes.status}: ${JSON.stringify(elJson).slice(0, 300)}`);
+    // Friendlier messages for the common gotchas
+    const detail = elJson?.detail?.message || elJson?.detail || JSON.stringify(elJson).slice(0,300);
+    if (elRes.status === 401) {
+      throw new Error(`ElevenLabs API key is invalid or missing. In Supabase, run: supabase secrets set ELEVENLABS_API_KEY=sk_... — then redeploy the function. (Voice cloning requires the paid Creator plan or higher.)`);
+    }
+    if (elRes.status === 403 || /can_use_instant_voice_cloning/i.test(detail)) {
+      throw new Error(`ElevenLabs free plan doesn't include voice cloning. Upgrade to the Creator plan ($22/mo) at elevenlabs.io/subscription, then try again.`);
+    }
+    if (elRes.status === 422) {
+      throw new Error(`ElevenLabs rejected the audio: ${detail}. Try a longer / cleaner recording (at least 30 seconds, no music or other voices).`);
+    }
+    throw new Error(`ElevenLabs ${elRes.status}: ${detail}`);
   }
 
   await sb.from("businesses").update({
