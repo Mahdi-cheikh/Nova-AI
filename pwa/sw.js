@@ -1,5 +1,5 @@
 /* Nova AI service worker — cache-first shell, network-first data */
-const VERSION = 'nova-pwa-v7';
+const VERSION = 'nova-pwa-v8';
 const SHELL = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL).catch(()=>{}))); self.skipWaiting(); });
