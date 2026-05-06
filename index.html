@@ -3923,7 +3923,9 @@ async function renderDoctorView(){
  </aside>
  <main class="main">
  <div class="topbar"><div><h1>Welcome, ${escapeHtml(doc.name)}</h1><div class="sub">${upcoming.length} upcoming appointment${upcoming.length===1?'':'s'}</div></div></div>
- <div style="display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start">
+ <button class="btn btn-primary btn-lg" id="dash-doc-scan" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-size:15px;padding:16px;margin-bottom:18px"><span style="font-size:20px">▦</span> Scan patient QR to start visit</button>
+ <div id="ct-overlay-host"></div>
+ <div class="dash-2col">
  <div class="panel"><div class="panel-head"><h3>My appointments</h3></div>
  <div class="panel-body no-pad">${upcoming.length===0?`<div class="empty"><div class="ic">◷</div>Nothing scheduled</div>`:`
  <table><thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Service</th><th>Status</th></tr></thead>
@@ -3939,6 +3941,142 @@ async function renderDoctorView(){
 function bindDoctorView(){
  $('#back-admin').onclick = ()=>{ sessionStorage.removeItem('view_doctor_id'); navigate('#/dashboard'); };
  $('#theme-btn-d').onclick = ()=>{ cycleTheme(); render(); };
+ const scanBtn = $('#dash-doc-scan');
+ if (scanBtn) scanBtn.onclick = () => openDashScanner();
+ // If the page was opened with ?qr=<token> (deep-link from native camera scan), auto-start
+ const qrTok = new URLSearchParams(location.search).get('qr');
+ if (qrTok) { history.replaceState({}, '', location.pathname + location.hash); startDashConsultation(qrTok); }
+}
+
+// =============== DASHBOARD QR SCANNER + CONSULTATION TIMER ===============
+let DASH_CT_STATE = null;
+
+async function openDashScanner(){
+ if (!window.Html5Qrcode){
+   await new Promise((res, rej)=>{
+     const s = document.createElement('script');
+     s.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.10/html5-qrcode.min.js';
+     s.onload = res; s.onerror = ()=>rej(new Error('Could not load scanner library'));
+     document.head.appendChild(s);
+   }).catch(e => { toast({title:'Scanner unavailable', message:'Check your connection.', urgent:true}); throw e; });
+ }
+ const html = `<div style="text-align:center">
+   <h3 style="margin:0 0 6px">Scan patient QR</h3>
+   <p style="margin:0 0 16px;color:var(--text-dim);font-size:13.5px">Hold the patient's phone QR up to your webcam.</p>
+   <div id="dash-qr-reader" style="width:100%;max-width:380px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px solid var(--primary)"></div>
+   <div id="dash-qr-msg" style="margin-top:14px;font-size:13px;color:var(--warn);min-height:18px"></div>
+   <div class="row" style="justify-content:center;margin-top:14px"><button class="btn btn-secondary" onclick="closeDashScanner()">Cancel</button></div>
+ </div>`;
+ openModal(html);
+ const reader = new Html5Qrcode("dash-qr-reader");
+ window.__dashQr = reader;
+ let scanning = true;
+ const setMsg = (text, color) => {
+   const el = document.getElementById('dash-qr-msg');
+   if (el){ el.textContent = text; el.style.color = color || 'var(--warn)'; }
+ };
+ try {
+   await reader.start(
+     { facingMode: 'environment' },
+     { fps: 10, qrbox: { width: 240, height: 240 } },
+     async (decoded) => {
+       if (!scanning) return;
+       scanning = false;
+       let token = decoded;
+       try { const u = new URL(decoded); token = u.searchParams.get('qr') || u.searchParams.get('a') || decoded; } catch(_e){}
+       setMsg('QR detected — starting visit...', 'var(--accent)');
+       await closeDashScanner();
+       startDashConsultation(token);
+     },
+     ()=>{}
+   );
+ } catch (e){
+   setMsg('Could not access camera: ' + (e.message||'permission denied'), 'var(--danger)');
+ }
+}
+window.closeDashScanner = async function(){
+ try { if (window.__dashQr) await window.__dashQr.stop(); } catch(_e){}
+ window.__dashQr = null;
+ closeModal();
+};
+
+async function startDashConsultation(token){
+ try {
+   const docId = sessionStorage.getItem('view_doctor_id') || (SESSION?.member?.id ?? null);
+   const { data, error } = await sb.rpc('apt_start_consultation', { p_token: token, p_doctor_id: docId });
+   if (error) throw error;
+   if (!data || !data.length) throw new Error('Appointment not found');
+   const a = data[0];
+   DASH_CT_STATE = {
+     aptId: a.appointment_id,
+     name: a.client_name,
+     service: a.service_name,
+     phone: a.client_phone,
+     arrivedAt: new Date(a.arrived_at).getTime(),
+     tickHandle: null,
+   };
+   renderDashConsultation();
+ } catch (e){
+   toast({title:'Could not start consultation', message: e.message || 'Invalid QR', urgent:true});
+ }
+}
+
+function renderDashConsultation(){
+ const host = document.getElementById('ct-overlay-host');
+ if (!host || !DASH_CT_STATE) return;
+ host.innerHTML = `<div class="panel" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08));border:1px solid color-mix(in srgb,var(--primary) 40%,transparent);box-shadow:0 12px 40px -8px rgba(99,102,241,0.4)">
+   <div class="panel-body" style="display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:24px">
+     <div style="min-width:0">
+       <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-2);font-weight:700;margin-bottom:6px">CONSULTATION IN PROGRESS</div>
+       <h2 style="margin:0 0 4px;font-size:24px;font-weight:700;letter-spacing:-.3px">${escapeHtml(DASH_CT_STATE.name||'—')}</h2>
+       <div style="color:var(--text-dim);font-size:13.5px">${escapeHtml(DASH_CT_STATE.service||'')}${DASH_CT_STATE.phone?` · ${escapeHtml(DASH_CT_STATE.phone)}`:''}</div>
+       <div style="margin-top:12px;font-size:12.5px;color:var(--text-faint)">Started <span id="ct-started-d">—</span></div>
+     </div>
+     <div style="text-align:center;min-width:180px">
+       <div id="ct-timer-d" style="font-size:48px;font-weight:200;letter-spacing:-1.5px;line-height:1;font-variant-numeric:tabular-nums;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">00:00</div>
+       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);font-weight:600;margin:6px 0 14px">elapsed</div>
+       <button class="btn btn-danger" id="ct-end-btn-d" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;font-weight:700;padding:12px 22px;border-radius:10px;border:0;cursor:pointer;box-shadow:0 6px 18px rgba(239,68,68,0.4)">End consultation</button>
+     </div>
+   </div>
+ </div>`;
+ const start = DASH_CT_STATE.arrivedAt;
+ const startedEl = document.getElementById('ct-started-d');
+ if (startedEl) startedEl.textContent = new Date(start).toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'});
+ const tick = () => {
+   const el = document.getElementById('ct-timer-d');
+   if (!el || !DASH_CT_STATE) return;
+   const ms = Date.now() - start;
+   const m = Math.floor(ms/60000), s = Math.floor((ms%60000)/1000);
+   el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+ };
+ tick();
+ if (DASH_CT_STATE.tickHandle) clearInterval(DASH_CT_STATE.tickHandle);
+ DASH_CT_STATE.tickHandle = setInterval(tick, 1000);
+
+ document.getElementById('ct-end-btn-d').onclick = async () => {
+   const btn = document.getElementById('ct-end-btn-d');
+   btn.disabled = true; btn.textContent = 'Ending...';
+   try {
+     const { data, error } = await sb.rpc('apt_end_consultation', { p_appointment_id: DASH_CT_STATE.aptId });
+     if (error) throw error;
+     const dur = (data && data[0]?.actual_duration_min) || Math.floor((Date.now() - start) / 60000);
+     clearInterval(DASH_CT_STATE.tickHandle);
+     const name = DASH_CT_STATE.name;
+     DASH_CT_STATE = null;
+     host.innerHTML = `<div class="panel" style="margin-bottom:18px;background:color-mix(in srgb,var(--accent) 14%,var(--card));border:1px solid var(--accent)">
+       <div class="panel-body" style="text-align:center;padding:24px">
+         <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);font-weight:700;margin-bottom:6px">VISIT COMPLETED</div>
+         <div style="font-size:36px;font-weight:200;letter-spacing:-1px;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;margin:6px 0 4px">${dur} min</div>
+         <div style="color:var(--text-dim);font-size:13.5px">${escapeHtml(name||'patient')} — duration logged for self-learning</div>
+       </div>
+     </div>`;
+     toast({title:'Visit completed', message:`${dur} min logged.`, type:'booking'});
+     setTimeout(()=>render(), 2200);
+   } catch (e){
+     btn.disabled = false; btn.textContent = 'End consultation';
+     toast({title:'Could not end visit', message:e.message||'try again', urgent:true});
+   }
+ };
 }
 
 /* ---------- MODALS ---------- */
