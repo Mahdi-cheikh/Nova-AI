@@ -143,12 +143,12 @@ async function showStatus(entryId, initial) {
   const update = (s) => {
     const stateEl = document.getElementById('state');
     if (!stateEl) return;
-    if (s.status === 'waiting' && s.position > 0) {
-      const pillText = s.position === 1 ? 'You\\'re next' : `Position ${s.position}`;
+    if (s.status === 'waiting' && s.queue_pos > 0) {
+      const pillText = s.queue_pos === 1 ? 'You\\'re next' : `Position ${s.queue_pos}`;
       const etaText = s.eta_minutes <= 0 ? 'any moment now' : (s.eta_minutes < 1 ? '< 1 min' : `${s.eta_minutes} min`);
       stateEl.innerHTML = `
         <div class="pos-pill waiting">${pillText}</div>
-        <div class="big-num">#${s.position}</div>
+        <div class="big-num">#${s.queue_pos}</div>
         <div class="sub" style="margin:0 0 14px">in front of you: ${s.ahead_count}</div>
         <div class="eta"><b>~ ${etaText}</b></div>
         <div class="sub">based on the last ${Math.round(s.avg_serve_min || 8)} min average. We\\'ll update this live as the queue moves — feel free to step out.</div>
@@ -182,12 +182,12 @@ async function showStatus(entryId, initial) {
   };
 
   // Initial render
-  if (initial && initial.position) {
+  if (initial && initial.queue_pos) {
     update({
       status: 'waiting',
-      position: initial.position,
+      position: initial.queue_pos,
       eta_minutes: initial.eta_minutes,
-      ahead_count: Math.max(0, initial.position - 1),
+      ahead_count: Math.max(0, initial.queue_pos - 1),
       avg_serve_min: initial.avg_serve_min || 8,
       joined_at: new Date().toISOString(),
     });

@@ -3055,7 +3055,7 @@ async function renderLabPipeline(){
    }
  } catch (_e) { queueAvailable = false; }
 
- const waiting = queueData.filter(q => q.status === 'waiting').sort((a,b)=>a.position-b.position);
+ const waiting = queueData.filter(q => q.status === 'waiting').sort((a,b)=>(a.queue_pos||999)-(b.queue_pos||999));
  const inProgress = queueData.find(q => q.status === 'in_progress');
  const queueUrl = `${location.origin}/pwa/queue.html?b=${encodeURIComponent(bizId)}`;
  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=${encodeURIComponent(queueUrl)}`;
@@ -3086,7 +3086,7 @@ async function renderLabPipeline(){
               ${waiting.slice(0,8).map((q,i) => {
                 const eta = i * queueAvg;
                 return `<div style="display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:9px;background:var(--card-2);border:1px solid var(--border)">
-                  <div style="font-size:18px;font-weight:700;color:var(--primary-2);text-align:center">#${q.position}</div>
+                  <div style="font-size:18px;font-weight:700;color:var(--primary-2);text-align:center">#${q.queue_pos}</div>
                   <div style="min-width:0"><div style="font-weight:600;font-size:13.5px">${escapeHtml(q.name||'')}</div>
                     <div style="font-size:11.5px;color:var(--text-dim)">${escapeHtml(q.phone||'')} · waiting ${Math.max(0,Math.round((Date.now()-new Date(q.joined_at).getTime())/60000))} min</div>
                   </div>
