@@ -3652,4 +3652,21 @@ async function addAppointmentModal(){
  /* Trick: addAppointmentModal is async, but openModal expects sync html. We'll just openModal here. */
  const html = modalShell('New appointment',
  `<div class="field"><label>Client</label><select name="client_id" required>${(cls.data||[]).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select></div>
- <div class="field"><label>Doctor</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}
+ <div class="field"><label>Doctor</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Service</label><select name="service_id">${(svcs.data||[]).map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}</select></div>
+ <div class="row"><div class="field grow"><label>Date</label><input name="date" type="date" value="${isoDate(1)}" required /></div>
+ <div class="field grow"><label>Time</label><input name="time" type="time" value="10:00" required /></div></div>`);
+ openModal(html);
+}
+
+/* ---------- BOOT ---------- */
+window.addEventListener('DOMContentLoaded', safeRender);
+window.NOVA = {
+ reset(){ localStorage.removeItem(CFG_KEY); localStorage.removeItem(THEME_KEY); location.reload(); },
+ cfg: ()=>CFG,
+ session: ()=>SESSION
+};
+</script>
+</body>
+</html>
+
