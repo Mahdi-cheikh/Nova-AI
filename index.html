@@ -2070,6 +2070,7 @@ async function renderDashboard(route){
  <div class="topbar-actions">
  <button class="icon-btn" id="theme-btn" title="Toggle theme">${currentThemeIcon()}</button>
  ${biz.type !== 'laboratoire' ? `<button class="icon-btn" id="dash-scan-btn" title="Scan patient QR to start consultation" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:0;font-size:16px">▦</button>` : ''}
+ <button class="ask-nova-btn" id="ask-nova-btn" title="Ask Nova - voice AI assistant"><span class="an-pulse"></span><span class="an-text">Ask Nova</span></button>
  <button class="icon-btn bell" id="bell-btn" title="Notifications">♪<span class="dot" id="bell-dot" style="display:none">0</span></button>
  ${userPill()}
  </div>
@@ -2126,6 +2127,8 @@ async function bindDashboard(route){
  // Topbar QR scan button — works from any dashboard page
  const scanBtn = document.getElementById('dash-scan-btn');
  if (scanBtn) scanBtn.onclick = () => openDashScanner();
+ const askBtn = document.getElementById('ask-nova-btn');
+ if (askBtn) askBtn.onclick = () => openAskNova();
  // Deep-link from native camera scan: ?qr=<token>
  const qrTok = new URLSearchParams(location.search).get('qr');
  if (qrTok) { history.replaceState({}, '', location.pathname + location.hash); startDashConsultation(qrTok); }
@@ -5273,6 +5276,143 @@ async function loadQrLib(){
    } catch (_e) { /* try next */ }
  }
  return false;
+}
+
+// =============== ASK NOVA - voice business assistant ===================
+async function openAskNova(){
+ const overlay = document.createElement('div');
+ overlay.className = 'an-overlay';
+ overlay.innerHTML = `
+   <button class="an-close" id="an-close" aria-label="Close">x</button>
+   <div class="an-header">
+     <div class="badge"><span class="dot"></span> Ask Nova</div>
+     <h1 id="an-title">Hey boss! How can I help you today?</h1>
+     <p id="an-sub">Tap the orb and speak. Nova listens, then answers out loud.</p>
+   </div>
+   <div class="an-orb-wrap" id="an-orb-wrap">
+     <div class="an-orb-ring"></div>
+     <div class="an-orb-ring r2"></div>
+     <div class="an-orb"></div>
+     <div class="an-orb-mic">&#x1F3A4;</div>
+   </div>
+   <div class="an-status" id="an-status">Ready</div>
+   <div class="an-prompt" id="an-prompt"></div>
+   <div class="an-suggest" id="an-suggest">
+     <div class="an-suggest-chip" data-q="Combien de rendez-vous aujourd hui ?">Rendez-vous aujourd hui ?</div>
+     <div class="an-suggest-chip" data-q="Qui est mon prochain patient ?">Prochain patient ?</div>
+     <div class="an-suggest-chip" data-q="Combien de nouveaux clients cette semaine ?">Nouveaux clients ?</div>
+     <div class="an-suggest-chip" data-q="Quel est mon service le plus reserve ?">Service le plus reserve ?</div>
+   </div>
+   <div class="an-actions">
+     <button class="an-btn" id="an-stop">Stop</button>
+   </div>`;
+ document.body.appendChild(overlay);
+ const orbWrap = overlay.querySelector('#an-orb-wrap');
+ const statusEl = overlay.querySelector('#an-status');
+ const promptEl = overlay.querySelector('#an-prompt');
+ const stopBtn = overlay.querySelector('#an-stop');
+ const closeBtn = overlay.querySelector('#an-close');
+ const titleEl = overlay.querySelector('#an-title');
+ const suggest = overlay.querySelector('#an-suggest');
+ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+ const TTS = window.speechSynthesis;
+ const supportsVoice = !!SR && !!TTS;
+ let rec = null;
+ let lastUserText = '';
+ function setState(state, msg, color){
+   orbWrap.classList.remove('listening','thinking','speaking');
+   if (state) orbWrap.classList.add(state);
+   statusEl.innerHTML = msg ? `<span class="${color||''}">${msg}</span>` : '';
+ }
+ function setPrompt(youText, novaText){
+   let html = '';
+   if (youText) html += `<div class="you">"${escapeHtml(youText)}"</div>`;
+   if (novaText) html += `<div style="margin-top:10px">${escapeHtml(novaText)}</div>`;
+   promptEl.innerHTML = html;
+ }
+ function speak(text, lang){
+   if (!TTS) return;
+   try { TTS.cancel(); } catch(_e){}
+   const u = new SpeechSynthesisUtterance(text);
+   u.lang = lang || 'fr-FR';
+   u.rate = 1.0; u.pitch = 1.0;
+   u.onstart = ()=> setState('speaking', 'Speaking...', 'live');
+   u.onend = ()=> setState(null, 'Tap the orb to talk again', '');
+   TTS.speak(u);
+ }
+ async function askClaude(transcript, lang){
+   setState('thinking','Thinking...','live');
+   try {
+     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/ask-nova`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
+       body: JSON.stringify({ business_id: SESSION.business.id, transcript, lang }),
+     });
+     const j = await r.json();
+     if (!r.ok || !j.ok) throw new Error(j.error || 'Network error');
+     setPrompt(transcript, j.answer);
+     speak(j.answer, lang === 'ar' ? 'ar-TN' : (lang === 'en' ? 'en-US' : 'fr-FR'));
+   } catch (e){
+     setState(null, 'Error', '');
+     setPrompt(transcript, 'Sorry, I could not reach Nova: ' + e.message);
+   }
+ }
+ function startListening(){
+   if (!supportsVoice){
+     const text = prompt("Voice not supported in this browser. Type your question:");
+     if (text) { setState(null,'',''); askClaude(text, 'fr'); }
+     return;
+   }
+   try { TTS.cancel(); } catch(_e){}
+   rec = new SR();
+   rec.continuous = false;
+   rec.interimResults = true;
+   rec.lang = 'fr-FR';
+   rec.onstart = () => setState('listening','Listening...','live');
+   rec.onresult = (e) => {
+     let interim = '', final = '';
+     for (let i = e.resultIndex; i < e.results.length; i++){
+       const t = e.results[i][0].transcript;
+       if (e.results[i].isFinal) final += t; else interim += t;
+     }
+     if (interim) setPrompt(interim, '');
+     if (final) lastUserText = final;
+   };
+   rec.onerror = (e) => { setState(null, 'Mic error: ' + e.error, ''); };
+   rec.onend = () => {
+     if (lastUserText){
+       const detectedLang = /[\u0600-\u06FF]/.test(lastUserText) ? 'ar'
+         : /\b(the|how|what|when|why)\b/i.test(lastUserText) ? 'en'
+         : 'fr';
+       askClaude(lastUserText, detectedLang);
+     } else {
+       setState(null,'No speech detected - tap to retry','');
+     }
+   };
+   try { rec.start(); } catch(_e){}
+ }
+ orbWrap.onclick = () => {
+   suggest.style.display = 'none';
+   titleEl.textContent = 'I am listening...';
+   lastUserText = '';
+   startListening();
+ };
+ overlay.querySelectorAll('.an-suggest-chip').forEach(chip => chip.onclick = () => {
+   suggest.style.display = 'none';
+   const q = chip.dataset.q;
+   setPrompt(q, '');
+   askClaude(q, 'fr');
+ });
+ const close = () => {
+   try { if (rec) rec.stop(); } catch(_e){}
+   try { TTS.cancel(); } catch(_e){}
+   overlay.remove();
+ };
+ closeBtn.onclick = close;
+ stopBtn.onclick = () => { try { if (rec) rec.stop(); } catch(_e){} try { TTS.cancel(); } catch(_e){} setState(null,'Stopped',''); };
+ const escHandler = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+ document.addEventListener('keydown', escHandler);
+ setTimeout(() => speak("Hey boss! How can I help you today?", 'en-US'), 350);
 }
 
 async function openDashScanner(){
