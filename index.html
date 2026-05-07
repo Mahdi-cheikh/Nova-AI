@@ -364,6 +364,13 @@
  .an-toggle.on { background:linear-gradient(135deg,#6366f1,#8b5cf6); }
  .an-toggle.on::after { transform:translateX(20px); }
 
+ /* Language picker (Auto / EN / FR / AR) */
+ .an-lang-row { display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap; }
+ .an-lang-row .label { color:#94a3b8;font-size:11.5px;letter-spacing:0.5px;text-transform:uppercase;margin-right:4px; }
+ .an-lang-pill { padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:600;color:#cbd5e1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all .15s;letter-spacing:0.4px; }
+ .an-lang-pill:hover { background:rgba(255,255,255,0.1);color:#fff; }
+ .an-lang-pill.active { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-color:transparent;box-shadow:0 0 14px rgba(139,92,246,0.5); }
+
  @media (max-width:1024px){
    .app{ grid-template-columns:1fr }
    .sidebar{ position:fixed;top:0;left:0;height:100vh;width:280px;z-index:85;transform:translateX(-105%);transition:transform .24s ease;box-shadow:0 0 40px rgba(0,0,0,0.4); }
@@ -5381,24 +5388,32 @@ function playWakeBeep(){
   } catch(_e){}
 }
 
+// Returns { voice, matched } — matched=true means we actually found a voice
+// for the requested language. matched=false means we fell back to *something*
+// because the OS has no voice installed for that locale (very common on
+// Windows/Linux for Arabic). Callers should treat matched=false as "audio
+// will probably be silent or wrong — show the text instead".
 function pickNovaVoice(lang){
   const voices = __novaVoices || window.speechSynthesis.getVoices() || [];
   const preferred = {
     en: ["Google UK English Male","Microsoft Ryan Online","Microsoft Guy Online","Microsoft George","Microsoft Mark","Microsoft David","Daniel","Daniel (Enhanced)","Alex","Albert","Arthur","Google US English"],
     fr: ["Google français","Microsoft Paul Online","Microsoft Henri Online","Microsoft Claude","Thomas","Thomas (Enhanced)","Nicolas"],
-    ar: ["Microsoft Hamed Online","Microsoft Naayf","Maged","Maged (Enhanced)","Tarik","Hassan"],
+    ar: ["Microsoft Hamed Online","Microsoft Naayf Online","Microsoft Naayf","Microsoft Salma","Microsoft Hoda","Maged","Maged (Enhanced)","Tarik","Hassan","Google العربية","Google عربى"],
   };
   const prefList = preferred[lang] || preferred.en;
   for (const name of prefList){
     const v = voices.find(v => v.name === name || v.name.includes(name));
-    if (v) return v;
+    if (v) return { voice: v, matched: true };
   }
   const langPrefix = lang === "ar" ? "ar" : lang === "fr" ? "fr" : "en";
-  const maleish = voices.find(v => (v.lang || "").startsWith(langPrefix) && /male|man|guy|david|ryan|paul|thomas|tarik/i.test(v.name));
-  if (maleish) return maleish;
+  const maleish = voices.find(v => (v.lang || "").startsWith(langPrefix) && /male|man|guy|david|ryan|paul|thomas|tarik|hamed|naayf/i.test(v.name));
+  if (maleish) return { voice: maleish, matched: true };
   const anyLang = voices.find(v => (v.lang || "").startsWith(langPrefix));
-  if (anyLang) return anyLang;
-  return voices[0];
+  if (anyLang) return { voice: anyLang, matched: true };
+  // No voice for this language exists on the system. Return *something* so
+  // the SR/TTS state machine keeps moving, but flag matched=false so the
+  // caller can warn the user that audio won't work.
+  return { voice: voices[0] || null, matched: false };
 }
 
 // Aggressive wake-word detector. Browser SR mishears "Nova" CONSTANTLY, so
@@ -5477,6 +5492,12 @@ async function openAskNova(){
        <div class="an-toggle" id="an-toggle"></div>
        <span id="an-toggle-state" style="font-weight:600;color:#94a3b8">OFF</span>
      </div>
+     <div class="an-lang-row" id="an-lang-row">
+       <span class="label">I speak</span>
+       <button class="an-lang-pill" data-lang="en">EN</button>
+       <button class="an-lang-pill" data-lang="fr">FR</button>
+       <button class="an-lang-pill" data-lang="ar">AR</button>
+     </div>
    </div>
    <div class="an-orb-wrap" id="an-orb-wrap">
      <div class="an-orb-ring"></div>
@@ -5515,10 +5536,49 @@ async function openAskNova(){
  let mode = "idle";         // idle | wake | listening | thinking | speaking
  let isProcessing = false;
 
+ // Default speaking language — manual pick only (no auto-detect). Persisted
+ // in window.__nova so the choice survives overlay re-creates and dashboard
+ // navigation. Priority:
+ //   1. Whatever the user manually picked last time (window.__nova.userLang)
+ //   2. Browser/OS language if it's one of en/fr/ar
+ //   3. Fall back to French
+ if (!window.__nova.userLang || !['en','fr','ar'].includes(window.__nova.userLang)){
+   const nav = (navigator.language || '').toLowerCase();
+   if (nav.startsWith('ar')) window.__nova.userLang = 'ar';
+   else if (nav.startsWith('fr')) window.__nova.userLang = 'fr';
+   else if (nav.startsWith('en')) window.__nova.userLang = 'en';
+   else window.__nova.userLang = 'fr';
+ }
+
+ // SR locale is locked to the user's manual pick — no cycling, no auto-detect.
+ function currentSrLocale(){
+   return srLocales[window.__nova.userLang] || srLocales.fr;
+ }
+
  if (window.__nova.alwaysOn){
    toggle.classList.add('on');
    toggleState.textContent = 'ON';
  }
+
+ // Wire up the language picker pills (EN / FR / AR)
+ function refreshLangPills(){
+   overlay.querySelectorAll('.an-lang-pill').forEach(p => {
+     p.classList.toggle('active', p.dataset.lang === window.__nova.userLang);
+   });
+ }
+ overlay.querySelectorAll('.an-lang-pill').forEach(p => {
+   p.addEventListener('click', () => {
+     window.__nova.userLang = p.dataset.lang;
+     refreshLangPills();
+     // If we're mid-listen, restart with the new locale immediately
+     if (mode === 'listening' && questionRec){
+       try { questionRec.abort(); } catch(_e){}
+       setTimeout(() => listenForQuestion(), 80);
+     }
+     setState(null, `Listening in ${p.dataset.lang.toUpperCase()}`, '');
+   });
+ });
+ refreshLangPills();
 
  function setState(state, msg, color){
    orbWrap.classList.remove('listening','thinking','speaking');
@@ -5532,12 +5592,83 @@ async function openAskNova(){
    promptEl.innerHTML = html;
  }
 
- function speak(text, lang){
+ function speak(text, lang, opts){
    if (!TTS || !text) return;
    try { TTS.cancel(); } catch(_e){}
+
+   const fallbackFrText = opts && opts.fallbackFrText ? String(opts.fallbackFrText).trim() : '';
+
+   const pick = pickNovaVoice(lang);
+   const desiredLocale = lang === 'ar' ? 'ar-SA' : lang === 'fr' ? 'fr-FR' : 'en-GB';
+
+   // Arabic with no installed Arabic voice — most browser TTS engines
+   // silently skip Arabic characters and the user hears nothing. Strategy:
+   //   1. If Claude provided a French fallback line, speak THAT in French
+   //      so the user hears Nova reply (the on-screen text stays Arabic).
+   //   2. Otherwise, attempt the Arabic utterance anyway (some online
+   //      voices may take it) and fall back to a length-based timer so
+   //      the always-on listening loop keeps cycling.
+   if (!pick.matched && lang === 'ar'){
+     // Show a one-time gentle warning toast so the user knows why.
+     if (!window.__nova.warnedNoArabicVoice){
+       window.__nova.warnedNoArabicVoice = true;
+       try {
+         toast({
+           title: 'No Arabic voice installed',
+           message: 'Nova will speak the answer in French and show the Arabic on screen. Install Microsoft Hamed (Windows) or Maged (macOS) to hear Nova in Arabic.',
+           type: 'info',
+         });
+       } catch(_e){}
+     }
+     if (fallbackFrText){
+       const frPick = pickNovaVoice('fr');
+       const u = new SpeechSynthesisUtterance(fallbackFrText);
+       if (frPick.voice) u.voice = frPick.voice;
+       u.lang = frPick.voice ? frPick.voice.lang : 'fr-FR';
+       u.rate = 0.9;
+       u.pitch = 0.78;
+       u.volume = 1.0;
+       u.onstart = () => setState('speaking', 'Speaking (FR fallback)...', 'live');
+       u.onend = () => {
+         setState(null, '', '');
+         if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
+       };
+       u.onerror = () => {
+         setState(null, '', '');
+         if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
+       };
+       TTS.speak(u);
+       return;
+     }
+     // Best-effort Arabic utterance (online voice may pick it up).
+     setState('speaking', 'Reading Arabic (text only - no voice)', 'live');
+     const u = new SpeechSynthesisUtterance(text);
+     if (pick.voice) u.voice = pick.voice;
+     u.lang = desiredLocale;
+     u.rate = 0.92;
+     u.pitch = 0.85;
+     u.volume = 1.0;
+     let ended = false;
+     const finish = () => {
+       if (ended) return; ended = true;
+       setState(null, '', '');
+       if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
+     };
+     u.onend = finish;
+     u.onerror = finish;
+     try { TTS.speak(u); } catch(_e){}
+     setTimeout(() => {
+       if (!ended){
+         const readingMs = Math.min(8000, Math.max(2500, text.length * 70));
+         setTimeout(finish, readingMs);
+       }
+     }, 600);
+     return;
+   }
+
    const u = new SpeechSynthesisUtterance(text);
-   u.voice = pickNovaVoice(lang);
-   u.lang = u.voice ? u.voice.lang : (lang === 'ar' ? 'ar-SA' : lang === 'fr' ? 'fr-FR' : 'en-GB');
+   if (pick.voice) u.voice = pick.voice;
+   u.lang = pick.voice ? pick.voice.lang : desiredLocale;
    u.rate = 0.88;
    u.pitch = 0.78;
    u.volume = 1.0;
@@ -5547,31 +5678,44 @@ async function openAskNova(){
      // After Nova finishes speaking, immediately reopen the mic if active
      if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
    };
+   u.onerror = () => {
+     setState(null, '', '');
+     if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
+   };
    TTS.speak(u);
  }
 
  function parseAnswer(raw){
-   const m = (raw || '').match(/^\s*\[LANG=(en|fr|ar)\]\s*([\s\S]*)$/i);
-   if (m) return { lang: m[1].toLowerCase(), text: m[2].trim() };
-   return { lang: window.__nova.lastLang || 'en', text: (raw || '').trim() };
+   const src = (raw || '').trim();
+   // Extract optional French fallback line: [SPEAK_FR=...]
+   let speakFr = null;
+   const frMatch = src.match(/\[SPEAK_FR=([\s\S]+?)\]\s*$/i);
+   const stripped = frMatch ? src.slice(0, frMatch.index).trim() : src;
+   if (frMatch) speakFr = frMatch[1].trim();
+   const m = stripped.match(/^\s*\[LANG=(en|fr|ar)\]\s*([\s\S]*)$/i);
+   if (m) return { lang: m[1].toLowerCase(), text: m[2].trim(), speakFr };
+   return { lang: window.__nova.lastLang || 'en', text: stripped, speakFr };
  }
 
  async function askClaude(transcript){
    if (!transcript) return;
    isProcessing = true;
    setState('thinking', 'Thinking...', 'live');
+   // The user explicitly picked the language; tell Claude to reply in it.
+   const hintLang = window.__nova.userLang || 'fr';
+   const hintLocale = currentSrLocale() || '';
    try {
      const r = await fetch(`${CFG.supabaseUrl}/functions/v1/ask-nova`, {
        method:'POST',
        headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
-       body: JSON.stringify({ business_id: SESSION.business.id, transcript }),
+       body: JSON.stringify({ business_id: SESSION.business.id, transcript, lang: hintLang, sr_locale: hintLocale }),
      });
      const j = await r.json();
      if (!r.ok || !j.ok) throw new Error(j.error || 'Network error');
-     const { lang, text } = parseAnswer(j.answer);
+     const { lang, text, speakFr } = parseAnswer(j.answer);
      window.__nova.lastLang = lang;
      setPrompt(transcript, text);
-     speak(text, lang);
+     speak(text, lang, { fallbackFrText: speakFr });
    } catch (e){
      setState(null, 'Error', '');
      setPrompt(transcript, 'Sorry, I could not reach you: ' + e.message);
@@ -5592,10 +5736,12 @@ async function openAskNova(){
    questionRec = new SR();
    questionRec.continuous = false;
    questionRec.interimResults = true;
-   questionRec.lang = srLocales[window.__nova.lastLang] || "fr-FR";
+   const srLocale = currentSrLocale();
+   questionRec.lang = srLocale || "fr-FR";
+   const localeLabel = (window.__nova.userLang || 'fr').toUpperCase();
    let lastUserText = (seedText || '').trim();
    if (lastUserText) setPrompt(lastUserText, '');
-   questionRec.onstart = () => setState('listening', 'Listening...', 'live');
+   questionRec.onstart = () => setState('listening', `Listening (${localeLabel})...`, 'live');
    questionRec.onresult = (e) => {
      let interim = '', final = '';
      for (let i = e.resultIndex; i < e.results.length; i++){
@@ -5617,9 +5763,13 @@ async function openAskNova(){
    questionRec.onerror = (e) => { setState(null, 'Mic: ' + e.error, ''); mode = "idle"; };
    questionRec.onend = () => {
      mode = "idle";
-     if (lastUserText) askClaude(lastUserText);
-     else if (window.__nova.alwaysOn) setTimeout(() => listenForQuestion(), 300);
-     else setState(null, 'Tap the orb to talk again', '');
+     if (lastUserText){
+       askClaude(lastUserText);
+     } else if (window.__nova.alwaysOn){
+       setTimeout(() => listenForQuestion(), 300);
+     } else {
+       setState(null, 'Tap the orb to talk again', '');
+     }
    };
    try { questionRec.start(); } catch(_e){}
  }
