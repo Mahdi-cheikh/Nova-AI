@@ -5434,7 +5434,7 @@ async function openAskNova(){
    <div class="an-header">
      <div class="badge"><span class="dot"></span> Ask Nova</div>
      <h1 id="an-title">Hey boss. How can I help?</h1>
-     <p id="an-sub">Tap the orb, or say <b>"Hey Nova"</b> when always-on is enabled.</p>
+     <p id="an-sub">Tap the orb to talk, or use <b>Talk now</b> below. Toggle Always-on to use <b>"Hey Nova"</b> wake word.</p>
      <div class="an-toggle-row">
        <span>Always-on (wake word "Hey Nova")</span>
        <div class="an-toggle" id="an-toggle"></div>
@@ -5450,6 +5450,7 @@ async function openAskNova(){
    <div class="an-status" id="an-status">Tap the orb, or say "Hey Nova"</div>
    <div class="an-prompt" id="an-prompt"></div>
    <div class="an-actions">
+     <button class="an-btn" id="an-talk-now">Talk now</button>
      <button class="an-btn" id="an-stop">Stop</button>
    </div>`;
  document.body.appendChild(overlay);
@@ -5578,59 +5579,97 @@ async function openAskNova(){
 
  // --- Mode 2: Continuous wake-word listening ---
  function startWakeListening(){
-   if (!supportsVoice || !window.__nova.alwaysOn || isProcessing) return;
+   if (!supportsVoice){
+     setState(null, 'Voice not supported in this browser', '');
+     return;
+   }
+   if (!window.__nova.alwaysOn){
+     setState(null, 'Tap the orb to talk', '');
+     return;
+   }
+   if (isProcessing){
+     setTimeout(() => startWakeListening(), 400);
+     return;
+   }
    try { if (wakeRec) wakeRec.abort(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
    mode = "wake";
    wakeRec = new SR();
    wakeRec.continuous = true;
    wakeRec.interimResults = true;
-   wakeRec.lang = srLocales[window.__nova.lastLang] || "fr-FR";
-   wakeRec.onstart = () => setState(null, 'Listening for "Hey Nova"...', '');
-   let buffer = '';
+   wakeRec.lang = srLocales[window.__nova.lastLang] || "en-US";
+   wakeRec.onstart = () => {
+     setState(null, 'Mic ON — say "Nova" or "Hey Nova"', 'live');
+     setPrompt('', '');
+   };
+   let buffer = "";
    wakeRec.onresult = (e) => {
-     // Scan BOTH interim and final results — wake word should fire ASAP
+     let interimText = '';
      for (let i = e.resultIndex; i < e.results.length; i++){
        const t = e.results[i][0].transcript;
-       const isFinal = e.results[i].isFinal;
-       // Append to rolling buffer
        buffer += t + " ";
-       // Check immediately on each chunk (interim or final)
+       interimText += t + " ";
        const after = extractAfterWakeWord(buffer);
        if (after !== null){
          buffer = "";
          try { wakeRec.stop(); } catch(_e){}
-         // Visual + audio feedback: orb pulse + soft beep
          orbWrap.classList.remove("listening","thinking","speaking");
          orbWrap.classList.add("listening");
          playWakeBeep();
-         setState("listening", "Yes? I am listening...", "live");
+         setState("listening", "Wake word detected — listening...", "live");
          if (after === "__WAKE_ONLY__"){
-           // Wake word alone — listen for follow-up question
            setTimeout(() => listenForQuestion(), 250);
          } else {
-           // Wake word + question in one breath — process directly
            askClaude(after);
          }
          return;
        }
      }
-     // Trim buffer to last 120 chars to avoid runaway memory
+     // Show what the mic is hearing in real time so the user knows it works
+     if (interimText.trim()) {
+       promptEl.innerHTML = `<div style="color:#94a3b8;font-size:13px">Hearing: <i>"${escapeHtml(interimText.trim().slice(-100))}"</i></div>`;
+     }
      if (buffer.length > 240) buffer = buffer.slice(-120);
    };
    wakeRec.onerror = (e) => {
-     if (e.error === 'no-speech' || e.error === 'aborted') {
-       if (window.__nova.alwaysOn) setTimeout(() => startWakeListening(), 200);
-     } else {
-       setState(null, 'Mic: ' + e.error, '');
+     console.warn('Nova wake-rec error:', e.error);
+     // Visibly surface common errors so the user knows what's wrong
+     if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+       setState(null, 'Microphone blocked — allow mic access in browser settings', '');
+       window.__nova.alwaysOn = false;
+       toggle.classList.remove('on');
+       toggleState.textContent = 'OFF';
+       return;
      }
+     if (e.error === 'no-speech'){
+       // Silence — just restart quietly
+       if (window.__nova.alwaysOn) setTimeout(() => startWakeListening(), 200);
+       return;
+     }
+     if (e.error === 'audio-capture'){
+       setState(null, 'No microphone detected', '');
+       return;
+     }
+     if (e.error === 'network'){
+       setState(null, 'Network error — Speech needs internet', '');
+       if (window.__nova.alwaysOn) setTimeout(() => startWakeListening(), 1500);
+       return;
+     }
+     // Other errors: just restart
+     if (window.__nova.alwaysOn) setTimeout(() => startWakeListening(), 400);
    };
    wakeRec.onend = () => {
+     // Continuous mode often ends every ~30s on Chrome — restart if still in wake mode
      if (mode === "wake" && window.__nova.alwaysOn && !isProcessing){
        setTimeout(() => startWakeListening(), 100);
      }
    };
-   try { wakeRec.start(); } catch(_e){}
+   try {
+     wakeRec.start();
+   } catch (err){
+     console.error('Wake rec start failed:', err);
+     setState(null, 'Could not start mic: ' + err.message, '');
+   }
  }
 
  orbWrap.onclick = () => {
@@ -5677,6 +5716,13 @@ async function openAskNova(){
    try { TTS.cancel(); } catch(_e){}
    isProcessing = false;
    setState(null, 'Stopped', '');
+ };
+ // "Talk now" — bypass the wake word entirely, listen for a question immediately
+ const talkNow = overlay.querySelector('#an-talk-now');
+ if (talkNow) talkNow.onclick = () => {
+   try { if (wakeRec) wakeRec.abort(); } catch(_e){}
+   try { TTS.cancel(); } catch(_e){}
+   listenForQuestion();
  };
  const escHandler = (e) => {
    if (e.key === 'Escape'){
