@@ -320,6 +320,43 @@
  .an-overlay.minimized .an-orb { inset:8px; }
  .an-overlay.minimized .an-orb-mic { font-size:22px; }
 
+ /* Anti-gravity speech-detected pulse — fires when user starts talking */
+ .an-overlay.minimized.speech-detected .an-orb-wrap {
+   filter:drop-shadow(0 0 22px rgba(34,211,238,0.95)) drop-shadow(0 0 44px rgba(99,102,241,0.7));
+   animation:an-bubble-bounce 0.6s ease-in-out infinite;
+ }
+ .an-overlay.minimized.speech-detected .an-orb {
+   animation:an-bubble-orb-pulse 0.5s ease-in-out infinite !important;
+ }
+ .an-overlay.minimized.speech-detected .an-orb-wrap::after {
+   content:'';
+   position:absolute; inset:-12px;
+   border-radius:50%;
+   border:2px solid rgba(34,211,238,0.9);
+   animation:an-bubble-ring 1.2s ease-out infinite;
+ }
+ .an-overlay.minimized.speech-detected .an-orb-wrap::before {
+   opacity:1 !important;
+   background:linear-gradient(135deg,rgba(34,211,238,0.95),rgba(99,102,241,0.95));
+   color:#fff;
+   border-color:rgba(34,211,238,0.7);
+   font-weight:700;
+   content:'Nova hears you' !important;
+ }
+ @keyframes an-bubble-bounce {
+   0%,100% { transform:translateY(0) scale(1) }
+   50%     { transform:translateY(-8px) scale(1.08) }
+ }
+ @keyframes an-bubble-orb-pulse {
+   0%,100% { transform:scale(1);   box-shadow:0 0 60px 8px rgba(34,211,238,0.7), inset 0 0 60px rgba(34,211,238,0.6); }
+   50%     { transform:scale(1.18); box-shadow:0 0 110px 22px rgba(34,211,238,1), inset 0 0 100px rgba(34,211,238,1); }
+ }
+ @keyframes an-bubble-ring {
+   0%   { transform:scale(0.7); opacity:0.95 }
+   80%  { opacity:0.5 }
+   100% { transform:scale(1.7); opacity:0 }
+ }
+
  /* Always-on toggle */
  .an-toggle-row { display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;color:#94a3b8;font-size:12.5px; }
  .an-toggle { position:relative;width:44px;height:24px;background:rgba(255,255,255,0.1);border-radius:999px;cursor:pointer;transition:background .2s; }
@@ -5434,7 +5471,7 @@ async function openAskNova(){
    <div class="an-header">
      <div class="badge"><span class="dot"></span> Ask Nova</div>
      <h1 id="an-title">Hey boss. How can I help?</h1>
-     <p id="an-sub">Tap the orb to talk, or flip <b>Active</b> on. You can interrupt Nova anytime — just start speaking.</p>
+     <p id="an-sub">Tap the orb to talk, or flip <b>Active</b> on. Minimize Nova and she keeps listening — the bubble pulses cyan when she hears you.</p>
      <div class="an-toggle-row">
        <span>Active (continuous listening)</span>
        <div class="an-toggle" id="an-toggle"></div>
@@ -5495,52 +5532,6 @@ async function openAskNova(){
    promptEl.innerHTML = html;
  }
 
- let bargeRec = null;
- function startBargeInListener(lang){
-   // While Nova is speaking, run a quiet recognizer that watches for the user
-   // starting to speak. If they do, cancel TTS and treat their words as the
-   // next question — full barge-in / interruption support.
-   if (!supportsVoice) return;
-   try { if (bargeRec) bargeRec.abort(); } catch(_e){}
-   bargeRec = new SR();
-   bargeRec.continuous = false;
-   bargeRec.interimResults = true;
-   bargeRec.lang = srLocales[lang] || srLocales[window.__nova.lastLang] || "fr-FR";
-   let captured = "";
-   bargeRec.onresult = (e) => {
-     let interim = "", final = "";
-     for (let i = e.resultIndex; i < e.results.length; i++){
-       const t = e.results[i][0].transcript;
-       if (e.results[i].isFinal) final += t; else interim += t;
-     }
-     const heard = (final || interim).trim();
-     // Only fire if there's substantive content (>= 4 chars or >= 2 words)
-     // — guards against picking up Nova's own voice as echo
-     if (heard.length >= 4 || heard.split(/\s+/).length >= 2){
-       captured = heard;
-       try { TTS.cancel(); } catch(_e){}      // immediately stop Nova
-       try { bargeRec.abort(); } catch(_e){}
-       if (final){
-         // Already have the full sentence — send straight to Claude
-         askClaude(final.trim());
-       } else {
-         // Partial heard — switch to a proper question recognizer to capture the rest
-         setState('listening', 'Listening...', 'live');
-         setPrompt(heard, '');
-         // Start the question recognizer, primed with what we already heard
-         setTimeout(() => listenForQuestion(heard), 80);
-       }
-     }
-   };
-   bargeRec.onerror = () => {};
-   bargeRec.onend = () => {};
-   try { bargeRec.start(); } catch(_e){}
- }
- function stopBargeInListener(){
-   try { if (bargeRec) bargeRec.abort(); } catch(_e){}
-   bargeRec = null;
- }
-
  function speak(text, lang){
    if (!TTS || !text) return;
    try { TTS.cancel(); } catch(_e){}
@@ -5550,15 +5541,10 @@ async function openAskNova(){
    u.rate = 0.88;
    u.pitch = 0.78;
    u.volume = 1.0;
-   u.onstart = () => {
-     setState('speaking', 'Speaking — interrupt me anytime', 'live');
-     // Start barge-in mic so the user can cut Nova off
-     startBargeInListener(lang);
-   };
+   u.onstart = () => setState('speaking', 'Speaking...', 'live');
    u.onend = () => {
-     stopBargeInListener();
      setState(null, '', '');
-     // After Nova finishes naturally, reopen the mic if active mode
+     // After Nova finishes speaking, immediately reopen the mic if active
      if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
    };
    TTS.speak(u);
@@ -5600,7 +5586,6 @@ async function openAskNova(){
      return;
    }
    try { TTS.cancel(); } catch(_e){}
-   try { stopBargeInListener(); } catch(_e){}
    try { if (wakeRec) wakeRec.stop(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
    mode = "listening";
@@ -5616,6 +5601,15 @@ async function openAskNova(){
      for (let i = e.resultIndex; i < e.results.length; i++){
        const t = e.results[i][0].transcript;
        if (e.results[i].isFinal) final += t; else interim += t;
+     }
+     // Trigger the bubble anti-gravity pulse when user starts speaking
+     // (only when the overlay is minimized — visible feedback that Nova heard you)
+     if ((interim || final) && overlay.classList.contains('minimized')){
+       overlay.classList.add('speech-detected');
+       clearTimeout(window.__nova.pulseTimer);
+       window.__nova.pulseTimer = setTimeout(() => {
+         overlay.classList.remove('speech-detected');
+       }, 1200);
      }
      if (interim) setPrompt(interim, '');
      if (final) lastUserText = final;
@@ -5685,7 +5679,6 @@ async function openAskNova(){
  const close = () => {
    try { if (wakeRec) wakeRec.abort(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
-   try { stopBargeInListener(); } catch(_e){}
    try { TTS.cancel(); } catch(_e){}
    overlay.remove();
    window.__nova.overlay = null;
