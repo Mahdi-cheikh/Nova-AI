@@ -5309,8 +5309,7 @@ async function loadQrLib(){
  return false;
 }
 
-// =============== ASK NOVA - persistent voice business partner =============
-// Cached voice list and global state (survives dashboard re-renders)
+// =============== ASK NOVA - persistent voice partner with wake word ======
 let __novaVoices = null;
 window.__nova = window.__nova || { overlay: null, alwaysOn: false, lastLang: 'en', minimized: false };
 
@@ -5347,8 +5346,33 @@ function pickNovaVoice(lang){
   return voices[0];
 }
 
+// Detects "hey nova" / "nova" / "salut nova" / "نوفا" anywhere in a transcript.
+// Returns the question portion AFTER the wake word, or null if no wake word.
+function extractAfterWakeWord(text){
+  if (!text) return null;
+  // Normalise: lowercase, strip punctuation
+  const normalized = text.toLowerCase().replace(/[.,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Wake-word patterns (English / French / Arabic / common misrecognitions)
+  const patterns = [
+    /\b(?:hey|hi|hello|salut|bonjour|yo|ok)\s+nova(?:a|ah)?\b\s*/i,
+    /\bnova(?:a|ah)?\b\s*/i,
+    /\b(?:no\s*va|noh\s*va|noova)\b\s*/i,  // common SR mishearings
+    /\bya\s+nova\b\s*/i,                       // darija "ya nova"
+    /\bنوفا\s*/,                                  // Arabic
+  ];
+  for (const p of patterns){
+    const m = normalized.match(p);
+    if (m){
+      const after = normalized.slice(m.index + m[0].length).trim();
+      if (after.length >= 2) return after;       // wake word + a real question
+      // Wake word alone — treat as a greeting/attention call
+      return "__WAKE_ONLY__";
+    }
+  }
+  return null;
+}
+
 async function openAskNova(){
- // If already open, just unminimize it
  if (window.__nova.overlay && document.body.contains(window.__nova.overlay)){
    window.__nova.overlay.classList.remove('minimized');
    window.__nova.minimized = false;
@@ -5359,14 +5383,14 @@ async function openAskNova(){
  const overlay = document.createElement('div');
  overlay.className = 'an-overlay';
  overlay.innerHTML = `
-   <button class="an-min" id="an-min" aria-label="Minimize" title="Minimize — Nova stays alive in the corner">_</button>
+   <button class="an-min" id="an-min" aria-label="Minimize" title="Minimize - Nova stays alive in the corner">_</button>
    <button class="an-close" id="an-close" aria-label="Close">x</button>
    <div class="an-header">
      <div class="badge"><span class="dot"></span> Ask Nova</div>
      <h1 id="an-title">Hey boss. How can I help?</h1>
-     <p id="an-sub">Tap the orb and speak. I auto-detect your language.</p>
+     <p id="an-sub">Tap the orb, or say <b>"Hey Nova"</b> when always-on is enabled.</p>
      <div class="an-toggle-row">
-       <span>Always-on</span>
+       <span>Always-on (wake word "Hey Nova")</span>
        <div class="an-toggle" id="an-toggle"></div>
        <span id="an-toggle-state" style="font-weight:600;color:#94a3b8">OFF</span>
      </div>
@@ -5377,7 +5401,7 @@ async function openAskNova(){
      <div class="an-orb"></div>
      <div class="an-orb-mic">&#x1F3A4;</div>
    </div>
-   <div class="an-status" id="an-status">Tap the orb to talk</div>
+   <div class="an-status" id="an-status">Tap the orb, or say "Hey Nova"</div>
    <div class="an-prompt" id="an-prompt"></div>
    <div class="an-actions">
      <button class="an-btn" id="an-stop">Stop</button>
@@ -5399,14 +5423,14 @@ async function openAskNova(){
  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
  const TTS = window.speechSynthesis;
  const supportsVoice = !!SR && !!TTS;
-
  const srLocales = { en: "en-US", fr: "fr-FR", ar: "ar-TN" };
 
- let rec = null;
- let lastUserText = '';
+ // Two recognizers: one continuous for wake-word listening, one one-shot for answering
+ let wakeRec = null;        // continuous, scans for "Hey Nova"
+ let questionRec = null;    // one-shot, captures the actual question
+ let mode = "idle";         // idle | wake | listening | thinking | speaking
  let isProcessing = false;
 
- // Restore always-on state
  if (window.__nova.alwaysOn){
    toggle.classList.add('on');
    toggleState.textContent = 'ON';
@@ -5430,19 +5454,18 @@ async function openAskNova(){
    const u = new SpeechSynthesisUtterance(text);
    u.voice = pickNovaVoice(lang);
    u.lang = u.voice ? u.voice.lang : (lang === 'ar' ? 'ar-SA' : lang === 'fr' ? 'fr-FR' : 'en-GB');
-   u.rate = 0.88;       // slow & deliberate
-   u.pitch = 0.78;      // deep & mysterious
+   u.rate = 0.88;
+   u.pitch = 0.78;
    u.volume = 1.0;
    u.onstart = () => setState('speaking', 'Speaking...', 'live');
    u.onend = () => {
      setState(null, '', '');
-     // If always-on, immediately restart listening
-     if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => startListening(), 350);
+     // After Nova finishes speaking, resume wake-word listening if always-on
+     if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => startWakeListening(), 300);
    };
    TTS.speak(u);
  }
 
- // Strip the [LANG=xx] marker that Claude adds, return { lang, text }
  function parseAnswer(raw){
    const m = (raw || '').match(/^\s*\[LANG=(en|fr|ar)\]\s*([\s\S]*)$/i);
    if (m) return { lang: m[1].toLowerCase(), text: m[2].trim() };
@@ -5471,22 +5494,24 @@ async function openAskNova(){
    } finally { isProcessing = false; }
  }
 
- function startListening(){
+ // --- Mode 1: One-shot question listening (after tap or after wake word) ---
+ function listenForQuestion(){
    if (!supportsVoice){
      const text = prompt("Voice not supported. Type your question:");
      if (text) askClaude(text);
      return;
    }
    try { TTS.cancel(); } catch(_e){}
-   try { if (rec) rec.stop(); } catch(_e){}
-   rec = new SR();
-   rec.continuous = false;
-   rec.interimResults = true;
-   // Use last detected language; default to French (works well for Tunisian users)
-   rec.lang = srLocales[window.__nova.lastLang] || "fr-FR";
-   rec.onstart = () => setState('listening', 'Listening...', 'live');
-   lastUserText = '';
-   rec.onresult = (e) => {
+   try { if (wakeRec) wakeRec.stop(); } catch(_e){}
+   try { if (questionRec) questionRec.abort(); } catch(_e){}
+   mode = "listening";
+   questionRec = new SR();
+   questionRec.continuous = false;
+   questionRec.interimResults = true;
+   questionRec.lang = srLocales[window.__nova.lastLang] || "fr-FR";
+   let lastUserText = '';
+   questionRec.onstart = () => setState('listening', 'Listening...', 'live');
+   questionRec.onresult = (e) => {
      let interim = '', final = '';
      for (let i = e.resultIndex; i < e.results.length; i++){
        const t = e.results[i][0].transcript;
@@ -5495,18 +5520,64 @@ async function openAskNova(){
      if (interim) setPrompt(interim, '');
      if (final) lastUserText = final;
    };
-   rec.onerror = (e) => {
-     setState(null, 'Mic: ' + e.error, '');
-     if (window.__nova.alwaysOn && e.error !== 'not-allowed' && e.error !== 'aborted'){
-       setTimeout(() => startListening(), 500);
-     }
-   };
-   rec.onend = () => {
+   questionRec.onerror = (e) => { setState(null, 'Mic: ' + e.error, ''); mode = "idle"; };
+   questionRec.onend = () => {
+     mode = "idle";
      if (lastUserText) askClaude(lastUserText);
-     else if (window.__nova.alwaysOn) setTimeout(() => startListening(), 200);
+     else if (window.__nova.alwaysOn) setTimeout(() => startWakeListening(), 250);
      else setState(null, 'Tap the orb to talk again', '');
    };
-   try { rec.start(); } catch(_e){}
+   try { questionRec.start(); } catch(_e){}
+ }
+
+ // --- Mode 2: Continuous wake-word listening ---
+ function startWakeListening(){
+   if (!supportsVoice || !window.__nova.alwaysOn || isProcessing) return;
+   try { if (wakeRec) wakeRec.abort(); } catch(_e){}
+   try { if (questionRec) questionRec.abort(); } catch(_e){}
+   mode = "wake";
+   wakeRec = new SR();
+   wakeRec.continuous = true;
+   wakeRec.interimResults = true;
+   wakeRec.lang = srLocales[window.__nova.lastLang] || "fr-FR";
+   wakeRec.onstart = () => setState(null, 'Listening for "Hey Nova"...', '');
+   let buffer = '';
+   wakeRec.onresult = (e) => {
+     for (let i = e.resultIndex; i < e.results.length; i++){
+       const t = e.results[i][0].transcript;
+       buffer += t + ' ';
+       const after = extractAfterWakeWord(buffer);
+       if (after !== null){
+         try { wakeRec.stop(); } catch(_e){}
+         if (after === "__WAKE_ONLY__"){
+           // Just the wake word — beep, prompt, listen for follow-up
+           speak("Yes?", window.__nova.lastLang || 'en');
+           // After the "Yes?" finishes, listenForQuestion will be triggered
+           setTimeout(() => listenForQuestion(), 600);
+         } else {
+           // Wake word + question in one breath — process directly
+           askClaude(after);
+         }
+         buffer = '';
+         return;
+       }
+     }
+     // Buffer too long: keep only last 80 chars to avoid runaway
+     if (buffer.length > 200) buffer = buffer.slice(-80);
+   };
+   wakeRec.onerror = (e) => {
+     if (e.error === 'no-speech' || e.error === 'aborted') {
+       if (window.__nova.alwaysOn) setTimeout(() => startWakeListening(), 200);
+     } else {
+       setState(null, 'Mic: ' + e.error, '');
+     }
+   };
+   wakeRec.onend = () => {
+     if (mode === "wake" && window.__nova.alwaysOn && !isProcessing){
+       setTimeout(() => startWakeListening(), 100);
+     }
+   };
+   try { wakeRec.start(); } catch(_e){}
  }
 
  orbWrap.onclick = () => {
@@ -5516,15 +5587,19 @@ async function openAskNova(){
      return;
    }
    titleEl.textContent = 'I am listening...';
-   startListening();
+   listenForQuestion();
  };
 
  toggle.onclick = () => {
    window.__nova.alwaysOn = !window.__nova.alwaysOn;
    toggle.classList.toggle('on', window.__nova.alwaysOn);
    toggleState.textContent = window.__nova.alwaysOn ? 'ON' : 'OFF';
-   if (window.__nova.alwaysOn && !isProcessing) startListening();
-   else { try { if (rec) rec.stop(); } catch(_e){} }
+   if (window.__nova.alwaysOn){
+     startWakeListening();
+   } else {
+     try { if (wakeRec) wakeRec.stop(); } catch(_e){}
+     setState(null, 'Tap the orb to talk', '');
+   }
  };
 
  const minimize = () => {
@@ -5534,7 +5609,8 @@ async function openAskNova(){
  minBtn.onclick = minimize;
 
  const close = () => {
-   try { if (rec) rec.stop(); } catch(_e){}
+   try { if (wakeRec) wakeRec.abort(); } catch(_e){}
+   try { if (questionRec) questionRec.abort(); } catch(_e){}
    try { TTS.cancel(); } catch(_e){}
    overlay.remove();
    window.__nova.overlay = null;
@@ -5543,7 +5619,8 @@ async function openAskNova(){
  };
  closeBtn.onclick = close;
  stopBtn.onclick = () => {
-   try { if (rec) rec.stop(); } catch(_e){}
+   try { if (wakeRec) wakeRec.abort(); } catch(_e){}
+   try { if (questionRec) questionRec.abort(); } catch(_e){}
    try { TTS.cancel(); } catch(_e){}
    isProcessing = false;
    setState(null, 'Stopped', '');
