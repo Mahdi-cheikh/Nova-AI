@@ -496,6 +496,16 @@
  .obs-consent label input { width:18px; height:18px; cursor:pointer; }
  .obs-consent .btn-row { display:flex; gap:10px; margin-top:18px; }
  .obs-actions { display:flex; gap:10px; flex-wrap:wrap; }
+ .obs-cam-picker { margin:18px 0 8px; padding:14px; background:var(--card-2); border:1px solid var(--border); border-radius:11px; }
+ .obs-cam-label { display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:8px; font-weight:600; }
+ .obs-cam-row { display:flex; gap:8px; align-items:center; }
+ .obs-cam-select { flex:1; min-width:0; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:13px; font-family:inherit; }
+ .obs-cam-select:focus { outline:none; border-color:var(--primary-2); }
+ .obs-cam-hint { font-size:12px; color:var(--text-dim); line-height:1.55; margin-top:8px; }
+ .obs-cam-advanced { margin-top:10px; }
+ .obs-cam-advanced summary { font-size:12px; color:var(--text-dim); cursor:pointer; padding:6px 0; }
+ .obs-cam-advanced summary:hover { color:var(--text); }
+ .obs-cam-advanced .obs-cam-select { margin-top:8px; width:100%; box-sizing:border-box; }
 
 </style>
 </head>
@@ -6499,7 +6509,7 @@ function renderObservation(){
    <div class="panel-body" id="obs-body">
      <div class="obs-consent" id="obs-consent">
        <h4>Before you start — patient consent</h4>
-       <p>This tool uses your computer's camera to analyse the patient's body posture and movement. The AI runs <b>locally on this device</b>: video frames are never recorded, sent to a server, or stored anywhere.</p>
+       <p>This tool uses a camera to analyse the patient's body posture and movement. The AI runs <b>locally on this device</b>: video frames are never recorded, sent to a server, or stored anywhere.</p>
        <p>What gets saved to the appointment notes:</p>
        <ul>
          <li>Time-stamped posture labels (e.g. <i>"00:42 — leaning forward"</i>)</li>
@@ -6507,6 +6517,21 @@ function renderObservation(){
          <li>Periods of stillness</li>
        </ul>
        <p style="color:var(--accent);font-weight:600">The patient must be informed and verbally consent before you continue. This tool is observational support — it does not diagnose mood or replace clinical judgement.</p>
+
+       <div class="obs-cam-picker">
+         <label class="obs-cam-label">Camera source</label>
+         <div class="obs-cam-row">
+           <select id="obs-cam-select" class="obs-cam-select"><option value="">Detect cameras…</option></select>
+           <button type="button" class="btn btn-ghost btn-sm" id="obs-cam-detect" title="Re-scan connected cameras">Detect</button>
+         </div>
+         <div class="obs-cam-hint" id="obs-cam-hint">Click <b>Detect</b> to list all connected cameras. To use your phone as a side-camera, install <b>Iriun Webcam</b> or <b>DroidCam</b> on the phone and the matching desktop app — the phone will then appear in the list as a regular camera.</div>
+         <details class="obs-cam-advanced">
+           <summary>Advanced: IP camera (MJPEG/HTTP stream)</summary>
+           <input type="url" id="obs-ip-url" class="obs-cam-select" placeholder="http://192.168.1.50:8080/video" />
+           <div class="obs-cam-hint">Paste an MJPEG stream URL (e.g. from the <i>IP Webcam</i> Android app). The stream is fetched directly by the browser; nothing is sent to our servers.</div>
+         </details>
+       </div>
+
        <label><input type="checkbox" id="obs-consent-cb" /> Patient has been informed and verbally consented to body-language observation</label>
        <div class="btn-row">
          <button class="btn btn-primary" id="obs-start" disabled>Start observation</button>
@@ -6568,6 +6593,62 @@ function bindObservation(){
  if (saveBtn) saveBtn.addEventListener('click', saveObsReport);
  const clearBtn = document.getElementById('obs-clear');
  if (clearBtn) clearBtn.addEventListener('click', () => { stopObsSession(); navigate('#/dashboard/observation'); });
+
+ // Camera picker
+ const detectBtn = document.getElementById('obs-cam-detect');
+ const select = document.getElementById('obs-cam-select');
+ const hint = document.getElementById('obs-cam-hint');
+ const ipInput = document.getElementById('obs-ip-url');
+
+ const populate = async (forcePermission) => {
+   try {
+     // Browsers only return device labels after permission has been granted
+     // at least once. Probe permission first if we don't have it.
+     if (forcePermission){
+       try {
+         const probe = await navigator.mediaDevices.getUserMedia({ video:true });
+         probe.getTracks().forEach(t => t.stop());
+       } catch (_e){ /* permission denied — labels will be empty/anonymized */ }
+     }
+     const devices = await navigator.mediaDevices.enumerateDevices();
+     const cams = devices.filter(d => d.kind === 'videoinput');
+     if (!cams.length){
+       select.innerHTML = '<option value="">No cameras found</option>';
+       hint.innerHTML = 'No cameras detected. Plug in a USB camera or install Iriun/DroidCam to use your phone as a webcam.';
+       return;
+     }
+     const saved = localStorage.getItem('obs.cameraId') || '';
+     select.innerHTML = cams.map((c, i) => {
+       const sel = (saved && c.deviceId === saved) ? ' selected' : (!saved && i === 0 ? ' selected' : '');
+       const label = c.label || ('Camera ' + (i + 1));
+       return '<option value="' + c.deviceId + '"' + sel + '>' + label.replace(/</g,'&lt;') + '</option>';
+     }).join('');
+     hint.innerHTML = '<b>' + cams.length + '</b> camera' + (cams.length === 1 ? '' : 's') + ' detected. Pick the one pointing at the patient. Tip: use a USB camera or your phone (with Iriun/DroidCam) for a side angle.';
+   } catch (e){
+     select.innerHTML = '<option value="">Camera detection failed</option>';
+     hint.innerHTML = 'Could not enumerate cameras: ' + (e.message || e);
+   }
+ };
+
+ if (detectBtn){
+   detectBtn.addEventListener('click', () => populate(true));
+ }
+ if (select){
+   select.addEventListener('change', () => {
+     if (select.value) localStorage.setItem('obs.cameraId', select.value);
+   });
+ }
+ if (ipInput){
+   ipInput.value = localStorage.getItem('obs.ipUrl') || '';
+   ipInput.addEventListener('change', () => localStorage.setItem('obs.ipUrl', ipInput.value || ''));
+ }
+ // First-time auto-populate (without permission probe — labels may be blank)
+ populate(false);
+
+ // Hot-plug detection: re-scan when devices change (USB plug/unplug)
+ if (navigator.mediaDevices && navigator.mediaDevices.addEventListener){
+   navigator.mediaDevices.addEventListener('devicechange', () => populate(false));
+ }
 }
 
 async function startObsSession(){
@@ -6576,22 +6657,47 @@ async function startObsSession(){
  if (consent) consent.style.display = 'none';
  if (session) session.style.display = 'block';
 
- // Request camera
- let stream;
+ // Determine which camera to use
+ const select = document.getElementById('obs-cam-select');
+ const ipInput = document.getElementById('obs-ip-url');
+ const chosenId = select && select.value ? select.value : '';
+ const ipUrl = ipInput && ipInput.value ? ipInput.value.trim() : '';
+
+ const video = document.getElementById('obs-video');
+ const canvas = document.getElementById('obs-canvas');
+ let stream = null;
+ let usingIpCamera = false;
+
  try {
-   stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+   if (ipUrl){
+     // IP camera path: load MJPEG/HTTP stream directly into <video> via src.
+     // Some MJPEG endpoints work with <img> only — for those, the user can
+     // fall back to the device picker after using a virtual-cam app.
+     usingIpCamera = true;
+     video.src = ipUrl;
+     video.crossOrigin = 'anonymous';
+     await new Promise((res, rej) => {
+       video.addEventListener('loadeddata', res, { once:true });
+       video.addEventListener('error', () => rej(new Error('Could not load IP stream — check the URL is reachable from this browser')), { once:true });
+       setTimeout(() => rej(new Error('IP camera connection timed out')), 8000);
+     });
+   } else {
+     const constraints = chosenId
+       ? { video: { deviceId: { exact: chosenId }, width: 640, height: 480 } }
+       : { video: { width: 640, height: 480, facingMode: 'user' } };
+     stream = await navigator.mediaDevices.getUserMedia(constraints);
+     video.srcObject = stream;
+   }
  } catch (e){
-   toast({ title:'Camera blocked', message:'Please allow camera access in your browser settings, then try again.', urgent:true });
+   toast({ title:'Camera unavailable', message: e.message || 'Could not open the selected camera. Try Detect again or pick a different one.', urgent:true });
    if (consent) consent.style.display = 'block';
    if (session) session.style.display = 'none';
    return;
  }
-
- const video = document.getElementById('obs-video');
- const canvas = document.getElementById('obs-canvas');
- video.srcObject = stream;
- await new Promise(r => video.addEventListener('loadedmetadata', r, { once:true }));
- await video.play();
+ if (!usingIpCamera){
+   await new Promise(r => video.addEventListener('loadedmetadata', r, { once:true }));
+ }
+ try { await video.play(); } catch(_e){}
  canvas.width = video.videoWidth || 640;
  canvas.height = video.videoHeight || 480;
 
@@ -6620,7 +6726,7 @@ async function startObsSession(){
  }
 
  OBS_STATE = {
-   stream, video, canvas, poseLandmarker,
+   stream, usingIpCamera, video, canvas, poseLandmarker,
    ctx: canvas.getContext('2d'),
    startTime: Date.now(),
    lastLandmarks: null,
@@ -6805,6 +6911,9 @@ function stopObsSession(){
  if (!OBS_STATE) return;
  OBS_STATE.running = false;
  if (OBS_STATE.stream) OBS_STATE.stream.getTracks().forEach(t => t.stop());
+ if (OBS_STATE.usingIpCamera && OBS_STATE.video){
+   try { OBS_STATE.video.pause(); OBS_STATE.video.removeAttribute('src'); OBS_STATE.video.load(); } catch(_e){}
+ }
  if (OBS_STATE.tickInterval) clearInterval(OBS_STATE.tickInterval);
  if (OBS_STATE.poseLandmarker){
    try { OBS_STATE.poseLandmarker.close(); } catch(_e){}
