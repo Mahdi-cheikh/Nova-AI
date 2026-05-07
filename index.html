@@ -251,6 +251,51 @@
  .sb-backdrop { display:none;position:fixed;inset:0;background:rgba(5,8,22,.55);backdrop-filter:blur(4px);z-index:80; }
  .sb-backdrop.open { display:block; }
 
+ /* === ASK NOVA — voice business assistant ============================ */
+ .ask-nova-btn { position:relative;display:inline-flex;align-items:center;gap:10px;padding:7px 16px 7px 14px;border-radius:999px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);color:#fff;border:0;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:.4px;box-shadow:0 0 0 2px rgba(255,255,255,0.06) inset, 0 6px 22px -4px rgba(99,102,241,0.55);animation:an-glow 2.6s ease-in-out infinite; }
+ .ask-nova-btn .an-pulse { width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px 3px rgba(255,255,255,0.85);animation:an-blink 1.4s ease-in-out infinite; }
+ .ask-nova-btn .an-text { white-space:nowrap; }
+ .ask-nova-btn:hover { transform:translateY(-1px);filter:brightness(1.1); }
+ .ask-nova-btn:active { transform:scale(.97); }
+ @keyframes an-glow { 0%,100%{ box-shadow:0 0 0 2px rgba(255,255,255,0.06) inset, 0 6px 22px -4px rgba(99,102,241,0.55), 0 0 0 0 rgba(139,92,246,0.5) } 50%{ box-shadow:0 0 0 2px rgba(255,255,255,0.10) inset, 0 8px 32px -4px rgba(99,102,241,0.85), 0 0 0 8px rgba(139,92,246,0.0) } }
+ @keyframes an-blink { 0%,100%{ opacity:1;transform:scale(1) } 50%{ opacity:.5;transform:scale(.85) } }
+
+ .an-overlay { position:fixed;inset:0;background:radial-gradient(ellipse at top, #1a0d3a 0%, #050316 70%);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;animation:an-fade-in .35s ease; }
+ @keyframes an-fade-in { from{ opacity:0 } to{ opacity:1 } }
+ .an-header { color:#fff;text-align:center;margin-bottom:24px;max-width:600px; }
+ .an-header .badge { display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;background:rgba(99,102,241,0.18);border:1px solid rgba(99,102,241,0.5);font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:#a5b4fc;margin-bottom:14px;font-weight:700; }
+ .an-header .badge .dot { width:7px;height:7px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px #22d3ee;animation:an-blink 1.4s ease-in-out infinite; }
+ .an-header h1 { margin:0;font-size:24px;font-weight:700;letter-spacing:-.4px; }
+ .an-header p { margin:6px 0 0;font-size:13.5px;color:#94a3b8; }
+
+ .an-orb-wrap { position:relative;width:280px;height:280px;display:grid;place-items:center;cursor:pointer;user-select:none; }
+ .an-orb { position:absolute;inset:30px;border-radius:50%;background:radial-gradient(circle at 30% 30%, rgba(99,102,241,0.95), rgba(139,92,246,0.6) 45%, rgba(34,211,238,0.3) 75%, transparent);box-shadow:0 0 60px 8px rgba(99,102,241,0.6), inset 0 0 60px rgba(34,211,238,0.4); }
+ .an-orb-ring { position:absolute;inset:0;border-radius:50%;border:2px solid rgba(99,102,241,0.4);animation:an-rotate 8s linear infinite; }
+ .an-orb-ring::before { content:'';position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 14px #22d3ee; }
+ .an-orb-ring.r2 { inset:18px;border-color:rgba(139,92,246,0.45);animation:an-rotate 6s linear infinite reverse; }
+ .an-orb-ring.r2::before { background:#8b5cf6;box-shadow:0 0 14px #8b5cf6; }
+ @keyframes an-rotate { from{ transform:rotate(0deg) } to{ transform:rotate(360deg) } }
+ .an-orb-mic { position:relative;z-index:1;color:#fff;font-size:54px;line-height:1;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4)); }
+ .an-orb-wrap.listening .an-orb { animation:an-listen 1.2s ease-in-out infinite; }
+ .an-orb-wrap.thinking .an-orb { animation:an-think 1.6s ease-in-out infinite; }
+ .an-orb-wrap.speaking .an-orb { animation:an-speak 0.5s ease-in-out infinite; }
+ @keyframes an-listen { 0%,100%{ transform:scale(1);box-shadow:0 0 60px 8px rgba(34,211,238,0.7), inset 0 0 60px rgba(34,211,238,0.6) } 50%{ transform:scale(1.1);box-shadow:0 0 90px 18px rgba(34,211,238,0.95), inset 0 0 80px rgba(34,211,238,0.8) } }
+ @keyframes an-think { 0%,100%{ transform:scale(1);filter:hue-rotate(0deg) } 50%{ transform:scale(1.04);filter:hue-rotate(40deg) } }
+ @keyframes an-speak { 0%,100%{ transform:scale(1) } 50%{ transform:scale(1.06) } }
+
+ .an-status { color:#a5b4fc;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-top:18px;height:16px; }
+ .an-status .live { color:#22d3ee; }
+ .an-prompt { color:#fff;font-size:15px;text-align:center;margin-top:16px;max-width:560px;line-height:1.5;min-height:24px; }
+ .an-prompt .you { color:#a5b4fc;font-style:italic; }
+ .an-actions { display:flex;gap:10px;margin-top:24px;flex-wrap:wrap;justify-content:center; }
+ .an-btn { background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:10px 22px;font-size:13px;font-weight:600;cursor:pointer;backdrop-filter:blur(8px); }
+ .an-btn:hover { background:rgba(255,255,255,0.14); }
+ .an-btn:active { transform:scale(.97); }
+ .an-close { position:absolute;top:18px;right:18px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);font-size:18px;cursor:pointer;z-index:1; }
+ .an-suggest { display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px;max-width:600px; }
+ .an-suggest-chip { font-size:12px;background:rgba(99,102,241,0.18);border:1px solid rgba(99,102,241,0.4);color:#c7d2fe;padding:6px 12px;border-radius:999px;cursor:pointer; }
+ .an-suggest-chip:hover { background:rgba(99,102,241,0.28); }
+
  @media (max-width:1024px){
    .app{ grid-template-columns:1fr }
    .sidebar{ position:fixed;top:0;left:0;height:100vh;width:280px;z-index:85;transform:translateX(-105%);transition:transform .24s ease;box-shadow:0 0 40px rgba(0,0,0,0.4); }
