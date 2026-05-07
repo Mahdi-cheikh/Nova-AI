@@ -304,6 +304,22 @@
  .an-min { position:absolute;top:18px;left:18px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);font-size:18px;cursor:pointer;z-index:1; }
  .an-min:hover { background:rgba(255,255,255,0.14); }
 
+ /* Persistent live-state badge — shows what Nova is doing right now,
+    even when minimized or on a different page of the dashboard */
+ .an-live-badge { position:fixed;bottom:128px;right:24px;display:none;align-items:center;gap:8px;padding:8px 14px 8px 12px;background:rgba(13,15,22,0.92);color:#fff;border-radius:999px;font-size:12.5px;font-weight:600;letter-spacing:0.3px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 24px rgba(0,0,0,0.3);pointer-events:none;z-index:9999;animation:an-badge-fade .25s ease-out; }
+ .an-live-badge.show { display:flex; }
+ .an-live-badge .dot { width:9px;height:9px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px rgba(34,211,238,0.9);animation:an-badge-pulse 1.4s ease-in-out infinite; }
+ .an-live-badge.thinking .dot { background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,0.9); }
+ .an-live-badge.thinking { border-color:rgba(251,191,36,0.35); }
+ .an-live-badge.speaking .dot { background:#a78bfa;box-shadow:0 0 8px rgba(167,139,250,0.9); }
+ .an-live-badge.speaking { border-color:rgba(167,139,250,0.35); }
+ .an-live-badge.listening { border-color:rgba(34,211,238,0.35); }
+ .an-live-badge.heard { border-color:rgba(34,211,238,0.7);background:linear-gradient(135deg,rgba(34,211,238,0.25),rgba(99,102,241,0.25)); }
+ .an-live-badge.heard .dot { animation:an-badge-pulse-fast .5s ease-in-out infinite; }
+ @keyframes an-badge-fade { from { opacity:0;transform:translateY(8px) } to { opacity:1;transform:translateY(0) } }
+ @keyframes an-badge-pulse { 0%,100% { transform:scale(1);opacity:0.85 } 50% { transform:scale(1.35);opacity:1 } }
+ @keyframes an-badge-pulse-fast { 0%,100% { transform:scale(1.1);opacity:1 } 50% { transform:scale(1.55);opacity:1 } }
+
  /* Minimized state — floating bubble in the corner that survives navigation */
  .an-overlay.minimized { background:transparent;pointer-events:none;inset:auto;width:auto;height:auto;bottom:24px;right:24px;left:auto;top:auto;padding:0;display:block;animation:none; }
  .an-overlay.minimized .an-header,
@@ -5542,6 +5558,16 @@ async function openAskNova(){
      <button class="an-btn" id="an-stop">Stop</button>
    </div>`;
  document.body.appendChild(overlay);
+ // Persistent live-state badge — sits above the minimized bubble.
+ let liveBadge = document.getElementById('an-live-badge');
+ if (!liveBadge){
+   liveBadge = document.createElement('div');
+   liveBadge.id = 'an-live-badge';
+   liveBadge.className = 'an-live-badge';
+   liveBadge.innerHTML = '<span class="dot"></span><span class="txt">Listening</span>';
+   document.body.appendChild(liveBadge);
+ }
+ window.__nova.liveBadge = liveBadge;
  window.__nova.overlay = overlay;
  window.__nova.minimized = false;
 
@@ -5616,6 +5642,31 @@ async function openAskNova(){
    orbWrap.classList.remove('listening','thinking','speaking');
    if (state) orbWrap.classList.add(state);
    statusEl.innerHTML = msg ? `<span class="${color||''}">${escapeHtml(msg)}</span>` : '';
+   window.__nova.curState = state;
+   updateLiveBadge(state, msg);
+ }
+ function updateLiveBadge(state, msg){
+   const b = window.__nova.liveBadge;
+   if (!b) return;
+   const txt = b.querySelector('.txt');
+   b.classList.remove('listening','thinking','speaking','heard');
+   const isAlwaysOn = !!window.__nova.alwaysOn;
+   if (state === 'listening'){ b.classList.add('listening','show'); if (txt) txt.textContent = isAlwaysOn ? 'Listening' : 'Listening once'; }
+   else if (state === 'thinking'){ b.classList.add('thinking','show'); if (txt) txt.textContent = 'Thinking'; }
+   else if (state === 'speaking'){ b.classList.add('speaking','show'); if (txt) txt.textContent = 'Speaking'; }
+   else { if (isAlwaysOn){ b.classList.add('listening','show'); if (txt) txt.textContent = 'Listening'; } else { b.classList.remove('show'); } }
+ }
+ function flashHeardBadge(){
+   const b = window.__nova.liveBadge;
+   if (!b) return;
+   b.classList.add('heard');
+   const txt = b.querySelector('.txt');
+   if (txt) txt.textContent = 'Heard you';
+   clearTimeout(window.__nova.heardTimer);
+   window.__nova.heardTimer = setTimeout(() => {
+     b.classList.remove('heard');
+     updateLiveBadge(window.__nova.curState || 'listening', '');
+   }, 900);
  }
  function setPrompt(youText, novaText){
    let html = '';
@@ -5627,6 +5678,17 @@ async function openAskNova(){
  function speak(text, lang, opts){
    if (!TTS || !text) return;
    try { TTS.cancel(); } catch(_e){}
+   try { if (questionRec) questionRec.abort(); } catch(_e){}
+   mode = "speaking";
+   window.__nova.isSpeaking = true;
+   const onSpeakDone = () => {
+     window.__nova.isSpeaking = false;
+     mode = "idle";
+     setState(null, '', '');
+     if (window.__nova.alwaysOn && !isProcessing){
+       setTimeout(() => listenForQuestion(), 400);
+     }
+   };
 
    const fallbackFrText = opts && opts.fallbackFrText ? String(opts.fallbackFrText).trim() : '';
 
@@ -5661,14 +5723,8 @@ async function openAskNova(){
        u.pitch = 0.78;
        u.volume = 1.0;
        u.onstart = () => setState('speaking', 'Speaking (FR fallback)...', 'live');
-       u.onend = () => {
-         setState(null, '', '');
-         if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
-       };
-       u.onerror = () => {
-         setState(null, '', '');
-         if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
-       };
+       u.onend = onSpeakDone;
+       u.onerror = onSpeakDone;
        TTS.speak(u);
        return;
      }
@@ -5681,11 +5737,7 @@ async function openAskNova(){
      u.pitch = 0.85;
      u.volume = 1.0;
      let ended = false;
-     const finish = () => {
-       if (ended) return; ended = true;
-       setState(null, '', '');
-       if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
-     };
+     const finish = () => { if (ended) return; ended = true; onSpeakDone(); };
      u.onend = finish;
      u.onerror = finish;
      try { TTS.speak(u); } catch(_e){}
@@ -5705,15 +5757,8 @@ async function openAskNova(){
    u.pitch = 0.78;
    u.volume = 1.0;
    u.onstart = () => setState('speaking', 'Speaking...', 'live');
-   u.onend = () => {
-     setState(null, '', '');
-     // After Nova finishes speaking, immediately reopen the mic if active
-     if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
-   };
-   u.onerror = () => {
-     setState(null, '', '');
-     if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
-   };
+   u.onend = onSpeakDone;
+   u.onerror = onSpeakDone;
    TTS.speak(u);
  }
 
@@ -5761,7 +5806,8 @@ async function openAskNova(){
      if (text) askClaude(text);
      return;
    }
-   try { TTS.cancel(); } catch(_e){}
+   if (window.__nova.isSpeaking) return;
+   if (isProcessing){ setTimeout(() => listenForQuestion(seedText), 250); return; }
    try { if (wakeRec) wakeRec.stop(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
    mode = "listening";
@@ -5780,14 +5826,16 @@ async function openAskNova(){
        const t = e.results[i][0].transcript;
        if (e.results[i].isFinal) final += t; else interim += t;
      }
-     // Trigger the bubble anti-gravity pulse when user starts speaking
-     // (only when the overlay is minimized — visible feedback that Nova heard you)
-     if ((interim || final) && overlay.classList.contains('minimized')){
-       overlay.classList.add('speech-detected');
-       clearTimeout(window.__nova.pulseTimer);
-       window.__nova.pulseTimer = setTimeout(() => {
-         overlay.classList.remove('speech-detected');
-       }, 1200);
+     // Visible feedback that Nova heard you: flash the badge + pulse the bubble.
+     if (interim || final){
+       flashHeardBadge();
+       if (overlay.classList.contains('minimized')){
+         overlay.classList.add('speech-detected');
+         clearTimeout(window.__nova.pulseTimer);
+         window.__nova.pulseTimer = setTimeout(() => {
+           overlay.classList.remove('speech-detected');
+         }, 1200);
+       }
      }
      if (interim) setPrompt(interim, '');
      if (final) lastUserText = final;
@@ -5845,10 +5893,13 @@ async function openAskNova(){
    }
    if (!window.__nova.alwaysOn) return;
    if (isProcessing) return;
+   if (window.__nova.isSpeaking) return;
    if (mode === 'listening' || mode === 'thinking' || mode === 'speaking') return;
+   if (window.__nova.liveBadge && !window.__nova.liveBadge.classList.contains('show')){
+     updateLiveBadge('listening', '');
+   }
    const since = Date.now() - (window.__nova.lastListenAt || 0);
    if (since > 1500){
-     // Mic has been idle too long — re-kick it.
      listenForQuestion();
    }
  }, 1200);
@@ -5900,14 +5951,16 @@ async function openAskNova(){
    toggle.classList.toggle('on', window.__nova.alwaysOn);
    toggleState.textContent = window.__nova.alwaysOn ? 'ON' : 'OFF';
    if (window.__nova.alwaysOn){
-     // Start listening immediately — mic stays open continuously
+     updateLiveBadge('listening', '');
      listenForQuestion();
    } else {
-     // Stop any active recognizer
      try { if (wakeRec) wakeRec.stop(); } catch(_e){}
      try { if (questionRec) questionRec.abort(); } catch(_e){}
      try { TTS.cancel(); } catch(_e){}
+     window.__nova.isSpeaking = false;
+     mode = "idle";
      setState(null, 'Tap the orb to talk', '');
+     if (window.__nova.liveBadge) window.__nova.liveBadge.classList.remove('show');
    }
  };
 
@@ -5929,10 +5982,15 @@ async function openAskNova(){
      try { document.removeEventListener('visibilitychange', window.__nova.visListener); } catch(_e){}
      window.__nova.visListener = null;
    }
+   if (window.__nova.liveBadge){
+     window.__nova.liveBadge.remove();
+     window.__nova.liveBadge = null;
+   }
    overlay.remove();
    window.__nova.overlay = null;
    window.__nova.alwaysOn = false;
    window.__nova.minimized = false;
+   window.__nova.isSpeaking = false;
  };
  closeBtn.onclick = close;
  stopBtn.onclick = () => {
