@@ -300,6 +300,33 @@
  .an-lang:hover { color:#fff; }
  .an-lang.active { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,0.4); }
 
+ /* Minimize button (top-left of overlay) */
+ .an-min { position:absolute;top:18px;left:18px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);font-size:18px;cursor:pointer;z-index:1; }
+ .an-min:hover { background:rgba(255,255,255,0.14); }
+
+ /* Minimized state — floating bubble in the corner that survives navigation */
+ .an-overlay.minimized { background:transparent;pointer-events:none;inset:auto;width:auto;height:auto;bottom:24px;right:24px;left:auto;top:auto;padding:0;display:block;animation:none; }
+ .an-overlay.minimized .an-header,
+ .an-overlay.minimized .an-status,
+ .an-overlay.minimized .an-prompt,
+ .an-overlay.minimized .an-suggest,
+ .an-overlay.minimized .an-actions,
+ .an-overlay.minimized .an-close,
+ .an-overlay.minimized .an-min,
+ .an-overlay.minimized .an-langs { display:none !important; }
+ .an-overlay.minimized .an-orb-wrap { width:90px;height:90px;pointer-events:auto;cursor:pointer;filter:drop-shadow(0 8px 24px rgba(99,102,241,0.6)); }
+ .an-overlay.minimized .an-orb-wrap::before { content:'Ask Nova';position:absolute;left:-110px;top:50%;transform:translateY(-50%);background:rgba(13,15,22,0.85);color:#fff;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;backdrop-filter:blur(8px);border:1px solid rgba(99,102,241,0.4);white-space:nowrap;opacity:0;transition:opacity .2s; }
+ .an-overlay.minimized .an-orb-wrap:hover::before { opacity:1; }
+ .an-overlay.minimized .an-orb { inset:8px; }
+ .an-overlay.minimized .an-orb-mic { font-size:22px; }
+
+ /* Always-on toggle */
+ .an-toggle-row { display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;color:#94a3b8;font-size:12.5px; }
+ .an-toggle { position:relative;width:44px;height:24px;background:rgba(255,255,255,0.1);border-radius:999px;cursor:pointer;transition:background .2s; }
+ .an-toggle::after { content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s; }
+ .an-toggle.on { background:linear-gradient(135deg,#6366f1,#8b5cf6); }
+ .an-toggle.on::after { transform:translateX(20px); }
+
  @media (max-width:1024px){
    .app{ grid-template-columns:1fr }
    .sidebar{ position:fixed;top:0;left:0;height:100vh;width:280px;z-index:85;transform:translateX(-105%);transition:transform .24s ease;box-shadow:0 0 40px rgba(0,0,0,0.4); }
@@ -5282,77 +5309,66 @@ async function loadQrLib(){
  return false;
 }
 
-// =============== ASK NOVA - voice business assistant ===================
-// Cached voice list — browsers load asynchronously
+// =============== ASK NOVA - persistent voice business partner =============
+// Cached voice list and global state (survives dashboard re-renders)
 let __novaVoices = null;
+window.__nova = window.__nova || { overlay: null, alwaysOn: false, lastLang: 'en', minimized: false };
+
 function loadVoices(){
   return new Promise(resolve => {
-    let voices = window.speechSynthesis.getVoices();
-    if (voices && voices.length){ __novaVoices = voices; resolve(voices); return; }
+    let v = window.speechSynthesis.getVoices();
+    if (v && v.length){ __novaVoices = v; resolve(v); return; }
     window.speechSynthesis.onvoiceschanged = () => {
-      voices = window.speechSynthesis.getVoices();
-      __novaVoices = voices;
-      resolve(voices);
+      v = window.speechSynthesis.getVoices();
+      __novaVoices = v;
+      resolve(v);
     };
-    // Safety timeout
     setTimeout(() => { __novaVoices = window.speechSynthesis.getVoices() || []; resolve(__novaVoices); }, 1500);
   });
 }
 
-// Pick the most charismatic / mysterious voice available for a given language.
-// Priority: hand-curated voice names known to sound deep & resonant on the
-// major OS / browsers, then any male-tagged voice for that language, then
-// any voice for that language.
 function pickNovaVoice(lang){
   const voices = __novaVoices || window.speechSynthesis.getVoices() || [];
-  // Curated "charismatic male" voice names per locale
   const preferred = {
-    en: [
-      "Google UK English Male", "Microsoft Ryan Online", "Microsoft Guy Online",
-      "Microsoft George", "Microsoft Mark", "Microsoft David",
-      "Daniel", "Daniel (Enhanced)", "Alex", "Albert", "Arthur", "Bahh",
-      "Google US English",
-    ],
-    fr: [
-      "Google français", "Microsoft Paul Online", "Microsoft Henri Online",
-      "Microsoft Claude", "Thomas", "Thomas (Enhanced)", "Nicolas",
-    ],
-    ar: [
-      "Microsoft Hamed Online", "Microsoft Naayf",
-      "Maged", "Maged (Enhanced)", "Tarik", "Hassan",
-    ],
+    en: ["Google UK English Male","Microsoft Ryan Online","Microsoft Guy Online","Microsoft George","Microsoft Mark","Microsoft David","Daniel","Daniel (Enhanced)","Alex","Albert","Arthur","Google US English"],
+    fr: ["Google français","Microsoft Paul Online","Microsoft Henri Online","Microsoft Claude","Thomas","Thomas (Enhanced)","Nicolas"],
+    ar: ["Microsoft Hamed Online","Microsoft Naayf","Maged","Maged (Enhanced)","Tarik","Hassan"],
   };
   const prefList = preferred[lang] || preferred.en;
-  // Step 1: try the curated names
   for (const name of prefList){
     const v = voices.find(v => v.name === name || v.name.includes(name));
     if (v) return v;
   }
-  // Step 2: any voice tagged as Male for that language
   const langPrefix = lang === "ar" ? "ar" : lang === "fr" ? "fr" : "en";
   const maleish = voices.find(v => (v.lang || "").startsWith(langPrefix) && /male|man|guy|david|ryan|paul|thomas|tarik/i.test(v.name));
   if (maleish) return maleish;
-  // Step 3: any voice for that language
   const anyLang = voices.find(v => (v.lang || "").startsWith(langPrefix));
   if (anyLang) return anyLang;
-  // Step 4: anything
   return voices[0];
 }
 
 async function openAskNova(){
- await loadVoices();  // pre-warm voice list
+ // If already open, just unminimize it
+ if (window.__nova.overlay && document.body.contains(window.__nova.overlay)){
+   window.__nova.overlay.classList.remove('minimized');
+   window.__nova.minimized = false;
+   return;
+ }
+ await loadVoices();
+
  const overlay = document.createElement('div');
  overlay.className = 'an-overlay';
  overlay.innerHTML = `
+   <button class="an-min" id="an-min" aria-label="Minimize" title="Minimize — Nova stays alive in the corner">_</button>
    <button class="an-close" id="an-close" aria-label="Close">x</button>
    <div class="an-header">
      <div class="badge"><span class="dot"></span> Ask Nova</div>
      <h1 id="an-title">Hey boss. How can I help?</h1>
-     <p id="an-sub">Tap the orb and speak. Nova listens, then answers in the same voice.</p>
-     <div class="an-langs" id="an-langs">
-       <button class="an-lang active" data-lang="en">EN</button>
-       <button class="an-lang" data-lang="fr">FR</button>
-       <button class="an-lang" data-lang="ar">AR</button>
+     <p id="an-sub">Tap the orb and speak. I auto-detect your language.</p>
+     <div class="an-toggle-row">
+       <span>Always-on</span>
+       <div class="an-toggle" id="an-toggle"></div>
+       <span id="an-toggle-state" style="font-weight:600;color:#94a3b8">OFF</span>
      </div>
    </div>
    <div class="an-orb-wrap" id="an-orb-wrap">
@@ -5361,77 +5377,40 @@ async function openAskNova(){
      <div class="an-orb"></div>
      <div class="an-orb-mic">&#x1F3A4;</div>
    </div>
-   <div class="an-status" id="an-status">Ready</div>
+   <div class="an-status" id="an-status">Tap the orb to talk</div>
    <div class="an-prompt" id="an-prompt"></div>
-   <div class="an-suggest" id="an-suggest"></div>
    <div class="an-actions">
      <button class="an-btn" id="an-stop">Stop</button>
    </div>`;
  document.body.appendChild(overlay);
+ window.__nova.overlay = overlay;
+ window.__nova.minimized = false;
 
  const orbWrap = overlay.querySelector('#an-orb-wrap');
  const statusEl = overlay.querySelector('#an-status');
  const promptEl = overlay.querySelector('#an-prompt');
  const stopBtn = overlay.querySelector('#an-stop');
  const closeBtn = overlay.querySelector('#an-close');
+ const minBtn = overlay.querySelector('#an-min');
  const titleEl = overlay.querySelector('#an-title');
- const subEl = overlay.querySelector('#an-sub');
- const suggest = overlay.querySelector('#an-suggest');
- const langPills = overlay.querySelectorAll('.an-lang');
+ const toggle = overlay.querySelector('#an-toggle');
+ const toggleState = overlay.querySelector('#an-toggle-state');
 
  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
  const TTS = window.speechSynthesis;
  const supportsVoice = !!SR && !!TTS;
 
- // Active language: determines SR locale, suggested chips, and TTS voice
- let activeLang = "en";
+ const srLocales = { en: "en-US", fr: "fr-FR", ar: "ar-TN" };
+
  let rec = null;
  let lastUserText = '';
+ let isProcessing = false;
 
- const greetings = {
-   en: { title: "Hey boss. How can I help?", sub: "Tap the orb and speak. Nova listens, then answers in the same voice.",
-         greeting: "Hey boss. How can I help?",
-         suggestions: [
-           { q:"How many appointments do I have today?", l:"Today's appointments?" },
-           { q:"Who is my next patient?", l:"Next patient?" },
-           { q:"How many new clients this week?", l:"New clients this week?" },
-           { q:"What is my most booked service?", l:"Most booked service?" },
-         ]},
-   fr: { title: "Bonjour patron. Que puis-je faire pour vous ?", sub: "Tapez l'orbe et parlez. Nova ecoute, puis repond dans la meme voix.",
-         greeting: "Bonjour patron. Que puis-je faire pour vous ?",
-         suggestions: [
-           { q:"Combien de rendez-vous aujourd hui ?", l:"Rendez-vous aujourd'hui ?" },
-           { q:"Qui est mon prochain patient ?", l:"Prochain patient ?" },
-           { q:"Combien de nouveaux clients cette semaine ?", l:"Nouveaux clients ?" },
-           { q:"Quel est mon service le plus reserve ?", l:"Service le plus reserve ?" },
-         ]},
-   ar: { title: "السلام عليكم، كيف يمكنني مساعدتك؟", sub: "اضغط على الدائرة وتحدث. نوفا تستمع وترد بنفس الصوت.",
-         greeting: "السلام عليكم، كيف يمكنني مساعدتك؟",
-         suggestions: [
-           { q:"كم موعد عندي اليوم؟", l:"مواعيد اليوم؟" },
-           { q:"شكون المريض الجاي؟", l:"المريض الجاي؟" },
-           { q:"كم عميل جديد هاد الجمعة؟", l:"عملاء جدد؟" },
-           { q:"شنية الخدمة الأكثر حجزا؟", l:"الخدمة الأكثر حجزا؟" },
-         ]},
- };
- const srLocales = { en: "en-US", fr: "fr-FR", ar: "ar-TN" };
- const ttsLocales = { en: "en-GB", fr: "fr-FR", ar: "ar-SA" };
-
- function applyLang(lang){
-   activeLang = lang;
-   langPills.forEach(p => p.classList.toggle('active', p.dataset.lang === lang));
-   const g = greetings[lang];
-   titleEl.textContent = g.title;
-   subEl.textContent = g.sub;
-   suggest.innerHTML = g.suggestions.map(s => `<div class="an-suggest-chip" data-q="${escapeHtml(s.q)}">${escapeHtml(s.l)}</div>`).join('');
-   suggest.querySelectorAll('.an-suggest-chip').forEach(chip => chip.onclick = () => {
-     suggest.style.display = 'none';
-     const q = chip.dataset.q;
-     setPrompt(q, '');
-     askClaude(q, activeLang);
-   });
+ // Restore always-on state
+ if (window.__nova.alwaysOn){
+   toggle.classList.add('on');
+   toggleState.textContent = 'ON';
  }
- langPills.forEach(p => p.onclick = () => applyLang(p.dataset.lang));
 
  function setState(state, msg, color){
    orbWrap.classList.remove('listening','thinking','speaking');
@@ -5445,51 +5424,68 @@ async function openAskNova(){
    promptEl.innerHTML = html;
  }
 
- // The mysterious / charismatic voice — slow, deep, resonant
  function speak(text, lang){
-   if (!TTS) return;
+   if (!TTS || !text) return;
    try { TTS.cancel(); } catch(_e){}
    const u = new SpeechSynthesisUtterance(text);
    u.voice = pickNovaVoice(lang);
-   u.lang = u.voice ? u.voice.lang : (ttsLocales[lang] || "en-GB");
-   u.rate = 0.88;     // slow & deliberate
-   u.pitch = 0.78;    // deep & mysterious
+   u.lang = u.voice ? u.voice.lang : (lang === 'ar' ? 'ar-SA' : lang === 'fr' ? 'fr-FR' : 'en-GB');
+   u.rate = 0.88;       // slow & deliberate
+   u.pitch = 0.78;      // deep & mysterious
    u.volume = 1.0;
-   u.onstart = ()=> setState('speaking', 'Speaking...', 'live');
-   u.onend = ()=> setState(null, '', '');
+   u.onstart = () => setState('speaking', 'Speaking...', 'live');
+   u.onend = () => {
+     setState(null, '', '');
+     // If always-on, immediately restart listening
+     if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => startListening(), 350);
+   };
    TTS.speak(u);
  }
 
- async function askClaude(transcript, lang){
-   setState('thinking','Thinking...','live');
+ // Strip the [LANG=xx] marker that Claude adds, return { lang, text }
+ function parseAnswer(raw){
+   const m = (raw || '').match(/^\s*\[LANG=(en|fr|ar)\]\s*([\s\S]*)$/i);
+   if (m) return { lang: m[1].toLowerCase(), text: m[2].trim() };
+   return { lang: window.__nova.lastLang || 'en', text: (raw || '').trim() };
+ }
+
+ async function askClaude(transcript){
+   if (!transcript) return;
+   isProcessing = true;
+   setState('thinking', 'Thinking...', 'live');
    try {
      const r = await fetch(`${CFG.supabaseUrl}/functions/v1/ask-nova`, {
        method:'POST',
        headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
-       body: JSON.stringify({ business_id: SESSION.business.id, transcript, lang }),
+       body: JSON.stringify({ business_id: SESSION.business.id, transcript }),
      });
      const j = await r.json();
      if (!r.ok || !j.ok) throw new Error(j.error || 'Network error');
-     setPrompt(transcript, j.answer);
-     speak(j.answer, lang);
+     const { lang, text } = parseAnswer(j.answer);
+     window.__nova.lastLang = lang;
+     setPrompt(transcript, text);
+     speak(text, lang);
    } catch (e){
      setState(null, 'Error', '');
-     setPrompt(transcript, 'Sorry, I could not reach Nova: ' + e.message);
-   }
+     setPrompt(transcript, 'Sorry, I could not reach you: ' + e.message);
+   } finally { isProcessing = false; }
  }
 
  function startListening(){
    if (!supportsVoice){
      const text = prompt("Voice not supported. Type your question:");
-     if (text){ setState(null,'',''); askClaude(text, activeLang); }
+     if (text) askClaude(text);
      return;
    }
    try { TTS.cancel(); } catch(_e){}
+   try { if (rec) rec.stop(); } catch(_e){}
    rec = new SR();
    rec.continuous = false;
    rec.interimResults = true;
-   rec.lang = srLocales[activeLang] || "en-US";
-   rec.onstart = () => setState('listening','Listening...','live');
+   // Use last detected language; default to French (works well for Tunisian users)
+   rec.lang = srLocales[window.__nova.lastLang] || "fr-FR";
+   rec.onstart = () => setState('listening', 'Listening...', 'live');
+   lastUserText = '';
    rec.onresult = (e) => {
      let interim = '', final = '';
      for (let i = e.resultIndex; i < e.results.length; i++){
@@ -5499,33 +5495,72 @@ async function openAskNova(){
      if (interim) setPrompt(interim, '');
      if (final) lastUserText = final;
    };
-   rec.onerror = (e) => setState(null, 'Mic: ' + e.error, '');
+   rec.onerror = (e) => {
+     setState(null, 'Mic: ' + e.error, '');
+     if (window.__nova.alwaysOn && e.error !== 'not-allowed' && e.error !== 'aborted'){
+       setTimeout(() => startListening(), 500);
+     }
+   };
    rec.onend = () => {
-     if (lastUserText) askClaude(lastUserText, activeLang);
-     else setState(null,'No speech detected','');
+     if (lastUserText) askClaude(lastUserText);
+     else if (window.__nova.alwaysOn) setTimeout(() => startListening(), 200);
+     else setState(null, 'Tap the orb to talk again', '');
    };
    try { rec.start(); } catch(_e){}
  }
 
  orbWrap.onclick = () => {
-   suggest.style.display = 'none';
-   titleEl.textContent = activeLang === 'fr' ? "J'ecoute..." : activeLang === 'ar' ? "أنا أستمع..." : "I am listening...";
-   lastUserText = '';
+   if (overlay.classList.contains('minimized')){
+     overlay.classList.remove('minimized');
+     window.__nova.minimized = false;
+     return;
+   }
+   titleEl.textContent = 'I am listening...';
    startListening();
  };
+
+ toggle.onclick = () => {
+   window.__nova.alwaysOn = !window.__nova.alwaysOn;
+   toggle.classList.toggle('on', window.__nova.alwaysOn);
+   toggleState.textContent = window.__nova.alwaysOn ? 'ON' : 'OFF';
+   if (window.__nova.alwaysOn && !isProcessing) startListening();
+   else { try { if (rec) rec.stop(); } catch(_e){} }
+ };
+
+ const minimize = () => {
+   overlay.classList.add('minimized');
+   window.__nova.minimized = true;
+ };
+ minBtn.onclick = minimize;
 
  const close = () => {
    try { if (rec) rec.stop(); } catch(_e){}
    try { TTS.cancel(); } catch(_e){}
    overlay.remove();
+   window.__nova.overlay = null;
+   window.__nova.alwaysOn = false;
+   window.__nova.minimized = false;
  };
  closeBtn.onclick = close;
- stopBtn.onclick = () => { try { if (rec) rec.stop(); } catch(_e){} try { TTS.cancel(); } catch(_e){} setState(null,'Stopped',''); };
- const escHandler = (e) => { if (e.key === 'Escape'){ close(); document.removeEventListener('keydown', escHandler); } };
+ stopBtn.onclick = () => {
+   try { if (rec) rec.stop(); } catch(_e){}
+   try { TTS.cancel(); } catch(_e){}
+   isProcessing = false;
+   setState(null, 'Stopped', '');
+ };
+ const escHandler = (e) => {
+   if (e.key === 'Escape'){
+     if (overlay.classList.contains('minimized')){
+       close();
+       document.removeEventListener('keydown', escHandler);
+     } else {
+       minimize();
+     }
+   }
+ };
  document.addEventListener('keydown', escHandler);
 
- applyLang('en');
- setTimeout(() => speak(greetings.en.greeting, 'en'), 400);
+ setTimeout(() => speak("Hey boss. How can I help?", 'en'), 400);
 }
 
 async function openDashScanner(){
