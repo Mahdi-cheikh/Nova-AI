@@ -5810,7 +5810,10 @@ async function openAskNova(){
    if (isProcessing){ setTimeout(() => listenForQuestion(seedText), 250); return; }
    try { if (wakeRec) wakeRec.stop(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
-   mode = "listening";
+   // mode stays 'idle' until onstart fires — that way, if the SR silently
+   // fails to start, the watchdog will detect the stale 'idle' state and
+   // re-kick listening instead of trusting a fake 'listening' flag.
+   mode = "starting";
    questionRec = new SR();
    questionRec.continuous = false;
    questionRec.interimResults = true;
@@ -5818,8 +5821,17 @@ async function openAskNova(){
    questionRec.lang = srLocale || "fr-FR";
    const localeLabel = (window.__nova.userLang || 'fr').toUpperCase();
    let lastUserText = (seedText || '').trim();
+   let started = false;
+   let ended = false;
    if (lastUserText) setPrompt(lastUserText, '');
-   questionRec.onstart = () => setState('listening', `Listening (${localeLabel})...`, 'live');
+   questionRec.onstart = () => {
+     started = true;
+     mode = "listening";
+     window.__nova.lastListenAt = Date.now();
+     setState('listening', `Listening (${localeLabel})...`, 'live');
+   };
+   questionRec.onaudiostart = () => { window.__nova.lastListenAt = Date.now(); };
+   questionRec.onspeechstart = () => { window.__nova.lastListenAt = Date.now(); flashHeardBadge(); };
    questionRec.onresult = (e) => {
      let interim = '', final = '';
      for (let i = e.resultIndex; i < e.results.length; i++){
@@ -5828,6 +5840,7 @@ async function openAskNova(){
      }
      // Visible feedback that Nova heard you: flash the badge + pulse the bubble.
      if (interim || final){
+       window.__nova.lastListenAt = Date.now();
        flashHeardBadge();
        if (overlay.classList.contains('minimized')){
          overlay.classList.add('speech-detected');
@@ -5841,28 +5854,28 @@ async function openAskNova(){
      if (final) lastUserText = final;
    };
    questionRec.onerror = (e) => {
+     if (ended) return; ended = true;
      mode = "idle";
-     // Common errors when minimized + idle: 'no-speech', 'aborted', 'audio-capture'.
-     // For all of these, just restart if we're supposed to be in always-on mode.
-     // 'not-allowed' is a permission rejection — show a clear message and stop.
      if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
-       setState(null, 'Mic permission denied - please allow it in your browser', '');
+       setState(null, 'Mic permission denied - allow it in your browser', '');
        window.__nova.alwaysOn = false;
        toggle.classList.remove('on');
        toggleState.textContent = 'OFF';
+       if (window.__nova.liveBadge) window.__nova.liveBadge.classList.remove('show');
        return;
      }
-     // Soft errors — just keep cycling so Nova stays alive while minimized.
-     if (window.__nova.alwaysOn && !isProcessing){
+     // Soft errors (no-speech, aborted, audio-capture) — restart if Active is on.
+     if (window.__nova.alwaysOn && !isProcessing && !window.__nova.isSpeaking){
        setTimeout(() => listenForQuestion(), 350);
      }
    };
    questionRec.onend = () => {
+     if (ended) return; ended = true;
      mode = "idle";
      window.__nova.lastListenAt = Date.now();
      if (lastUserText){
        askClaude(lastUserText);
-     } else if (window.__nova.alwaysOn){
+     } else if (window.__nova.alwaysOn && !window.__nova.isSpeaking){
        setTimeout(() => listenForQuestion(), 300);
      } else {
        setState(null, 'Tap the orb to talk again', '');
@@ -5870,11 +5883,24 @@ async function openAskNova(){
    };
    window.__nova.lastListenAt = Date.now();
    try { questionRec.start(); } catch(_e){
-     // Already running OR lost mic — schedule a retry instead of dying silently.
+     mode = "idle";
      if (window.__nova.alwaysOn && !isProcessing){
        setTimeout(() => listenForQuestion(), 500);
      }
+     return;
    }
+   // Safety: if onstart doesn't fire within 1.2 seconds, the SR silently
+   // failed — abort it and try again. This catches the silent-failure case
+   // where the recognizer never actually opens the mic.
+   setTimeout(() => {
+     if (!started && !ended){
+       try { questionRec.abort(); } catch(_e){}
+       mode = "idle";
+       if (window.__nova.alwaysOn && !isProcessing){
+         listenForQuestion();
+       }
+     }
+   }, 1500);
  }
 
  // --- Watchdog: ensures the mic stays alive while Active is ON ---
@@ -5894,7 +5920,9 @@ async function openAskNova(){
    if (!window.__nova.alwaysOn) return;
    if (isProcessing) return;
    if (window.__nova.isSpeaking) return;
+   // Allow watchdog to recover from stuck 'starting' mode (SR failed silently).
    if (mode === 'listening' || mode === 'thinking' || mode === 'speaking') return;
+   if (mode === 'starting' && (Date.now() - (window.__nova.lastListenAt || 0)) < 1500) return;
    if (window.__nova.liveBadge && !window.__nova.liveBadge.classList.contains('show')){
      updateLiveBadge('listening', '');
    }
