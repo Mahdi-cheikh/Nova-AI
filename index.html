@@ -5326,6 +5326,24 @@ function loadVoices(){
   });
 }
 
+function playWakeBeep(){
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(880, ctx.currentTime);          // A5 ping
+    o.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.08);  // up to E6
+    g.gain.setValueAtTime(0.001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.2);
+  } catch(_e){}
+}
+
 function pickNovaVoice(lang){
   const voices = __novaVoices || window.speechSynthesis.getVoices() || [];
   const preferred = {
@@ -5346,26 +5364,54 @@ function pickNovaVoice(lang){
   return voices[0];
 }
 
-// Detects "hey nova" / "nova" / "salut nova" / "نوفا" anywhere in a transcript.
-// Returns the question portion AFTER the wake word, or null if no wake word.
+// Aggressive wake-word detector. Browser SR mishears "Nova" CONSTANTLY, so
+// we match a wide net of variants and fuzzy spellings, on both interim and
+// final transcripts. Returns the question after the wake word, or null.
+const WAKE_VARIANTS = [
+  // Canonical
+  "nova","novah","novaa","noova","nouva","nouvah",
+  // Common SR mishearings
+  "no va","noh va","oh va","ova","ovah","know va","know ah","newa","neva","newva",
+  "nofa","noofa","nofah","nuova","noevah","nofa","no fa","no var","nover",
+  // Arabic transliteration
+  "noufa","noufah","nofa",
+];
+const WAKE_PREFIXES = [
+  "hey","hi","hello","salut","bonjour","yo","ok","hay","ya","hé","eh","hé","ey",
+  "yes","oh","ah","",
+];
+
 function extractAfterWakeWord(text){
   if (!text) return null;
-  // Normalise: lowercase, strip punctuation
-  const normalized = text.toLowerCase().replace(/[.,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
-  // Wake-word patterns (English / French / Arabic / common misrecognitions)
-  const patterns = [
-    /\b(?:hey|hi|hello|salut|bonjour|yo|ok)\s+nova(?:a|ah)?\b\s*/i,
-    /\bnova(?:a|ah)?\b\s*/i,
-    /\b(?:no\s*va|noh\s*va|noova)\b\s*/i,  // common SR mishearings
-    /\bya\s+nova\b\s*/i,                       // darija "ya nova"
-    /\bنوفا\s*/,                                  // Arabic
-  ];
-  for (const p of patterns){
-    const m = normalized.match(p);
+  // Normalise: strip diacritics, lowercase, collapse punctuation/whitespace
+  let s = text.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")  // strip accents
+    .replace(/[.,!?;:،؟]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  // Direct Arabic "نوفا" still in the original text — keep as a separate check
+  const arabic = /نوفا|نوف[ا]?/.test(text);
+  if (arabic){
+    const idx = text.search(/نوفا|نوف[ا]?/);
+    const tail = idx >= 0 ? text.slice(idx + 4).trim() : "";
+    return tail.length >= 2 ? tail : "__WAKE_ONLY__";
+  }
+  // Try every (prefix + variant) combo, longest first so "hey nova" beats "nova"
+  const tries = [];
+  for (const v of WAKE_VARIANTS){
+    for (const p of WAKE_PREFIXES){
+      tries.push(p ? `${p} ${v}` : v);
+    }
+  }
+  tries.sort((a,b) => b.length - a.length);  // longest match first
+  for (const phrase of tries){
+    // Build a tolerant regex: word boundaries optional, allow spaces between letters
+    const escaped = phrase.replace(/\s+/g, "\\s*").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(^|[^a-z])${escaped}([^a-z]|$)`, "i");
+    const m = s.match(re);
     if (m){
-      const after = normalized.slice(m.index + m[0].length).trim();
-      if (after.length >= 2) return after;       // wake word + a real question
-      // Wake word alone — treat as a greeting/attention call
+      const after = s.slice(m.index + m[0].length).trim();
+      if (after.length >= 2) return after;
       return "__WAKE_ONLY__";
     }
   }
@@ -5543,27 +5589,34 @@ async function openAskNova(){
    wakeRec.onstart = () => setState(null, 'Listening for "Hey Nova"...', '');
    let buffer = '';
    wakeRec.onresult = (e) => {
+     // Scan BOTH interim and final results — wake word should fire ASAP
      for (let i = e.resultIndex; i < e.results.length; i++){
        const t = e.results[i][0].transcript;
-       buffer += t + ' ';
+       const isFinal = e.results[i].isFinal;
+       // Append to rolling buffer
+       buffer += t + " ";
+       // Check immediately on each chunk (interim or final)
        const after = extractAfterWakeWord(buffer);
        if (after !== null){
+         buffer = "";
          try { wakeRec.stop(); } catch(_e){}
+         // Visual + audio feedback: orb pulse + soft beep
+         orbWrap.classList.remove("listening","thinking","speaking");
+         orbWrap.classList.add("listening");
+         playWakeBeep();
+         setState("listening", "Yes? I am listening...", "live");
          if (after === "__WAKE_ONLY__"){
-           // Just the wake word — beep, prompt, listen for follow-up
-           speak("Yes?", window.__nova.lastLang || 'en');
-           // After the "Yes?" finishes, listenForQuestion will be triggered
-           setTimeout(() => listenForQuestion(), 600);
+           // Wake word alone — listen for follow-up question
+           setTimeout(() => listenForQuestion(), 250);
          } else {
            // Wake word + question in one breath — process directly
            askClaude(after);
          }
-         buffer = '';
          return;
        }
      }
-     // Buffer too long: keep only last 80 chars to avoid runaway
-     if (buffer.length > 200) buffer = buffer.slice(-80);
+     // Trim buffer to last 120 chars to avoid runaway memory
+     if (buffer.length > 240) buffer = buffer.slice(-120);
    };
    wakeRec.onerror = (e) => {
      if (e.error === 'no-speech' || e.error === 'aborted') {
