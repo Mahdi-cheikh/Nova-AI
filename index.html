@@ -5434,7 +5434,7 @@ async function openAskNova(){
    <div class="an-header">
      <div class="badge"><span class="dot"></span> Ask Nova</div>
      <h1 id="an-title">Hey boss. How can I help?</h1>
-     <p id="an-sub">Tap the orb to talk, or flip <b>Active</b> on for hands-free conversation.</p>
+     <p id="an-sub">Tap the orb to talk, or flip <b>Active</b> on. You can interrupt Nova anytime — just start speaking.</p>
      <div class="an-toggle-row">
        <span>Active (continuous listening)</span>
        <div class="an-toggle" id="an-toggle"></div>
@@ -5495,6 +5495,52 @@ async function openAskNova(){
    promptEl.innerHTML = html;
  }
 
+ let bargeRec = null;
+ function startBargeInListener(lang){
+   // While Nova is speaking, run a quiet recognizer that watches for the user
+   // starting to speak. If they do, cancel TTS and treat their words as the
+   // next question — full barge-in / interruption support.
+   if (!supportsVoice) return;
+   try { if (bargeRec) bargeRec.abort(); } catch(_e){}
+   bargeRec = new SR();
+   bargeRec.continuous = false;
+   bargeRec.interimResults = true;
+   bargeRec.lang = srLocales[lang] || srLocales[window.__nova.lastLang] || "fr-FR";
+   let captured = "";
+   bargeRec.onresult = (e) => {
+     let interim = "", final = "";
+     for (let i = e.resultIndex; i < e.results.length; i++){
+       const t = e.results[i][0].transcript;
+       if (e.results[i].isFinal) final += t; else interim += t;
+     }
+     const heard = (final || interim).trim();
+     // Only fire if there's substantive content (>= 4 chars or >= 2 words)
+     // — guards against picking up Nova's own voice as echo
+     if (heard.length >= 4 || heard.split(/\s+/).length >= 2){
+       captured = heard;
+       try { TTS.cancel(); } catch(_e){}      // immediately stop Nova
+       try { bargeRec.abort(); } catch(_e){}
+       if (final){
+         // Already have the full sentence — send straight to Claude
+         askClaude(final.trim());
+       } else {
+         // Partial heard — switch to a proper question recognizer to capture the rest
+         setState('listening', 'Listening...', 'live');
+         setPrompt(heard, '');
+         // Start the question recognizer, primed with what we already heard
+         setTimeout(() => listenForQuestion(heard), 80);
+       }
+     }
+   };
+   bargeRec.onerror = () => {};
+   bargeRec.onend = () => {};
+   try { bargeRec.start(); } catch(_e){}
+ }
+ function stopBargeInListener(){
+   try { if (bargeRec) bargeRec.abort(); } catch(_e){}
+   bargeRec = null;
+ }
+
  function speak(text, lang){
    if (!TTS || !text) return;
    try { TTS.cancel(); } catch(_e){}
@@ -5504,10 +5550,15 @@ async function openAskNova(){
    u.rate = 0.88;
    u.pitch = 0.78;
    u.volume = 1.0;
-   u.onstart = () => setState('speaking', 'Speaking...', 'live');
+   u.onstart = () => {
+     setState('speaking', 'Speaking — interrupt me anytime', 'live');
+     // Start barge-in mic so the user can cut Nova off
+     startBargeInListener(lang);
+   };
    u.onend = () => {
+     stopBargeInListener();
      setState(null, '', '');
-     // After Nova finishes speaking, immediately reopen the mic if active
+     // After Nova finishes naturally, reopen the mic if active mode
      if (window.__nova.alwaysOn && !isProcessing) setTimeout(() => listenForQuestion(), 300);
    };
    TTS.speak(u);
@@ -5542,13 +5593,14 @@ async function openAskNova(){
  }
 
  // --- Mode 1: One-shot question listening (after tap or after wake word) ---
- function listenForQuestion(){
+ function listenForQuestion(seedText){
    if (!supportsVoice){
      const text = prompt("Voice not supported. Type your question:");
      if (text) askClaude(text);
      return;
    }
    try { TTS.cancel(); } catch(_e){}
+   try { stopBargeInListener(); } catch(_e){}
    try { if (wakeRec) wakeRec.stop(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
    mode = "listening";
@@ -5556,7 +5608,8 @@ async function openAskNova(){
    questionRec.continuous = false;
    questionRec.interimResults = true;
    questionRec.lang = srLocales[window.__nova.lastLang] || "fr-FR";
-   let lastUserText = '';
+   let lastUserText = (seedText || '').trim();
+   if (lastUserText) setPrompt(lastUserText, '');
    questionRec.onstart = () => setState('listening', 'Listening...', 'live');
    questionRec.onresult = (e) => {
      let interim = '', final = '';
@@ -5632,6 +5685,7 @@ async function openAskNova(){
  const close = () => {
    try { if (wakeRec) wakeRec.abort(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
+   try { stopBargeInListener(); } catch(_e){}
    try { TTS.cancel(); } catch(_e){}
    overlay.remove();
    window.__nova.overlay = null;
