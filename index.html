@@ -364,12 +364,41 @@
  .an-toggle.on { background:linear-gradient(135deg,#6366f1,#8b5cf6); }
  .an-toggle.on::after { transform:translateX(20px); }
 
- /* Language picker (Auto / EN / FR / AR) */
- .an-lang-row { display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap; }
- .an-lang-row .label { color:#94a3b8;font-size:11.5px;letter-spacing:0.5px;text-transform:uppercase;margin-right:4px; }
- .an-lang-pill { padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:600;color:#cbd5e1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all .15s;letter-spacing:0.4px; }
- .an-lang-pill:hover { background:rgba(255,255,255,0.1);color:#fff; }
- .an-lang-pill.active { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-color:transparent;box-shadow:0 0 14px rgba(139,92,246,0.5); }
+ /* Language picker — segmented control, Claude-style */
+ .an-lang-row {
+   display:inline-flex;
+   align-items:center;
+   margin:14px auto 0;
+   padding:3px;
+   background:rgba(255,255,255,0.04);
+   border:1px solid rgba(255,255,255,0.07);
+   border-radius:10px;
+   gap:2px;
+   backdrop-filter:blur(8px);
+ }
+ .an-lang-pill {
+   appearance:none;
+   border:none;
+   background:transparent;
+   color:#9ca3af;
+   font-size:12px;
+   font-weight:500;
+   letter-spacing:0.3px;
+   padding:6px 14px;
+   border-radius:7px;
+   cursor:pointer;
+   transition:color .18s ease, background .18s ease;
+   font-family:inherit;
+   min-width:42px;
+ }
+ .an-lang-pill:hover { color:#e5e7eb; background:rgba(255,255,255,0.04); }
+ .an-lang-pill.active {
+   color:#0f0f12;
+   background:#f3f4f6;
+   font-weight:600;
+   box-shadow:0 1px 2px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(255,255,255,0.05);
+ }
+ .an-lang-pill:focus-visible { outline:2px solid #8b5cf6; outline-offset:1px; }
 
  @media (max-width:1024px){
    .app{ grid-template-columns:1fr }
@@ -5492,11 +5521,12 @@ async function openAskNova(){
        <div class="an-toggle" id="an-toggle"></div>
        <span id="an-toggle-state" style="font-weight:600;color:#94a3b8">OFF</span>
      </div>
-     <div class="an-lang-row" id="an-lang-row">
-       <span class="label">I speak</span>
-       <button class="an-lang-pill" data-lang="en">EN</button>
-       <button class="an-lang-pill" data-lang="fr">FR</button>
-       <button class="an-lang-pill" data-lang="ar">AR</button>
+     <div style="display:flex;justify-content:center">
+       <div class="an-lang-row" id="an-lang-row" role="tablist" aria-label="Spoken language">
+         <button class="an-lang-pill" data-lang="en" role="tab">English</button>
+         <button class="an-lang-pill" data-lang="fr" role="tab">Français</button>
+         <button class="an-lang-pill" data-lang="ar" role="tab">العربية</button>
+       </div>
      </div>
    </div>
    <div class="an-orb-wrap" id="an-orb-wrap">
@@ -5563,7 +5593,9 @@ async function openAskNova(){
  // Wire up the language picker pills (EN / FR / AR)
  function refreshLangPills(){
    overlay.querySelectorAll('.an-lang-pill').forEach(p => {
-     p.classList.toggle('active', p.dataset.lang === window.__nova.userLang);
+     const isActive = p.dataset.lang === window.__nova.userLang;
+     p.classList.toggle('active', isActive);
+     p.setAttribute('aria-selected', isActive ? 'true' : 'false');
    });
  }
  overlay.querySelectorAll('.an-lang-pill').forEach(p => {
@@ -5760,9 +5792,26 @@ async function openAskNova(){
      if (interim) setPrompt(interim, '');
      if (final) lastUserText = final;
    };
-   questionRec.onerror = (e) => { setState(null, 'Mic: ' + e.error, ''); mode = "idle"; };
+   questionRec.onerror = (e) => {
+     mode = "idle";
+     // Common errors when minimized + idle: 'no-speech', 'aborted', 'audio-capture'.
+     // For all of these, just restart if we're supposed to be in always-on mode.
+     // 'not-allowed' is a permission rejection — show a clear message and stop.
+     if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+       setState(null, 'Mic permission denied - please allow it in your browser', '');
+       window.__nova.alwaysOn = false;
+       toggle.classList.remove('on');
+       toggleState.textContent = 'OFF';
+       return;
+     }
+     // Soft errors — just keep cycling so Nova stays alive while minimized.
+     if (window.__nova.alwaysOn && !isProcessing){
+       setTimeout(() => listenForQuestion(), 350);
+     }
+   };
    questionRec.onend = () => {
      mode = "idle";
+     window.__nova.lastListenAt = Date.now();
      if (lastUserText){
        askClaude(lastUserText);
      } else if (window.__nova.alwaysOn){
@@ -5771,7 +5820,49 @@ async function openAskNova(){
        setState(null, 'Tap the orb to talk again', '');
      }
    };
-   try { questionRec.start(); } catch(_e){}
+   window.__nova.lastListenAt = Date.now();
+   try { questionRec.start(); } catch(_e){
+     // Already running OR lost mic — schedule a retry instead of dying silently.
+     if (window.__nova.alwaysOn && !isProcessing){
+       setTimeout(() => listenForQuestion(), 500);
+     }
+   }
+ }
+
+ // --- Watchdog: ensures the mic stays alive while Active is ON ---
+ // The Web Speech API silently dies in several cases (tab loses focus, mic
+ // glitch, no-speech timeout fires while we're between handlers). A periodic
+ // heartbeat that re-kicks listenForQuestion() keeps Nova listening even
+ // when the dashboard is on a different page and the overlay is minimized.
+ if (window.__nova.watchdog){
+   try { clearInterval(window.__nova.watchdog); } catch(_e){}
+ }
+ window.__nova.watchdog = setInterval(() => {
+   if (!window.__nova.overlay || !document.body.contains(window.__nova.overlay)){
+     try { clearInterval(window.__nova.watchdog); } catch(_e){}
+     window.__nova.watchdog = null;
+     return;
+   }
+   if (!window.__nova.alwaysOn) return;
+   if (isProcessing) return;
+   if (mode === 'listening' || mode === 'thinking' || mode === 'speaking') return;
+   const since = Date.now() - (window.__nova.lastListenAt || 0);
+   if (since > 1500){
+     // Mic has been idle too long — re-kick it.
+     listenForQuestion();
+   }
+ }, 1200);
+
+ // When the user comes back to the tab after switching away, re-kick the mic.
+ // Browsers throttle/suspend SR while the tab is hidden, so a fresh listen
+ // call on visibility change picks up cleanly.
+ if (!window.__nova.visListener){
+   window.__nova.visListener = () => {
+     if (document.visibilityState === 'visible' && window.__nova.alwaysOn && !isProcessing){
+       setTimeout(() => listenForQuestion(), 200);
+     }
+   };
+   document.addEventListener('visibilitychange', window.__nova.visListener);
  }
 
  // --- ACTIVE mode: continuous listening (no wake word) ---
@@ -5830,6 +5921,14 @@ async function openAskNova(){
    try { if (wakeRec) wakeRec.abort(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
    try { TTS.cancel(); } catch(_e){}
+   if (window.__nova.watchdog){
+     try { clearInterval(window.__nova.watchdog); } catch(_e){}
+     window.__nova.watchdog = null;
+   }
+   if (window.__nova.visListener){
+     try { document.removeEventListener('visibilitychange', window.__nova.visListener); } catch(_e){}
+     window.__nova.visListener = null;
+   }
    overlay.remove();
    window.__nova.overlay = null;
    window.__nova.alwaysOn = false;
