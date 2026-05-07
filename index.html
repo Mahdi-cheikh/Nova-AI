@@ -5679,6 +5679,7 @@ async function openAskNova(){
    if (!TTS || !text) return;
    try { TTS.cancel(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
+   stopActiveListening();
    mode = "speaking";
    window.__nova.isSpeaking = true;
    const onSpeakDone = () => {
@@ -5686,7 +5687,8 @@ async function openAskNova(){
      mode = "idle";
      setState(null, '', '');
      if (window.__nova.alwaysOn && !isProcessing){
-       setTimeout(() => listenForQuestion(), 400);
+       // Resume continuous listening; tiny gap lets audio resources release.
+       setTimeout(() => startActiveListening(), 400);
      }
    };
 
@@ -5920,15 +5922,20 @@ async function openAskNova(){
    if (!window.__nova.alwaysOn) return;
    if (isProcessing) return;
    if (window.__nova.isSpeaking) return;
-   // Allow watchdog to recover from stuck 'starting' mode (SR failed silently).
-   if (mode === 'listening' || mode === 'thinking' || mode === 'speaking') return;
-   if (mode === 'starting' && (Date.now() - (window.__nova.lastListenAt || 0)) < 1500) return;
    if (window.__nova.liveBadge && !window.__nova.liveBadge.classList.contains('show')){
      updateLiveBadge('listening', '');
    }
+   // If active mode is on but the continuous recognizer is missing, start it.
+   if (!window.__nova.activeRec){
+     startActiveListening();
+     return;
+   }
+   // If recognizer exists but we haven't seen any signal for 12+ seconds,
+   // it may be silently dead — restart it.
    const since = Date.now() - (window.__nova.lastListenAt || 0);
-   if (since > 1500){
-     listenForQuestion();
+   if (since > 12000){
+     stopActiveListening();
+     setTimeout(() => startActiveListening(), 200);
    }
  }, 1200);
 
@@ -5937,8 +5944,9 @@ async function openAskNova(){
  // call on visibility change picks up cleanly.
  if (!window.__nova.visListener){
    window.__nova.visListener = () => {
-     if (document.visibilityState === 'visible' && window.__nova.alwaysOn && !isProcessing){
-       setTimeout(() => listenForQuestion(), 200);
+     if (document.visibilityState === 'visible' && window.__nova.alwaysOn && !isProcessing && !window.__nova.isSpeaking){
+       // Tab came back — make sure the active recognizer is alive.
+       if (!window.__nova.activeRec) setTimeout(() => startActiveListening(), 200);
      }
    };
    document.addEventListener('visibilitychange', window.__nova.visListener);
@@ -5947,6 +5955,136 @@ async function openAskNova(){
  // --- ACTIVE mode: continuous listening (no wake word) ---
  // When the toggle is ON, the mic just stays open and listens for any speech.
  // After Nova answers, the mic reopens automatically.
+ // --- ACTIVE mode (continuous) -----------------------------------------
+ // Uses the SR API in continuous=true mode so the mic stays open
+ // indefinitely. Way more reliable than the one-shot restart loop.
+ // Final transcripts are debounced 700ms and shipped to Claude. The
+ // recognizer keeps running through the dashboard navigation, only
+ // pausing during TTS.
+ async function ensureMicPermission(){
+   if (window.__nova.micChecked) return true;
+   try {
+     // Probe the mic permission. If denied we surface a clear message
+     // instead of silently looping.
+     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+     stream.getTracks().forEach(t => t.stop());
+     window.__nova.micChecked = true;
+     return true;
+   } catch (e){
+     setState(null, 'Mic blocked - please allow microphone in browser settings', '');
+     try { toast({ title:'Mic blocked', message:'Allow microphone access in your browser settings, then toggle Active again.', urgent:true }); } catch(_e){}
+     return false;
+   }
+ }
+ function stopActiveListening(){
+   if (window.__nova.activeRec){
+     try { window.__nova.activeRec.abort(); } catch(_e){}
+     window.__nova.activeRec = null;
+   }
+   clearTimeout(window.__nova.activePauseTimer);
+   window.__nova.activeBuffer = '';
+ }
+ async function startActiveListening(){
+   if (!supportsVoice){
+     setState(null, 'Voice not supported in this browser', '');
+     return;
+   }
+   if (!window.__nova.alwaysOn) return;
+   if (window.__nova.isSpeaking) return;
+   if (isProcessing) return;
+   if (window.__nova.activeRec) return; // already listening
+   const ok = await ensureMicPermission();
+   if (!ok){
+     window.__nova.alwaysOn = false;
+     toggle.classList.remove('on');
+     toggleState.textContent = 'OFF';
+     if (window.__nova.liveBadge) window.__nova.liveBadge.classList.remove('show');
+     return;
+   }
+   const rec = new SR();
+   rec.continuous = true;
+   rec.interimResults = true;
+   rec.maxAlternatives = 1;
+   rec.lang = currentSrLocale() || 'fr-FR';
+   const localeLabel = (window.__nova.userLang || 'fr').toUpperCase();
+   window.__nova.activeRec = rec;
+   window.__nova.activeBuffer = '';
+   let lastFinalAt = 0;
+
+   const flushFinal = () => {
+     const text = (window.__nova.activeBuffer || '').trim();
+     if (text.length < 2) return;
+     window.__nova.activeBuffer = '';
+     // Stop the recognizer while we ask Claude + speak the answer; restart
+     // once TTS finishes (handled inside speak()/onSpeakDone).
+     stopActiveListening();
+     askClaude(text);
+   };
+
+   rec.onstart = () => {
+     mode = 'listening';
+     window.__nova.lastListenAt = Date.now();
+     setState('listening', `Listening (${localeLabel}) - continuous`, 'live');
+   };
+   rec.onaudiostart = () => { window.__nova.lastListenAt = Date.now(); };
+   rec.onspeechstart = () => { flashHeardBadge(); window.__nova.lastListenAt = Date.now(); };
+   rec.onresult = (e) => {
+     let interim = '';
+     for (let i = e.resultIndex; i < e.results.length; i++){
+       const t = e.results[i][0].transcript;
+       if (e.results[i].isFinal){
+         window.__nova.activeBuffer = ((window.__nova.activeBuffer||'') + ' ' + t).trim();
+         lastFinalAt = Date.now();
+       } else {
+         interim += t;
+       }
+     }
+     window.__nova.lastListenAt = Date.now();
+     flashHeardBadge();
+     if (overlay.classList.contains('minimized')){
+       overlay.classList.add('speech-detected');
+       clearTimeout(window.__nova.pulseTimer);
+       window.__nova.pulseTimer = setTimeout(() => overlay.classList.remove('speech-detected'), 1200);
+     }
+     setPrompt(interim || window.__nova.activeBuffer || '', '');
+     // Debounce: 700ms after the last final chunk, ship to Claude.
+     if (window.__nova.activeBuffer){
+       clearTimeout(window.__nova.activePauseTimer);
+       window.__nova.activePauseTimer = setTimeout(flushFinal, 700);
+     }
+   };
+   rec.onerror = (e) => {
+     if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+       setState(null, 'Mic permission denied - allow it in your browser', '');
+       window.__nova.alwaysOn = false;
+       toggle.classList.remove('on');
+       toggleState.textContent = 'OFF';
+       if (window.__nova.liveBadge) window.__nova.liveBadge.classList.remove('show');
+       window.__nova.activeRec = null;
+       return;
+     }
+     // no-speech, aborted, audio-capture, network — soft errors. Log and
+     // restart shortly. continuous=true means these come less often.
+     console.warn('[Nova active SR error]', e.error);
+   };
+   rec.onend = () => {
+     window.__nova.activeRec = null;
+     mode = 'idle';
+     // continuous=true means it should only end when we abort or browser
+     // kills it. If alwaysOn and not speaking, restart immediately.
+     if (window.__nova.alwaysOn && !window.__nova.isSpeaking && !isProcessing){
+       setTimeout(() => startActiveListening(), 300);
+     }
+   };
+   try {
+     rec.start();
+   } catch(e){
+     // Already running or transient — retry shortly
+     window.__nova.activeRec = null;
+     setTimeout(() => startActiveListening(), 500);
+   }
+ }
+
  function startWakeListening(){
    if (!supportsVoice){
      setState(null, 'Voice not supported in this browser', '');
@@ -5956,12 +6094,7 @@ async function openAskNova(){
      setState(null, 'Tap the orb to talk', '');
      return;
    }
-   if (isProcessing){
-     setTimeout(() => startWakeListening(), 400);
-     return;
-   }
-   // In ACTIVE mode we just keep listenForQuestion() running in a loop.
-   listenForQuestion();
+   startActiveListening();
  }
 
  orbWrap.onclick = () => {
@@ -5974,16 +6107,19 @@ async function openAskNova(){
    listenForQuestion();
  };
 
- toggle.onclick = () => {
+ toggle.onclick = async () => {
    window.__nova.alwaysOn = !window.__nova.alwaysOn;
    toggle.classList.toggle('on', window.__nova.alwaysOn);
    toggleState.textContent = window.__nova.alwaysOn ? 'ON' : 'OFF';
    if (window.__nova.alwaysOn){
      updateLiveBadge('listening', '');
-     listenForQuestion();
+     // Stop one-shot recognizer if any, then start the continuous one.
+     try { if (questionRec) questionRec.abort(); } catch(_e){}
+     await startActiveListening();
    } else {
      try { if (wakeRec) wakeRec.stop(); } catch(_e){}
      try { if (questionRec) questionRec.abort(); } catch(_e){}
+     stopActiveListening();
      try { TTS.cancel(); } catch(_e){}
      window.__nova.isSpeaking = false;
      mode = "idle";
@@ -6001,6 +6137,7 @@ async function openAskNova(){
  const close = () => {
    try { if (wakeRec) wakeRec.abort(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
+   stopActiveListening();
    try { TTS.cancel(); } catch(_e){}
    if (window.__nova.watchdog){
      try { clearInterval(window.__nova.watchdog); } catch(_e){}
