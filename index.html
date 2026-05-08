@@ -520,6 +520,25 @@
  .nv-tg.nv-tg-sm .nv-tg-slider::before { height:16px; width:16px; }
  .nv-tg.nv-tg-sm input:checked + .nv-tg-slider::before { left:21px; }
 
+
+ /* Observation — pro polish */
+ .obs-spark { width:100%; height:48px; display:block; margin-top:8px; border-radius:6px; background:rgba(255,255,255,0.03); }
+ .obs-summary { background:linear-gradient(180deg, rgba(99,102,241,0.06), rgba(34,211,238,0.04)); border:1px solid var(--border); border-radius:14px; padding:20px 22px; margin-top:18px; }
+ .obs-summary h4 { margin:0 0 6px; font-size:18px; font-weight:700; }
+ .obs-summary .lede { font-size:13px; color:var(--text-dim); margin-bottom:16px; }
+ .obs-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:18px; }
+ .obs-stat { background:var(--card-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+ .obs-stat .lab { font-size:10.5px; letter-spacing:0.5px; color:var(--text-dim); text-transform:uppercase; font-weight:600; margin-bottom:4px; }
+ .obs-stat .val { font-size:22px; font-weight:700; color:var(--text); }
+ .obs-stat .sub { font-size:12px; color:var(--text-dim); margin-top:2px; }
+ .obs-conc { font-size:14px; line-height:1.55; color:var(--text); white-space:pre-line; }
+ .obs-conc strong { color:var(--primary-2); font-weight:600; }
+ .obs-posture-bar { display:flex; height:10px; border-radius:5px; overflow:hidden; margin-top:8px; background:rgba(255,255,255,0.05); border:1px solid var(--border); }
+ .obs-posture-bar > span { transition:flex-grow .3s; }
+ .obs-posture-legend { display:flex; flex-wrap:wrap; gap:8px; font-size:11.5px; margin-top:6px; }
+ .obs-posture-legend > span { display:inline-flex; align-items:center; gap:5px; color:var(--text-dim); }
+ .obs-posture-legend > span::before { content:''; width:8px; height:8px; border-radius:2px; background:var(--c, var(--primary)); }
+
 </style>
 </head>
 <body>
@@ -6755,6 +6774,7 @@ function renderObservation(){
              <label>Agitation</label>
              <div class="obs-bar"><div class="obs-bar-fill" id="obs-agitation-fill" style="width:0%"></div></div>
              <div class="obs-bar-val"><span id="obs-agitation-val">0</span><span id="obs-agitation-label">calm</span></div>
+             <canvas class="obs-spark" id="obs-spark" width="320" height="48"></canvas>
            </div>
            <div class="obs-metric">
              <label>Stillness duration</label>
@@ -6770,6 +6790,7 @@ function renderObservation(){
            </div>
          </div>
        </div>
+       <div id="obs-summary-container"></div>
      </div>
    </div>
  </div>`;
@@ -6926,6 +6947,7 @@ async function startObsSession(){
    startTime: Date.now(),
    lastLandmarks: null,
    movementHistory: [],
+   agitationSpark: [],
    lastSignificantMovement: Date.now(),
    lastMinorMovement: Date.now(),
    events: [],
@@ -6933,6 +6955,15 @@ async function startObsSession(){
    currentPostureSince: Date.now(),
    running: true,
    tickInterval: null,
+   agg: {
+     samples: 0,
+     agitationSum: 0,
+     agitationPeak: 0,
+     postureMs: {},
+     stillnessMs: 0,
+     postureChanges: 0,
+     spikes: [],
+   }
  };
 
  logObsEvent('Session started');
@@ -7031,7 +7062,7 @@ function analyzeObsPose(lm){
  if (posture !== OBS_STATE.currentPosture){
    const heldFor = Date.now() - OBS_STATE.currentPostureSince;
    if (OBS_STATE.currentPosture && heldFor > 2000){
-     // log only when previous posture was held a meaningful amount of time
+     OBS_STATE.agg.postureChanges = (OBS_STATE.agg.postureChanges || 0) + 1;
    }
    OBS_STATE.currentPosture = posture;
    OBS_STATE.currentPostureSince = Date.now();
@@ -7043,7 +7074,6 @@ function analyzeObsPose(lm){
 
 function updateObsUI(){
  if (!OBS_STATE) return;
- // Agitation
  const avg = OBS_STATE.movementHistory.length
    ? OBS_STATE.movementHistory.reduce((a,b) => a+b, 0) / OBS_STATE.movementHistory.length
    : 0;
@@ -7056,10 +7086,21 @@ function updateObsUI(){
  if (lbl){
    lbl.textContent = agitation < 15 ? 'calm' : agitation < 35 ? 'normal' : agitation < 60 ? 'restless' : agitation < 80 ? 'agitated' : 'highly agitated';
  }
- // Posture
+ OBS_STATE.agitationSpark.push(agitation);
+ if (OBS_STATE.agitationSpark.length > 240) OBS_STATE.agitationSpark.shift();
+ drawObsSpark();
+ const a = OBS_STATE.agg;
+ a.samples++;
+ a.agitationSum += agitation;
+ if (agitation > a.agitationPeak) a.agitationPeak = agitation;
+ const dt = 250;
+ if (OBS_STATE.currentPosture){
+   a.postureMs[OBS_STATE.currentPosture] = (a.postureMs[OBS_STATE.currentPosture]||0) + dt;
+ }
+ const stillNow = (Date.now() - OBS_STATE.lastSignificantMovement) > 1500;
+ if (stillNow) a.stillnessMs += dt;
  const pe = document.getElementById('obs-posture');
  if (pe) pe.textContent = OBS_STATE.currentPosture || '—';
- // Stillness
  const stillSec = Math.floor((Date.now() - OBS_STATE.lastSignificantMovement) / 1000);
  const se = document.getElementById('obs-stillness');
  if (se){
@@ -7069,19 +7110,147 @@ function updateObsUI(){
      se.textContent = stillSec + 's';
    }
  }
- // Duration
  const elapsed = Math.floor((Date.now() - OBS_STATE.startTime) / 1000);
  const min = Math.floor(elapsed / 60);
  const sec = elapsed % 60;
  const de = document.getElementById('obs-duration');
  if (de) de.textContent = min + ':' + String(sec).padStart(2, '0');
-
- // Auto-log notable events
- if (stillSec === 30 && !OBS_STATE._loggedStill30){ OBS_STATE._loggedStill30 = true; logObsEvent('Patient still for 30s'); }
- if (stillSec === 120 && !OBS_STATE._loggedStill120){ OBS_STATE._loggedStill120 = true; logObsEvent('Patient still for 2 minutes'); }
- if (agitation > 70 && !OBS_STATE._loggedAgitation){ OBS_STATE._loggedAgitation = true; logObsEvent('High agitation detected'); setTimeout(() => OBS_STATE && (OBS_STATE._loggedAgitation = false), 30000); }
- // Reset stillness flags when patient moves again
+ if (stillSec === 30 && !OBS_STATE._loggedStill30){ OBS_STATE._loggedStill30 = true; logObsEvent('Stillness sustained ~30 seconds'); }
+ if (stillSec === 120 && !OBS_STATE._loggedStill120){ OBS_STATE._loggedStill120 = true; logObsEvent('Prolonged stillness — 2 minutes'); }
+ if (agitation > 70 && !OBS_STATE._loggedAgitation){
+   OBS_STATE._loggedAgitation = true;
+   logObsEvent('High agitation burst detected (' + agitation + ')');
+   OBS_STATE.agg.spikes.push({ ts: Date.now() - OBS_STATE.startTime, peak: agitation });
+   setTimeout(() => OBS_STATE && (OBS_STATE._loggedAgitation = false), 30000);
+ }
  if (stillSec < 5){ OBS_STATE._loggedStill30 = false; OBS_STATE._loggedStill120 = false; }
+}
+
+function drawObsSpark(){
+ const cv = document.getElementById('obs-spark');
+ if (!cv || !OBS_STATE) return;
+ const ctx = cv.getContext('2d');
+ const w = cv.width, h = cv.height;
+ ctx.clearRect(0, 0, w, h);
+ const data = OBS_STATE.agitationSpark;
+ if (data.length < 2) return;
+ const grad = ctx.createLinearGradient(0, 0, 0, h);
+ grad.addColorStop(0, 'rgba(167,139,250,0.55)');
+ grad.addColorStop(1, 'rgba(34,211,238,0.05)');
+ ctx.fillStyle = grad;
+ ctx.beginPath();
+ ctx.moveTo(0, h);
+ for (let i = 0; i < data.length; i++){
+   const x = (i / (data.length - 1)) * w;
+   const y = h - (data[i] / 100) * (h - 4) - 2;
+   ctx.lineTo(x, y);
+ }
+ ctx.lineTo(w, h);
+ ctx.closePath();
+ ctx.fill();
+ ctx.strokeStyle = 'rgba(167,139,250,0.95)';
+ ctx.lineWidth = 1.5;
+ ctx.beginPath();
+ for (let i = 0; i < data.length; i++){
+   const x = (i / (data.length - 1)) * w;
+   const y = h - (data[i] / 100) * (h - 4) - 2;
+   if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+ }
+ ctx.stroke();
+}
+
+function buildObsSummary(){
+ if (!OBS_STATE) return null;
+ const a = OBS_STATE.agg;
+ const totalMs = Math.max(1, Date.now() - OBS_STATE.startTime);
+ const totalSec = Math.floor(totalMs / 1000);
+ const avgAgitation = a.samples ? Math.round(a.agitationSum / a.samples) : 0;
+ const stillPct = Math.round((a.stillnessMs / totalMs) * 100);
+ const postureRanked = Object.entries(a.postureMs).sort((x,y)=>y[1]-x[1]);
+ const dominantPosture = postureRanked[0] ? postureRanked[0][0] : '—';
+ const dominantPosturePct = postureRanked[0] ? Math.round((postureRanked[0][1] / totalMs) * 100) : 0;
+ const lines = [];
+ if (avgAgitation < 18){
+   lines.push('Le patient est resté **calme** et stable pendant la majeure partie de la séance.');
+ } else if (avgAgitation < 38){
+   lines.push("Le niveau d'activité moteur est resté **dans la normale**, avec quelques mouvements ponctuels attendus.");
+ } else if (avgAgitation < 60){
+   lines.push("Le patient a montré un niveau d'activité **légèrement élevé** — léger inconfort ou nervosité possible.");
+ } else {
+   lines.push("Le patient a présenté une **agitation marquée**. Envisager d'évaluer la douleur ou l'anxiété.");
+ }
+ if (dominantPosturePct >= 50){
+   if (dominantPosture === 'Upright'){
+     lines.push('La posture **droite** était majoritaire (' + dominantPosturePct + '% du temps), suggérant attention et coopération.');
+   } else if (dominantPosture && dominantPosture.indexOf('forward') >= 0){
+     lines.push("Posture en **inclinaison vers l'avant** dominante (" + dominantPosturePct + "%) — engagement possible, ou douleur abdominale/dorsale à explorer.");
+   } else if (dominantPosture && dominantPosture.indexOf('Slouched') >= 0){
+     lines.push('Posture **avachie** observée pendant ' + dominantPosturePct + '% — fatigue, lassitude ou inconfort lombaire à considérer.');
+   } else if (dominantPosture && dominantPosture.indexOf('Reclined') >= 0){
+     lines.push('Patient majoritairement **incliné en arrière** (' + dominantPosturePct + '%) — détente ou inconfort à clarifier.');
+   } else {
+     lines.push('Posture dominante : **' + dominantPosture + '** (' + dominantPosturePct + '%).');
+   }
+ }
+ if (stillPct >= 70){
+   lines.push("Immobilité prolongée (" + stillPct + "% de la séance). Vérifier si liée à l'écoute attentive ou à un état de retrait.");
+ } else if (stillPct >= 40){
+   lines.push("Mélange équilibré entre repos et mouvements (" + stillPct + "% du temps en immobilité).");
+ } else {
+   lines.push("Mouvements fréquents pendant la séance (" + (100 - stillPct) + "% en activité).");
+ }
+ if (a.spikes.length >= 2){
+   const at = a.spikes.map(s => Math.floor(s.ts / 60000) + ':' + String(Math.floor((s.ts%60000)/1000)).padStart(2,'0')).join(', ');
+   lines.push(a.spikes.length + " pics d'agitation enregistrés (à " + at + "). Croiser avec les questions posées à ces moments.");
+ } else if (a.spikes.length === 1){
+   const sk = a.spikes[0];
+   const t = Math.floor(sk.ts / 60000) + ':' + String(Math.floor((sk.ts%60000)/1000)).padStart(2,'0');
+   lines.push("Un pic d'agitation isolé à **" + t + "** (intensité " + sk.peak + "/100). Noter le contexte de ce moment.");
+ }
+ if (a.postureChanges >= 5){
+   lines.push('**' + a.postureChanges + ' changements de posture** sur la séance — repositionnement fréquent, possible inconfort.');
+ }
+ lines.push("— Ces observations sont **un soutien**, pas un diagnostic. Croiser systématiquement avec l'examen clinique.");
+ return {
+   totalSec, avgAgitation, peakAgitation: a.agitationPeak, stillPct,
+   dominantPosture, dominantPosturePct, postureRanked, postureChanges: a.postureChanges,
+   spikes: a.spikes, conclusions: lines.join('\n')
+ };
+}
+
+function renderObsSummaryPanel(){
+ const s = buildObsSummary();
+ const host = document.getElementById('obs-summary-container');
+ if (!s || !host) return;
+ const totalMin = Math.floor(s.totalSec / 60), totalSec = s.totalSec % 60;
+ const postureColors = { 'Upright':'#22c55e', 'Slouched / leaning forward':'#f59e0b', 'Head forward':'#a78bfa', 'Head back':'#22d3ee', 'Reclined':'#94a3b8', '—':'#475569' };
+ const totalMs = Math.max(1, Date.now() - OBS_STATE.startTime);
+ const top = s.postureRanked.slice(0, 5);
+ const barHtml = top.map(([name, ms]) => {
+   const pct = Math.round((ms / totalMs) * 100);
+   const c = postureColors[name] || '#6366f1';
+   return '<span style="flex:' + pct + ';background:' + c + '" title="' + name + ': ' + pct + '%"></span>';
+ }).join('');
+ const legendHtml = top.map(([name, ms]) => {
+   const pct = Math.round((ms / totalMs) * 100);
+   const c = postureColors[name] || '#6366f1';
+   return '<span style="--c:' + c + '">' + escapeHtml(name) + ' · ' + pct + '%</span>';
+ }).join('');
+ const conclusionHtml = escapeHtml(s.conclusions).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+ host.innerHTML = '<div class="obs-summary">' +
+   '<h4>Synthèse clinique</h4>' +
+   '<div class="lede">Observation terminée · ' + totalMin + ':' + String(totalSec).padStart(2,'0') + ' · ' + OBS_STATE.events.length + ' événements consignés</div>' +
+   '<div class="obs-summary-grid">' +
+     '<div class="obs-stat"><div class="lab">Agitation moyenne</div><div class="val">' + s.avgAgitation + '<span style="font-size:13px;font-weight:500;color:var(--text-dim)"> / 100</span></div><div class="sub">Pic : ' + s.peakAgitation + '</div></div>' +
+     '<div class="obs-stat"><div class="lab">Immobilité</div><div class="val">' + s.stillPct + '%</div><div class="sub">du temps de séance</div></div>' +
+     '<div class="obs-stat"><div class="lab">Posture dominante</div><div class="val" style="font-size:16px">' + escapeHtml(s.dominantPosture || '—') + '</div><div class="sub">' + s.dominantPosturePct + '% du temps</div></div>' +
+     "<div class=\"obs-stat\"><div class=\"lab\">Pics d'agitation</div><div class=\"val\">" + s.spikes.length + "</div><div class=\"sub\">épisodes &gt; 70</div></div>" +
+   '</div>' +
+   (top.length ? '<div style="font-size:11px;letter-spacing:0.5px;color:var(--text-dim);text-transform:uppercase;font-weight:600;margin-bottom:4px">Distribution des postures</div><div class="obs-posture-bar">' + barHtml + '</div><div class="obs-posture-legend">' + legendHtml + '</div>' : '') +
+   '<div style="margin-top:18px;font-size:11px;letter-spacing:0.5px;color:var(--text-dim);text-transform:uppercase;font-weight:600;margin-bottom:8px">Conclusions</div>' +
+   '<div class="obs-conc">' + conclusionHtml + '</div>' +
+ '</div>';
+ try { host.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(_e){}
 }
 
 function logObsEvent(label){
@@ -7114,7 +7283,8 @@ function stopObsSession(){
    try { OBS_STATE.poseLandmarker.close(); } catch(_e){}
  }
  logObsEvent('Session ended');
- toast({ title:'Observation stopped', message:'You can save the report or discard this session.', type:'info' });
+ try { renderObsSummaryPanel(); } catch(e){ console.warn('[obs summary]', e); }
+ toast({ title:'Observation terminée', message:'Synthèse clinique générée — sauvegardez le rapport ou jetez la séance.', type:'info' });
 }
 
 function saveObsReport(){
@@ -7125,12 +7295,27 @@ function saveObsReport(){
    const m = Math.floor(e.ts / 60000), s = Math.floor((e.ts % 60000) / 1000);
    return '[' + m + ':' + String(s).padStart(2,'0') + '] ' + e.label;
  }).join('\n');
+ const summary = buildObsSummary() || {};
+ const postureLines = (summary.postureRanked || []).slice(0, 5).map(([name, ms]) => {
+   const pct = Math.round((ms / Math.max(1, Date.now() - OBS_STATE.startTime)) * 100);
+   return '  - ' + name + ': ' + pct + '%';
+ }).join('\n');
+ const cleanConc = (summary.conclusions || '').replace(/\*\*(.+?)\*\*/g, '$1');
+ const summaryBlock = '\n=== CLINICAL SUMMARY ===\n' +
+   'Average agitation: ' + (summary.avgAgitation || 0) + ' / 100 (peak ' + (summary.peakAgitation || 0) + ')\n' +
+   'Stillness: ' + (summary.stillPct || 0) + '% of session\n' +
+   'Dominant posture: ' + (summary.dominantPosture || '—') + ' (' + (summary.dominantPosturePct || 0) + '%)\n' +
+   'Posture changes: ' + (summary.postureChanges || 0) + '\n' +
+   'High-agitation spikes: ' + ((summary.spikes || []).length) + '\n\n' +
+   'POSTURE DISTRIBUTION:\n' + (postureLines || '  (no posture detected)') + '\n\n' +
+   'CONCLUSIONS:\n' + cleanConc + '\n';
  const report = 'PATIENT OBSERVATION REPORT\n' +
    'Generated: ' + new Date().toLocaleString() + '\n' +
    'Duration: ' + min + ':' + String(sec).padStart(2,'0') + '\n' +
    'Doctor: ' + (SESSION?.user?.email || 'unknown') + '\n\n' +
    'NOTE: This report is AI-assisted observational support, not a diagnosis.\n' +
-   'Patient consented to body-language observation. No video was recorded or stored.\n\n' +
+   'Patient consented to body-language observation. No video was recorded or stored.\n' +
+   summaryBlock + '\n' +
    'EVENT LOG:\n' + (events || '(no events logged)') + '\n';
  const blob = new Blob([report], { type:'text/plain' });
  const url = URL.createObjectURL(blob);
