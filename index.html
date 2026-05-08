@@ -2217,7 +2217,6 @@ async function renderDashboard(route){
  ${biz.voice_feature_enabled ? navItem('voice','Voice avatar','◔') : ''}
  ${navItem('messages','Messages','')}
  ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
- ${navItem('test','Test assistant','▶')}
  ${navItem('activity','Activity','≡')}
  ${navItem('settings','Settings','⚙')}
  <div class="sidebar-foot">
@@ -2244,7 +2243,7 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',observation:'Patient observation',vehicles:'Vehicles',vehicle:'Vehicle profile',birthdays:'Birthdays',voice:'Voice avatar',messages:'Messages',notifications:'Notifications',test:'Test the assistant',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',observation:'Patient observation',vehicles:'Vehicles',vehicle:'Vehicle profile',birthdays:'Birthdays',voice:'Voice avatar',messages:'Messages',notifications:'Notifications',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
@@ -2264,7 +2263,6 @@ function pageSub(s){return ({
  vehicle:'Full service log + photo timeline for this vehicle',
  messages:'WhatsApp conversation history',
  notifications:'Real-time alerts triggered by AI actions',
- test:'Send a real message to verify your AI pipeline works end-to-end',
  activity:'Audit trail of every system event',
  settings:'Subscription, integrations, theme, business profile'
 })[s]||''}
@@ -2331,7 +2329,6 @@ async function bindDashboard(route){
  if (sub==='services') await bindServices();
  if (sub==='packages') await bindPackages();
  if (sub==='notifications') await bindNotifications();
- if (sub==='test') await bindTest();
  if (sub==='settings') await bindSettings();
 }
 
@@ -2390,7 +2387,6 @@ async function renderPage(sub){
  }
  if (sub==='messages') return await renderMessages();
  if (sub==='notifications') return await renderNotifications();
- if (sub==='test') return renderTest();
  if (sub==='activity') return await renderActivity();
  if (sub==='settings') return renderSettings();
  return await renderOverview();
@@ -5265,16 +5261,125 @@ function renderSettings(){
  </div>
  </div>
 
- <div class="panel">
- <div class="panel-head"><h3>Supabase connection</h3></div>
+ <div class="panel" style="grid-column:1/-1">
+ <div class="panel-head"><h3>Business profile</h3></div>
  <div class="panel-body">
- <div style="font-size:13px;color:var(--text-dim)">URL</div>
- <div class="code" style="display:block;margin:4px 0 12px;word-break:break-all">${escapeHtml(CFG.supabaseUrl)}</div>
+ <div class="row" style="gap:12px;flex-wrap:wrap">
+   <div class="field grow" style="min-width:240px"><label>Business name</label><input id="set-name" value="${escapeHtml(biz.name||'')}" /></div>
+   <div class="field" style="width:200px"><label>WhatsApp phone</label><input id="set-phone" value="${escapeHtml(biz.phone||'')}" /></div>
+   <div class="field" style="width:240px"><label>Contact email</label><input id="set-email" value="${escapeHtml(biz.email||'')}" /></div>
+ </div>
+ <div class="field"><label>Description (shown to patients)</label><textarea id="set-desc" rows="2">${escapeHtml(biz.description||'')}</textarea></div>
+ <div class="field"><label>Address</label><input id="set-address" value="${escapeHtml(novaSetting('address',''))}" placeholder="Avenue de la République, Kairouan" /></div>
+ <button class="btn btn-primary btn-sm" id="save-profile" style="margin-top:6px">Save profile</button>
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Working hours</h3></div>
+ <div class="panel-body">
+ <table style="width:100%;font-size:13px;border-collapse:collapse">
+   <thead><tr style="text-align:left;color:var(--text-dim)"><th style="padding:6px 0">Day</th><th>Open</th><th>From</th><th>To</th></tr></thead>
+   <tbody id="hours-body">
+   ${['mon','tue','wed','thu','fri','sat','sun'].map(d => {
+     const dayLabels = {mon:'Lundi',tue:'Mardi',wed:'Mercredi',thu:'Jeudi',fri:'Vendredi',sat:'Samedi',sun:'Dimanche'};
+     const h = novaSetting('hours_'+d, d==='sun' ? {open:false,from:'09:00',to:'13:00'} : {open:true,from:'08:30',to:'17:30'});
+     return `<tr data-day="${d}">
+       <td style="padding:6px 0;font-weight:600">${dayLabels[d]}</td>
+       <td><input type="checkbox" data-h-open ${h.open?'checked':''} /></td>
+       <td><input type="time" data-h-from value="${h.from}" style="width:110px" /></td>
+       <td><input type="time" data-h-to   value="${h.to}"   style="width:110px" /></td>
+     </tr>`;
+   }).join('')}
+   </tbody>
+ </table>
+ <button class="btn btn-primary btn-sm" id="save-hours" style="margin-top:10px">Save hours</button>
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>AI Receptionist</h3></div>
+ <div class="panel-body">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+   <div>
+     <div style="font-weight:600;font-size:14px">Auto-reply on WhatsApp</div>
+     <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Nova answers incoming messages, books, reschedules and triages.</div>
+   </div>
+   <label class="switch" style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0">
+     <input type="checkbox" id="ai-toggle" ${biz.ai_receptionist_enabled?'checked':''} style="opacity:0;width:0;height:0">
+     <span style="position:absolute;cursor:pointer;inset:0;background:${biz.ai_receptionist_enabled?'var(--accent)':'rgba(156,163,175,0.4)'};border-radius:24px;transition:.2s">
+       <span style="position:absolute;height:18px;width:18px;left:${biz.ai_receptionist_enabled?'23px':'3px'};top:3px;background:white;border-radius:50%;transition:.2s"></span>
+     </span>
+   </label>
+ </div>
+ <div class="field"><label>Default reply language</label>
+   <select id="ai-lang">
+     ${['auto','fr','ar','en'].map(l => `<option value="${l}" ${novaSetting('default_lang','auto')===l?'selected':''}>${{auto:'Auto-detect',fr:'Français',ar:'العربية (darija)',en:'English'}[l]}</option>`).join('')}
+   </select>
+ </div>
+ <div class="field"><label>Custom greeting (first message Nova sends new patients)</label><textarea id="ai-greeting" rows="2" placeholder="Bonjour, je suis Nova, l'assistante du Dr Mehdi. Comment puis-je vous aider ?">${escapeHtml(novaSetting('greeting',''))}</textarea></div>
+ <button class="btn btn-primary btn-sm" id="save-ai">Save AI settings</button>
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Reminders & follow-up</h3></div>
+ <div class="panel-body">
+ ${[
+   {k:'reminder_24h', label:'Rappel 24h avant', desc:'Envoyer un rappel WhatsApp 24h avant le RDV.', def:true},
+   {k:'reminder_1h',  label:'Rappel 1h avant',  desc:'Petit rappel 1h avant — confirmer la présence.', def:true},
+   {k:'thanks_after', label:'Message de remerciement', desc:'Court message après chaque consultation terminée.', def:false},
+   {k:'review_prompt',label:'Demande d''avis', desc:'24h après la consultation, demander un avis.', def:true},
+ ].map(r => `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+   <div>
+     <div style="font-weight:600;font-size:13.5px">${r.label}</div>
+     <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${r.desc}</div>
+   </div>
+   <label class="switch" style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+     <input type="checkbox" data-rem="${r.k}" ${novaSetting(r.k,r.def)?'checked':''} style="opacity:0;width:0;height:0">
+     <span style="position:absolute;cursor:pointer;inset:0;background:${novaSetting(r.k,r.def)?'var(--accent)':'rgba(156,163,175,0.4)'};border-radius:22px;transition:.2s">
+       <span style="position:absolute;height:16px;width:16px;left:${novaSetting(r.k,r.def)?'21px':'3px'};top:3px;background:white;border-radius:50%;transition:.2s"></span>
+     </span>
+   </label>
+ </div>`).join('')}
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Politique d'annulation</h3></div>
+ <div class="panel-body">
+ <div class="field"><label>Délai d'annulation gratuit (heures avant le RDV)</label><input id="set-cancel-h" type="number" value="${novaSetting('cancel_window_h',24)}" min="0" max="168" style="width:120px" /></div>
+ <div class="field"><label>Message envoyé en cas d'annulation tardive</label><textarea id="set-cancel-msg" rows="2">${escapeHtml(novaSetting('cancel_msg','Désolé, l''annulation moins de 24h avant le RDV n''est plus possible. Vous pouvez reprogrammer à un autre créneau.'))}</textarea></div>
+ <button class="btn btn-primary btn-sm" id="save-cancel">Save policy</button>
+ </div>
+ </div>
+
+ <div class="panel" style="grid-column:1/-1">
+ <div class="panel-head"><h3>Danger zone</h3></div>
+ <div class="panel-body">
+ <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px">Disconnect this dashboard from Supabase and return to setup. Your data stays safe in the database.</div>
  <button class="btn btn-danger btn-sm" id="reset-cfg">Disconnect & re-configure</button>
  </div>
  </div>
  </div>`;
 }
+// Tiny helper: per-business settings stored in localStorage so they persist
+// across reloads without a schema migration. Falls back to the default.
+function novaSetting(key, def){
+ try {
+   const all = JSON.parse(localStorage.getItem('nova.settings.'+SESSION.business.id) || '{}');
+   return key in all ? all[key] : def;
+ } catch(_e){ return def; }
+}
+function novaSettingSet(key, val){
+ try {
+   const k = 'nova.settings.'+SESSION.business.id;
+   const all = JSON.parse(localStorage.getItem(k) || '{}');
+   all[key] = val;
+   localStorage.setItem(k, JSON.stringify(all));
+ } catch(_e){}
+}
+
 function bindSettings(){
  $$('[data-plan]').forEach(p=>p.onclick = async ()=>{
  const plan = p.dataset.plan;
@@ -5314,6 +5419,70 @@ function bindSettings(){
  message: '+216 29 774 784 sent: "I have severe chest pain" — auto-tagged URGENT.',
  type: 'urgent', urgent: true,
  });
+
+ // Profile save
+ const saveProfile = $('#save-profile');
+ if (saveProfile) saveProfile.onclick = async ()=>{
+   saveProfile.disabled = true;
+   const name = $('#set-name').value.trim();
+   const phone = $('#set-phone').value.trim();
+   const email = $('#set-email').value.trim();
+   const desc = $('#set-desc').value.trim();
+   const address = $('#set-address').value.trim();
+   const { error } = await sb.from('businesses').update({ name, phone, email, description: desc }).eq('id', SESSION.business.id);
+   saveProfile.disabled = false;
+   if (error){ toast({title:'Save failed', message:error.message, urgent:true}); return; }
+   novaSettingSet('address', address);
+   SESSION.business.name = name; SESSION.business.phone = phone; SESSION.business.email = email; SESSION.business.description = desc;
+   toast({title:'Profile saved', message:'Business profile updated.', type:'booking'});
+ };
+
+ // Working hours save
+ const saveHours = $('#save-hours');
+ if (saveHours) saveHours.onclick = ()=>{
+   document.querySelectorAll('#hours-body tr[data-day]').forEach(tr => {
+     const day = tr.dataset.day;
+     const open = tr.querySelector('[data-h-open]').checked;
+     const from = tr.querySelector('[data-h-from]').value;
+     const to   = tr.querySelector('[data-h-to]').value;
+     novaSettingSet('hours_'+day, { open, from, to });
+   });
+   toast({title:'Hours saved', message:'Working hours updated.', type:'booking'});
+ };
+
+ // AI settings
+ const aiToggle = $('#ai-toggle');
+ if (aiToggle) aiToggle.onchange = async ()=>{
+   const next = aiToggle.checked;
+   const { error } = await sb.from('businesses').update({ ai_receptionist_enabled: next }).eq('id', SESSION.business.id);
+   if (error){ toast({title:'Failed', message:error.message, urgent:true}); aiToggle.checked = !next; return; }
+   SESSION.business.ai_receptionist_enabled = next;
+   toast({ title: next?'AI ON':'AI paused', message: next?'Nova will reply automatically.':'New messages will queue for manual reply.', type: next?'booking':'info' });
+ };
+ const saveAI = $('#save-ai');
+ if (saveAI) saveAI.onclick = ()=>{
+   novaSettingSet('default_lang', $('#ai-lang').value);
+   novaSettingSet('greeting', $('#ai-greeting').value.trim());
+   toast({title:'AI settings saved', message:'Language and greeting updated.', type:'booking'});
+ };
+
+ // Reminder toggles — save on each change
+ document.querySelectorAll('[data-rem]').forEach(cb => {
+   cb.onchange = ()=>{
+     novaSettingSet(cb.dataset.rem, cb.checked);
+     toast({title:'Saved', message:cb.dataset.rem+': '+(cb.checked?'on':'off'), type:'info'});
+   };
+ });
+
+ // Cancellation policy
+ const saveCancel = $('#save-cancel');
+ if (saveCancel) saveCancel.onclick = ()=>{
+   const h = parseInt($('#set-cancel-h').value, 10);
+   if (isNaN(h) || h < 0) { toast({title:'Invalid', message:'Délai must be a positive number', urgent:true}); return; }
+   novaSettingSet('cancel_window_h', h);
+   novaSettingSet('cancel_msg', $('#set-cancel-msg').value.trim());
+   toast({title:'Policy saved', message:'Cancellation policy updated.', type:'booking'});
+ };
 }
 
 /* ---------- PROFILE PAGE ---------- */
