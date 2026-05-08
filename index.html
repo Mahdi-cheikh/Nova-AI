@@ -507,6 +507,19 @@
  .obs-cam-advanced summary:hover { color:var(--text); }
  .obs-cam-advanced .obs-cam-select { margin-top:8px; width:100%; box-sizing:border-box; }
 
+
+ /* Live-reactive toggle — visual state is driven by :checked, no JS re-render */
+ .nv-tg { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; cursor:pointer; }
+ .nv-tg input { opacity:0; width:0; height:0; position:absolute; }
+ .nv-tg .nv-tg-slider { position:absolute; inset:0; background:rgba(156,163,175,0.4); border-radius:24px; transition:background .2s ease; }
+ .nv-tg .nv-tg-slider::before { content:''; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:left .2s ease, transform .2s ease; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+ .nv-tg input:checked + .nv-tg-slider { background:var(--accent); }
+ .nv-tg input:checked + .nv-tg-slider::before { left:23px; }
+ /* Compact variant for inline-list toggles */
+ .nv-tg.nv-tg-sm { width:40px; height:22px; }
+ .nv-tg.nv-tg-sm .nv-tg-slider::before { height:16px; width:16px; }
+ .nv-tg.nv-tg-sm input:checked + .nv-tg-slider::before { left:21px; }
+
 </style>
 </head>
 <body>
@@ -5226,11 +5239,9 @@ function renderSettings(){
  <div style="font-weight:600;font-size:14px">Sound alerts</div>
  <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Distinct chimes for bookings, cancellations, urgent triage flags.</div>
  </div>
- <label class="switch" style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0">
- <input type="checkbox" id="sound-toggle" ${NOVA_NOTIF.soundOn ? 'checked' : ''} style="opacity:0;width:0;height:0">
- <span style="position:absolute;cursor:pointer;inset:0;background:${NOVA_NOTIF.soundOn ? 'var(--accent)' : 'rgba(156,163,175,0.4)'};border-radius:24px;transition:.2s">
- <span style="position:absolute;height:18px;width:18px;left:${NOVA_NOTIF.soundOn ? '23px' : '3px'};top:3px;background:white;border-radius:50%;transition:.2s"></span>
- </span>
+ <label class="nv-tg">
+ <input type="checkbox" id="sound-toggle" ${NOVA_NOTIF.soundOn ? 'checked' : ''} />
+ <span class="nv-tg-slider"></span>
  </label>
  </div>
 
@@ -5305,11 +5316,9 @@ function renderSettings(){
      <div style="font-weight:600;font-size:14px">Auto-reply on WhatsApp</div>
      <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Nova answers incoming messages, books, reschedules and triages.</div>
    </div>
-   <label class="switch" style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0">
-     <input type="checkbox" id="ai-toggle" ${biz.ai_receptionist_enabled?'checked':''} style="opacity:0;width:0;height:0">
-     <span style="position:absolute;cursor:pointer;inset:0;background:${biz.ai_receptionist_enabled?'var(--accent)':'rgba(156,163,175,0.4)'};border-radius:24px;transition:.2s">
-       <span style="position:absolute;height:18px;width:18px;left:${biz.ai_receptionist_enabled?'23px':'3px'};top:3px;background:white;border-radius:50%;transition:.2s"></span>
-     </span>
+   <label class="nv-tg">
+     <input type="checkbox" id="ai-toggle" ${biz.ai_receptionist_enabled?'checked':''} />
+     <span class="nv-tg-slider"></span>
    </label>
  </div>
  <div class="field"><label>Default reply language</label>
@@ -5335,11 +5344,9 @@ function renderSettings(){
      <div style="font-weight:600;font-size:13.5px">${r.label}</div>
      <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${r.desc}</div>
    </div>
-   <label class="switch" style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
-     <input type="checkbox" data-rem="${r.k}" ${novaSetting(r.k,r.def)?'checked':''} style="opacity:0;width:0;height:0">
-     <span style="position:absolute;cursor:pointer;inset:0;background:${novaSetting(r.k,r.def)?'var(--accent)':'rgba(156,163,175,0.4)'};border-radius:22px;transition:.2s">
-       <span style="position:absolute;height:16px;width:16px;left:${novaSetting(r.k,r.def)?'21px':'3px'};top:3px;background:white;border-radius:50%;transition:.2s"></span>
-     </span>
+   <label class="nv-tg nv-tg-sm">
+     <input type="checkbox" data-rem="${r.k}" ${novaSetting(r.k,r.def)?'checked':''} />
+     <span class="nv-tg-slider"></span>
    </label>
  </div>`).join('')}
  </div>
@@ -5400,7 +5407,6 @@ function bindSettings(){
  NOVA_NOTIF.soundOn = soundT.checked;
  localStorage.setItem('nova_sound', soundT.checked ? '1' : '0');
  if (soundT.checked) novaPlaySound('info');
- render();
  };
 
  const enablePush = $('#enable-push');
