@@ -6029,6 +6029,7 @@ async function openAskNova(){
      window.__nova.activeRec = null;
    }
    clearTimeout(window.__nova.activePauseTimer);
+   window.__nova.activePauseTimer = null;
    window.__nova.activeBuffer = '';
  }
  async function startActiveListening(){
@@ -6058,9 +6059,21 @@ async function openAskNova(){
    window.__nova.activeBuffer = '';
    let lastFinalAt = 0;
 
+   // Map of finalized result index -> latest text. Using a Map keyed by
+   // index means revising a "final" in place (Android Chrome behavior)
+   // REPLACES the prior text instead of appending — no more "what's what's
+   // the what's the weather" duplication.
+   const finals = new Map();
+   const computeBuffer = () => Array.from(finals.entries())
+     .sort((a, b) => a[0] - b[0])
+     .map(([, txt]) => txt.trim())
+     .filter(Boolean)
+     .join(' ');
+
    const flushFinal = () => {
-     const text = (window.__nova.activeBuffer || '').trim();
+     const text = computeBuffer().trim();
      if (text.length < 2) return;
+     finals.clear();
      window.__nova.activeBuffer = '';
      // Stop the recognizer while we ask Claude + speak the answer; restart
      // once TTS finishes (handled inside speak()/onSpeakDone).
@@ -6076,16 +6089,23 @@ async function openAskNova(){
    rec.onaudiostart = () => { window.__nova.lastListenAt = Date.now(); };
    rec.onspeechstart = () => { flashHeardBadge(); window.__nova.lastListenAt = Date.now(); };
    rec.onresult = (e) => {
+     // Walk through ALL results (not just resultIndex onward) — this
+     // properly handles browsers that revise existing finals, and keeps
+     // only the latest interim for display.
      let interim = '';
-     for (let i = e.resultIndex; i < e.results.length; i++){
-       const t = e.results[i][0].transcript;
-       if (e.results[i].isFinal){
-         window.__nova.activeBuffer = ((window.__nova.activeBuffer||'') + ' ' + t).trim();
+     for (let i = 0; i < e.results.length; i++){
+       const r = e.results[i];
+       const t = (r[0].transcript || '').trim();
+       if (!t) continue;
+       if (r.isFinal){
+         // Set, not append — same index = same utterance, just refined.
+         finals.set(i, t);
          lastFinalAt = Date.now();
        } else {
-         interim += t;
+         interim = t; // last one wins
        }
      }
+     window.__nova.activeBuffer = computeBuffer();
      window.__nova.lastListenAt = Date.now();
      flashHeardBadge();
      if (overlay.classList.contains('minimized')){
@@ -6094,10 +6114,10 @@ async function openAskNova(){
        window.__nova.pulseTimer = setTimeout(() => overlay.classList.remove('speech-detected'), 1200);
      }
      setPrompt(interim || window.__nova.activeBuffer || '', '');
-     // Debounce: 700ms after the last final chunk, ship to Claude.
+     // Debounce: 800ms after the last final chunk, ship to Claude.
      if (window.__nova.activeBuffer){
        clearTimeout(window.__nova.activePauseTimer);
-       window.__nova.activePauseTimer = setTimeout(flushFinal, 700);
+       window.__nova.activePauseTimer = setTimeout(flushFinal, 800);
      }
    };
    rec.onerror = (e) => {
