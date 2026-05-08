@@ -5722,55 +5722,15 @@ async function openAskNova(){
    promptEl.innerHTML = html;
  }
 
- // Cloud TTS — single consistent male voice across all languages via
- // OpenAI 'onyx'. Returns true if it spoke; false to fall back to browser TTS.
- async function speakCloud(text, lang, onSpeakDone){
-   try {
-     const r = await fetch(`${CFG.supabaseUrl}/functions/v1/nova-tts`, {
-       method: 'POST',
-       headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.supabaseAnonKey}` },
-       body: JSON.stringify({ text, lang }),
-     });
-     if (r.status === 503){
-       // No OPENAI_API_KEY on the server — silent fallback.
-       return false;
-     }
-     if (!r.ok) return false;
-     const blob = await r.blob();
-     const url = URL.createObjectURL(blob);
-     const audio = new Audio(url);
-     window.__nova.cloudAudio = audio;
-     setState('speaking', 'Speaking...', 'live');
-     audio.onended = () => { try { URL.revokeObjectURL(url); } catch(_e){} onSpeakDone(); };
-     audio.onerror = () => { try { URL.revokeObjectURL(url); } catch(_e){} onSpeakDone(); };
-     try { await audio.play(); }
-     catch(playErr){
-       // Some browsers block autoplay until user interaction — show a hint
-       try { URL.revokeObjectURL(url); } catch(_e){}
-       console.warn('[nova-tts] autoplay blocked', playErr);
-       return false;
-     }
-     return true;
-   } catch (e){
-     console.warn('[nova-tts] cloud TTS failed, falling back to browser', e);
-     return false;
-   }
- }
-
- async function speak(text, lang, opts){
-   if (!text) return;
-   try { TTS && TTS.cancel(); } catch(_e){}
+ function speak(text, lang, opts){
+   if (!TTS || !text) return;
+   try { TTS.cancel(); } catch(_e){}
    try { if (questionRec) questionRec.abort(); } catch(_e){}
-   if (window.__nova.cloudAudio){
-     try { window.__nova.cloudAudio.pause(); } catch(_e){}
-     window.__nova.cloudAudio = null;
-   }
    stopActiveListening();
    mode = "speaking";
    window.__nova.isSpeaking = true;
    const onSpeakDone = () => {
      window.__nova.isSpeaking = false;
-     window.__nova.cloudAudio = null;
      mode = "idle";
      setState(null, '', '');
      if (window.__nova.alwaysOn && !isProcessing){
@@ -5778,14 +5738,6 @@ async function openAskNova(){
        setTimeout(() => startActiveListening(), 400);
      }
    };
-
-   // 1. Try the cloud single-voice TTS first (onyx — deep male, all langs).
-   const cloudOk = await speakCloud(text, lang, onSpeakDone);
-   if (cloudOk) return;
-
-   // 2. Fallback: browser TTS. Same code as before — different voice per
-   //    language, but at least the user hears something if cloud is down.
-   if (!TTS) { onSpeakDone(); return; }
 
    const fallbackFrText = opts && opts.fallbackFrText ? String(opts.fallbackFrText).trim() : '';
 
