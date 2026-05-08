@@ -4827,19 +4827,16 @@ async function bindTestCatalog(){
 }
 
 async function renderServices(){
- const [{data:svcs=[]}, {data:docs=[]}] = await Promise.all([
- sb.from('services').select('*, users:doctor_id(name)').eq('business_id', SESSION.business.id).order('name'),
- sb.from('users').select('id,name').eq('business_id', SESSION.business.id),
- ]);
+ const {data:svcs=[]} = await sb.from('services').select('*').eq('business_id', SESSION.business.id).order('name');
  return `<div class="panel">
  <div class="panel-head"><h3>Services (${svcs.length})</h3><button class="btn btn-primary btn-sm" id="add-svc">+ New service</button></div>
  <div class="panel-body no-pad">${svcs.length===0?`<div class="empty"><div class="ic">★</div>No services yet — Nova will auto-create them as customers ask, or add one manually.</div>`:`
  <table>
- <thead><tr><th>Name</th><th>Duration</th><th>Assigned to</th><th>Price</th><th></th></tr></thead>
+ <thead><tr><th>Name</th><th>Duration</th><th>Category</th><th>Price</th><th></th></tr></thead>
  <tbody>${svcs.map(s=>`<tr>
  <td>${escapeHtml(s.name)}</td>
  <td>${s.duration_min||30} min</td>
- <td>${escapeHtml(s.users?.name||'—')}</td>
+ <td>${escapeHtml(s.category||'—')}</td>
  <td>${s.price?s.price+' TND':'—'}</td>
  <td class="text-right">
  <button class="btn btn-ghost btn-sm" data-edit-svc="${s.id}">Edit</button>
@@ -5137,12 +5134,11 @@ function serviceModal(svc, docs){
  if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
  closeModal(); render();
  };
- const docOpts = `<option value="">— none —</option>${docs.map(d=>`<option value="${d.id}" ${svc?.doctor_id===d.id?'selected':''}>${escapeHtml(d.name)}</option>`).join('')}`;
  return modalShell(isEdit?'Edit service':'Add service',
  `<div class="field"><label>Name *</label><input name="name" value="${escapeHtml(svc?.name||'')}" required /></div>
  <div class="row"><div class="field grow"><label>Duration (min)</label><input name="duration_min" type="number" value="${svc?.duration_min||30}" min="5" max="480" /></div>
  <div class="field grow"><label>Price (optional)</label><input name="price" type="number" step="0.01" value="${svc?.price??''}" /></div></div>
- <div class="field"><label>Assigned to (optional)</label><select name="doctor_id">${docOpts}</select></div>`);
+ <div class="field"><label>Category (optional)</label><input name="category" value="${escapeHtml(svc?.category||'')}" placeholder="e.g. Médecine générale, Cardiologie" /></div>`);
 }
 
 async function renderMessages(){
