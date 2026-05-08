@@ -1958,7 +1958,7 @@ function renderCreateBusiness(){
 
  <div class="field"><label>Pick a plan</label>
  <div class="plans" id="plans">
- ${Object.entries(PLANS).map(([k,p])=>`<div class="plan ${k==='starter'?'selected':''}" data-plan="${k}"><div class="name">${p.name}</div><div class="price">$${p.price}<small>/mo</small></div><div class="desc">${p.desc}</div></div>`).join('')}
+ ${Object.entries(PLANS).map(([k,p])=>`<div class="plan ${k==='starter'?'selected':''}" data-plan="${k}"><div class="name">${p.name}</div><div class="price">${p.price} TND<small>/mo</small></div><div class="desc">${p.desc}</div></div>`).join('')}
  </div>
  </div>
 
@@ -2091,7 +2091,7 @@ function renderOnboarding(){
  } else {
  body = `<h2>Step 3 · Pick a plan</h2>
  <p class="lede">Free trial on every plan. Cancel anytime. You can change later.</p>
- <div class="plans" id="plans">${Object.entries(PLANS).map(([k,p])=>`<div class="plan ${k==='pro'?'selected':''}" data-plan="${k}"><div class="name">${p.name}</div><div class="price">$${p.price}<small>/mo</small></div><div class="desc">${p.desc}</div></div>`).join('')}</div>
+ <div class="plans" id="plans">${Object.entries(PLANS).map(([k,p])=>`<div class="plan ${k==='pro'?'selected':''}" data-plan="${k}"><div class="name">${p.name}</div><div class="price">${p.price} TND<small>/mo</small></div><div class="desc">${p.desc}</div></div>`).join('')}</div>
  <button class="btn btn-primary btn-block" id="finish">Start using Nova AI →</button>`;
  }
  return `<div class="wizard-wrap"><div class="wizard">
@@ -2282,11 +2282,11 @@ function userPill(){
 }
 
 async function bindDashboard(route){
- const sb = document.querySelector('.sidebar');
+ const sidebarEl = document.querySelector('.sidebar');
  const tog = document.getElementById('sb-toggle');
  const bd = document.getElementById('sb-bd');
- const closeSb = ()=>{ sb && sb.classList.remove('open'); bd && bd.classList.remove('open'); };
- if (tog) tog.onclick = ()=>{ sb.classList.toggle('open'); bd.classList.toggle('open'); };
+ const closeSb = ()=>{ sidebarEl && sidebarEl.classList.remove('open'); bd && bd.classList.remove('open'); };
+ if (tog) tog.onclick = ()=>{ sidebarEl.classList.toggle('open'); bd.classList.toggle('open'); };
  if (bd) bd.onclick = closeSb;
  document.querySelectorAll('.sidebar .nav-item').forEach(n => n.addEventListener('click', closeSb));
  // Topbar QR scan button — works from any dashboard page
@@ -4812,7 +4812,7 @@ async function renderServices(){
  <td>${escapeHtml(s.name)}</td>
  <td>${s.duration_min||30} min</td>
  <td>${escapeHtml(s.users?.name||'—')}</td>
- <td>${s.price?'$'+s.price:'—'}</td>
+ <td>${s.price?s.price+' TND':'—'}</td>
  <td class="text-right">
  <button class="btn btn-ghost btn-sm" data-edit-svc="${s.id}">Edit</button>
  <button class="btn btn-danger btn-sm" data-del-svc="${s.id}">Delete</button>
@@ -5192,9 +5192,9 @@ function renderSettings(){
  <div class="panel-head"><h3>Subscription</h3></div>
  <div class="panel-body">
  <div style="font-size:13px;color:var(--text-dim);margin-bottom:6px">Current plan</div>
- <div style="font-size:22px;font-weight:700">${PLANS[biz.subscription_plan]?.name||'Trial'} <span style="font-size:13px;color:var(--text-faint);font-weight:500">· $${PLANS[biz.subscription_plan]?.price||0}/mo</span></div>
+ <div style="font-size:22px;font-weight:700">${PLANS[biz.subscription_plan]?.name||'Trial'} <span style="font-size:13px;color:var(--text-faint);font-weight:500">· ${PLANS[biz.subscription_plan]?.price||0} TND/mo</span></div>
  <div style="margin:12px 0;font-size:13px;color:var(--text-dim)">Status: <span class="pill ${biz.subscription_status==='active'?'green':biz.subscription_status==='trialing'?'amber':'red'}">${biz.subscription_status||'—'}</span></div>
- <div class="plans">${Object.entries(PLANS).map(([k,p])=>`<div class="plan ${biz.subscription_plan===k?'selected':''}" data-plan="${k}"><div class="name">${p.name}</div><div class="price">$${p.price}<small>/mo</small></div><div class="desc">${p.desc}</div></div>`).join('')}</div>
+ <div class="plans">${Object.entries(PLANS).map(([k,p])=>`<div class="plan ${biz.subscription_plan===k?'selected':''}" data-plan="${k}"><div class="name">${p.name}</div><div class="price">${p.price} TND<small>/mo</small></div><div class="desc">${p.desc}</div></div>`).join('')}</div>
  <p style="font-size:12px;color:var(--text-faint);margin-top:8px">Stripe billing wires up via the <span class="code">stripe-webhook</span> Edge Function (see DEPLOY.md).</p>
  </div>
  </div>
