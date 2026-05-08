@@ -613,30 +613,49 @@ const NOVA_WA_PLACEHOLDER = {
 async function novaClaimWhatsApp(){
  if (!SESSION || !SESSION.business) return;
  const activeId = SESSION.business.id;
- if (SESSION.business.phone === NOVA_WA_LIVE){
+ const newClaimerOldPhone = SESSION.business.phone; // e.g. +21672444300
+ if (newClaimerOldPhone === NOVA_WA_LIVE){
    toast({ title:'Déjà actif', message:'Cette business a déjà le numéro WhatsApp en direct.', type:'info' });
    return;
  }
  try {
-   // Release the number from any other business currently holding it.
+   // Three-step swap: avoids the businesses_phone_key unique-constraint
+   // collision by nulling one side first.
+   // 1) Find the current holder of the live number (any business, not just owned).
    const { data: holders } = await sb.from('businesses')
-     .select('id')
+     .select('id, phone')
      .eq('phone', NOVA_WA_LIVE)
      .neq('id', activeId);
+   // 2) Free the new claimer's phone slot so it can take a different value.
+   await sb.from('businesses').update({ phone: null, whatsapp_verified: false }).eq('id', activeId);
+   // 3) Move each existing holder of the live number onto the placeholder
+   //    we just freed (its old phone). If multiple holders, the first
+   //    takes the placeholder, the rest fall back to the per-id map or
+   //    a generated number.
+   let placeholderUsed = false;
    for (const h of (holders || [])){
-     const placeholder = NOVA_WA_PLACEHOLDER[h.id] || ('+21620000' + Math.floor(Math.random()*900+100));
-     await sb.from('businesses').update({ phone: placeholder, whatsapp_verified: false }).eq('id', h.id);
+     let assign = !placeholderUsed && newClaimerOldPhone ? newClaimerOldPhone : (NOVA_WA_PLACEHOLDER[h.id] || ('+21620000' + Math.floor(Math.random()*900+100)));
+     // Make sure the assigned phone isn't already taken by yet another row.
+     // Simple loop: try until INSERT/UPDATE succeeds.
+     let tries = 0;
+     while (tries < 5){
+       const { error } = await sb.from('businesses').update({ phone: assign, whatsapp_verified: false }).eq('id', h.id);
+       if (!error) break;
+       assign = '+21620000' + Math.floor(Math.random() * 9000 + 1000);
+       tries++;
+     }
+     placeholderUsed = true;
    }
-   // Assign the live number to the active business.
+   // 4) Assign the live number to the active business.
    const { error } = await sb.from('businesses')
      .update({ phone: NOVA_WA_LIVE, whatsapp_verified: true, whatsapp_verified_at: new Date().toISOString() })
      .eq('id', activeId);
    if (error) throw error;
    SESSION = await loadSession();
-   toast({ title:'WhatsApp réclamé', message:NOVA_WA_LIVE + ' route maintenant vers ' + SESSION.business.name + '. Les messages entrants atterriront ici.', type:'booking' });
+   toast({ title:'WhatsApp réclamé', message: NOVA_WA_LIVE + ' route maintenant vers ' + SESSION.business.name + '.', type:'booking' });
    render();
  } catch (e){
-   toast({ title:'Erreur', message:e.message || 'Impossible de réclamer le numéro.', urgent:true });
+   toast({ title:'Erreur', message:(e.message || 'Impossible de réclamer le numéro.'), urgent:true });
  }
 }
 
