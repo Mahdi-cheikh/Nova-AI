@@ -698,8 +698,6 @@ async function bootSupabase(){
 
 async function loadSession(){
  if (!sb) return null;
- // Cap each step with its own timeout so a hanging Supabase call can't freeze
- // the entire dashboard. If anything stalls beyond 4s, we proceed with what we have.
  let session = null;
  try {
  const r = await Promise.race([
@@ -717,7 +715,28 @@ async function loadSession(){
  ]);
  member = r?.data || null;
  } catch (e) { console.warn('member lookup timed out:', e); }
- return member ? {user: session.user, business: member.businesses, member} : {user: session.user, business: null, member: null};
+ // Multi-business: also fetch every business this user OWNS so we can offer a switcher.
+ let owned = [];
+ try {
+ const { data } = await sb.from('businesses').select('*').eq('owner_user_id', session.user.id).order('created_at');
+ owned = data || [];
+ } catch (e) { console.warn('owned businesses lookup:', e); }
+ // Active business resolution: localStorage override > member's primary > first owned
+ let active = member?.businesses || null;
+ const savedId = localStorage.getItem('nova.active_business_id');
+ if (savedId && owned.some(b => b.id === savedId)) {
+ active = owned.find(b => b.id === savedId);
+ } else if (!active && owned.length) {
+ active = owned[0];
+ }
+ if (active && member && member.businesses && active.id !== member.businesses.id){
+   // Keep member.businesses pointing at the active business too, so the
+   // rest of the dashboard sees a consistent business object.
+   member = { ...member, businesses: active };
+ }
+ return member
+   ? { user: session.user, business: active, member, ownedBusinesses: owned }
+   : { user: session.user, business: active, member: null, ownedBusinesses: owned };
 }
 
 /* Hard reset for the dashboard — same pattern as the PWA. Clears any stuck
@@ -2226,11 +2245,20 @@ async function renderDashboard(route){
  <div class="sb-backdrop" id="sb-bd"></div>
  <aside class="sidebar">
  <div class="logo"><div class="logo-mark">N</div> Nova AI</div>
- <div class="biz-pill">
- <div class="name">${escapeHtml(biz.name)}</div>
- <div class="type">${escapeHtml(biz.type)}</div>
- <div class="plan">● ${escapeHtml(planName)} plan</div>
- </div>
+ ${(SESSION.ownedBusinesses && SESSION.ownedBusinesses.length > 1)
+ ? `<div class="biz-pill biz-switcher" id="biz-switcher" tabindex="0" role="button" title="Switch business" style="cursor:pointer;position:relative">
+     <div class="name">${escapeHtml(biz.name)} <span style="float:right;color:var(--text-dim);font-size:10px;margin-top:2px">▼</span></div>
+     <div class="type">${escapeHtml(biz.type)}</div>
+     <div class="plan">● ${escapeHtml(planName)} plan</div>
+     <div id="biz-switcher-menu" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:6px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,0.45);z-index:60;padding:6px">
+       ${SESSION.ownedBusinesses.map(b => `<button type="button" class="biz-switch-item" data-biz="${b.id}" style="display:block;width:100%;text-align:left;padding:8px 10px;border:none;background:${b.id === biz.id ? 'rgba(99,102,241,0.15)' : 'transparent'};color:var(--text);border-radius:7px;cursor:pointer;font-size:13px"><div style="font-weight:600">${escapeHtml(b.name)}</div><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em;margin-top:1px">${escapeHtml(b.type)}</div></button>`).join('')}
+     </div>
+   </div>`
+ : `<div class="biz-pill">
+     <div class="name">${escapeHtml(biz.name)}</div>
+     <div class="type">${escapeHtml(biz.type)}</div>
+     <div class="plan">● ${escapeHtml(planName)} plan</div>
+   </div>`}
  ${navItem('overview','Overview','▦')}
  ${navItem('appointments','Appointments','◷')}
  ${navItem('calendar','Calendar','⌗')}
@@ -2315,6 +2343,30 @@ async function bindDashboard(route){
  const sidebarEl = document.querySelector('.sidebar');
  const tog = document.getElementById('sb-toggle');
  const bd = document.getElementById('sb-bd');
+ // Multi-business switcher
+ const switcher = document.getElementById('biz-switcher');
+ const switcherMenu = document.getElementById('biz-switcher-menu');
+ if (switcher && switcherMenu){
+   switcher.addEventListener('click', (e) => {
+     if (e.target.closest('.biz-switch-item')) return;
+     switcherMenu.style.display = switcherMenu.style.display === 'block' ? 'none' : 'block';
+     e.stopPropagation();
+   });
+   document.addEventListener('click', () => { switcherMenu.style.display = 'none'; });
+   document.querySelectorAll('.biz-switch-item').forEach(b => {
+     b.addEventListener('click', async (e) => {
+       e.stopPropagation();
+       const id = b.dataset.biz;
+       if (id === SESSION.business.id) { switcherMenu.style.display = 'none'; return; }
+       localStorage.setItem('nova.active_business_id', id);
+       switcherMenu.style.display = 'none';
+       toast({ title: 'Switching business…', message: 'Loading the dashboard for the selected account.', type: 'info' });
+       SESSION = await loadSession();
+       navigate('#/dashboard');
+       render();
+     });
+   });
+ }
  const closeSb = ()=>{ sidebarEl && sidebarEl.classList.remove('open'); bd && bd.classList.remove('open'); };
  if (tog) tog.onclick = ()=>{ sidebarEl.classList.toggle('open'); bd.classList.toggle('open'); };
  if (bd) bd.onclick = closeSb;
