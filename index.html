@@ -539,6 +539,18 @@
  .obs-posture-legend > span { display:inline-flex; align-items:center; gap:5px; color:var(--text-dim); }
  .obs-posture-legend > span::before { content:''; width:8px; height:8px; border-radius:2px; background:var(--c, var(--primary)); }
 
+
+ /* WhatsApp claim toggle in the sidebar */
+ .nv-claim-wa { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; margin:10px 0 14px; background:var(--card); border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:background .15s; font-size:12.5px; }
+ .nv-claim-wa:hover { background:var(--card-2); }
+ .nv-claim-wa .nv-claim-label { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
+ .nv-claim-wa .nv-claim-icon { font-size:14px; }
+ .nv-claim-wa .nv-claim-text { color:var(--text-dim); line-height:1.3; }
+ .nv-claim-wa .nv-claim-text strong { display:block; color:var(--text); font-weight:600; font-size:12px; }
+ .nv-claim-wa .nv-claim-state { font-size:10.5px; padding:3px 8px; border-radius:999px; background:rgba(156,163,175,0.2); color:var(--text-dim); font-weight:600; letter-spacing:0.4px; text-transform:uppercase; flex-shrink:0; }
+ .nv-claim-wa.claimed .nv-claim-state { background:rgba(34,197,94,0.18); color:#22c55e; }
+ .nv-claim-wa.claimed { border-color:rgba(34,197,94,0.35); }
+
 </style>
 </head>
 <body>
@@ -584,6 +596,49 @@ const PLANS = {
  pro: {name:'Pro', price:29, msgs:1500, desc:'1,500 messages / month'},
  business: {name:'Business', price:79, msgs:6000, desc:'6,000 messages, multi-location'}
 };
+
+// Live verified WhatsApp Business number — this is the actual Meta-verified
+// number wired to the whatsapp-webhook. Only one business can hold it at a
+// time; the "Claim WhatsApp" button in the switcher swaps which business it
+// belongs to so live demos can target any vertical without provisioning
+// extra Meta numbers.
+const NOVA_WA_LIVE = '+15556369409';
+const NOVA_WA_PLACEHOLDER = {
+  '7c12be73-999c-4278-8489-61e110fd3f07': '+21629774784',
+  'b2222222-0000-0000-0000-000000000002': '+21670222100',
+  'b3333333-0000-0000-0000-000000000003': '+21671333200',
+  'b4444444-0000-0000-0000-000000000004': '+21672444300'
+};
+
+async function novaClaimWhatsApp(){
+ if (!SESSION || !SESSION.business) return;
+ const activeId = SESSION.business.id;
+ if (SESSION.business.phone === NOVA_WA_LIVE){
+   toast({ title:'Déjà actif', message:'Cette business a déjà le numéro WhatsApp en direct.', type:'info' });
+   return;
+ }
+ try {
+   // Release the number from any other business currently holding it.
+   const { data: holders } = await sb.from('businesses')
+     .select('id')
+     .eq('phone', NOVA_WA_LIVE)
+     .neq('id', activeId);
+   for (const h of (holders || [])){
+     const placeholder = NOVA_WA_PLACEHOLDER[h.id] || ('+21620000' + Math.floor(Math.random()*900+100));
+     await sb.from('businesses').update({ phone: placeholder, whatsapp_verified: false }).eq('id', h.id);
+   }
+   // Assign the live number to the active business.
+   const { error } = await sb.from('businesses')
+     .update({ phone: NOVA_WA_LIVE, whatsapp_verified: true, whatsapp_verified_at: new Date().toISOString() })
+     .eq('id', activeId);
+   if (error) throw error;
+   SESSION = await loadSession();
+   toast({ title:'WhatsApp réclamé', message:NOVA_WA_LIVE + ' route maintenant vers ' + SESSION.business.name + '. Les messages entrants atterriront ici.', type:'booking' });
+   render();
+ } catch (e){
+   toast({ title:'Erreur', message:e.message || 'Impossible de réclamer le numéro.', urgent:true });
+ }
+}
 
 let sb = null; /* Supabase client */
 let SESSION = null; /* {user, business, member} once authenticated */
@@ -2251,9 +2306,16 @@ async function renderDashboard(route){
      <div class="type">${escapeHtml(biz.type)}</div>
      <div class="plan">● ${escapeHtml(planName)} plan</div>
      <div id="biz-switcher-menu" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:6px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,0.45);z-index:60;padding:6px">
-       ${SESSION.ownedBusinesses.map(b => `<button type="button" class="biz-switch-item" data-biz="${b.id}" style="display:block;width:100%;text-align:left;padding:8px 10px;border:none;background:${b.id === biz.id ? 'rgba(99,102,241,0.15)' : 'transparent'};color:var(--text);border-radius:7px;cursor:pointer;font-size:13px"><div style="font-weight:600">${escapeHtml(b.name)}</div><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em;margin-top:1px">${escapeHtml(b.type)}</div></button>`).join('')}
+       ${SESSION.ownedBusinesses.map(b => `<button type="button" class="biz-switch-item" data-biz="${b.id}" style="display:block;width:100%;text-align:left;padding:8px 10px;border:none;background:${b.id === biz.id ? 'rgba(99,102,241,0.15)' : 'transparent'};color:var(--text);border-radius:7px;cursor:pointer;font-size:13px"><div style="font-weight:600">${escapeHtml(b.name)} ${b.phone === NOVA_WA_LIVE ? '<span style="float:right;font-size:10px;color:#22c55e;background:rgba(34,197,94,0.18);padding:2px 6px;border-radius:999px;font-weight:600">📞 LIVE</span>' : ''}</div><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em;margin-top:1px">${escapeHtml(b.type)}</div></button>`).join('')}
      </div>
-   </div>`
+   </div>
+   <button type="button" class="nv-claim-wa ${biz.phone === NOVA_WA_LIVE ? 'claimed' : ''}" id="claim-wa-btn" title="Faire pointer le numéro WhatsApp en direct vers ce business">
+     <span class="nv-claim-label">
+       <span class="nv-claim-icon">📞</span>
+       <span class="nv-claim-text"><strong>WhatsApp en direct</strong>${biz.phone === NOVA_WA_LIVE ? escapeHtml(NOVA_WA_LIVE) : 'Cliquer pour rediriger ici'}</span>
+     </span>
+     <span class="nv-claim-state">${biz.phone === NOVA_WA_LIVE ? '✓ Actif' : 'Réclamer'}</span>
+   </button>`
  : `<div class="biz-pill">
      <div class="name">${escapeHtml(biz.name)}</div>
      <div class="type">${escapeHtml(biz.type)}</div>
@@ -2366,6 +2428,10 @@ async function bindDashboard(route){
        render();
      });
    });
+ }
+ const claimBtn = document.getElementById('claim-wa-btn');
+ if (claimBtn){
+   claimBtn.addEventListener('click', () => novaClaimWhatsApp());
  }
  const closeSb = ()=>{ sidebarEl && sidebarEl.classList.remove('open'); bd && bd.classList.remove('open'); };
  if (tog) tog.onclick = ()=>{ sidebarEl.classList.toggle('open'); bd.classList.toggle('open'); };
