@@ -5329,7 +5329,7 @@ function renderSettings(){
    {k:'reminder_24h', label:'Rappel 24h avant', desc:'Envoyer un rappel WhatsApp 24h avant le RDV.', def:true},
    {k:'reminder_1h',  label:'Rappel 1h avant',  desc:'Petit rappel 1h avant — confirmer la présence.', def:true},
    {k:'thanks_after', label:'Message de remerciement', desc:'Court message après chaque consultation terminée.', def:false},
-   {k:'review_prompt',label:'Demande d''avis', desc:'24h après la consultation, demander un avis.', def:true},
+   {k:'review_prompt',label:"Demande d'avis", desc:'24h après la consultation, demander un avis.', def:true},
  ].map(r => `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
    <div>
      <div style="font-weight:600;font-size:13.5px">${r.label}</div>
@@ -5349,7 +5349,7 @@ function renderSettings(){
  <div class="panel-head"><h3>Politique d'annulation</h3></div>
  <div class="panel-body">
  <div class="field"><label>Délai d'annulation gratuit (heures avant le RDV)</label><input id="set-cancel-h" type="number" value="${novaSetting('cancel_window_h',24)}" min="0" max="168" style="width:120px" /></div>
- <div class="field"><label>Message envoyé en cas d'annulation tardive</label><textarea id="set-cancel-msg" rows="2">${escapeHtml(novaSetting('cancel_msg','Désolé, l''annulation moins de 24h avant le RDV n''est plus possible. Vous pouvez reprogrammer à un autre créneau.'))}</textarea></div>
+ <div class="field"><label>Message envoyé en cas d'annulation tardive</label><textarea id="set-cancel-msg" rows="2">${escapeHtml(novaSetting('cancel_msg', "Désolé, l'annulation moins de 24h avant le RDV n'est plus possible. Vous pouvez reprogrammer à un autre créneau."))}</textarea></div>
  <button class="btn btn-primary btn-sm" id="save-cancel">Save policy</button>
  </div>
  </div>
