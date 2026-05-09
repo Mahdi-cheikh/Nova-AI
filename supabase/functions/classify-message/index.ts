@@ -148,8 +148,9 @@ function nextQuestion(state: DraftState, lang: string, ctx: any): string {
  const t = (en: string, fr: string, ar: string) => lang==="fr" ? fr : lang==="ar" ? ar : en;
  // Personalised greeting prefix when this is the FIRST question of a returning
  // patient's flow (name already known, ctx.greeted not yet set by caller).
+ const bn = ctx.biz_name ? String(ctx.biz_name) : "";
  const hi = (ctx.name && !ctx._greeted)
- ? (lang==="fr" ? `Bon retour ${ctx.name} ! ` : lang==="ar" ? `أهلا بعودتك ${ctx.name}! ` : `Welcome back ${ctx.name}! `)
+ ? (lang==="fr" ? `Bon retour ${ctx.name} ! ${bn ? `Ici ${bn}. ` : ""}` : lang==="ar" ? `أهلا بعودتك ${ctx.name}! ${bn ? `معك ${bn}. ` : ""}` : `Welcome back ${ctx.name}! ${bn ? `This is ${bn}. ` : ""}`)
  : "";
  if (ctx.name && !ctx._greeted) ctx._greeted = true;
  switch (state) {
@@ -991,8 +992,9 @@ serve(async (req) => {
  if (profile.preferred_service && !payload.service) collected.service = profile.preferred_service;
 
  // For clinics/laboratoires with 2+ doctors: ask which doctor.
- const { data: bizRow } = await sb.from("businesses").select("type").eq("id", business_id).single();
+ const { data: bizRow } = await sb.from("businesses").select("type, name").eq("id", business_id).single();
  collected.biz_type = bizRow?.type;
+ collected.biz_name = bizRow?.name;
  // Pre-load the lab test catalog for laboratoire businesses so the service
  // question can show categories and the confirmation can list prices.
  if (bizRow?.type === "laboratoire") {
@@ -1277,7 +1279,9 @@ ${(faqs as any[]).map((f: any, i: number) => `${i+1}. Q: ${f.question}\n A: ${f.
  }
 
  // 5. Build patient-facing reply (in their language)
- const reply = labAnswer || faqAnswer || buildReply(payload, action);
+ // Resolve business name for the welcome message
+ const { data: bizForReply } = await sb.from("businesses").select("name").eq("id", business_id).maybeSingle();
+ const reply = labAnswer || faqAnswer || buildReply(payload, action, bizForReply?.name || "");
 
  // 6. Send the reply back via WhatsApp Cloud API (text channel only)
  const WA_PHONE_ID = Deno.env.get("WA_PHONE_ID");
@@ -1317,7 +1321,7 @@ ${(faqs as any[]).map((f: any, i: number) => `${i+1}. Q: ${f.question}\n A: ${f.
  }
 });
 
-function buildReply(p: any, action: any): string {
+function buildReply(p: any, action: any, bizName: string = ""): string {
  const lang = p.language || "en";
  // Special case: alternative slot picked because requested was busy
  if (action.kind === "booked" && action.alternativeUsed) {
@@ -1345,9 +1349,9 @@ function buildReply(p: any, action: any): string {
  escalate_en: { default: "I've flagged your message as urgent. A staff member will call you back very soon." },
  escalate_fr: { default: "J'ai signalé votre message comme urgent. Un membre de l'équipe vous rappellera très vite." },
  escalate_ar: { default: "تم تصنيف رسالتك كعاجلة. سيتواصل معكم أحد أفراد الفريق قريبا." },
- faq_en: { default: "Hi! I'm Nova. I can help you book, cancel or reschedule an appointment. What would you like to do?" },
- faq_fr: { default: "Bonjour ! Je suis Nova. Je peux vous aider à prendre, annuler ou reporter un rendez-vous. Que souhaitez-vous ?" },
- faq_ar: { default: "مرحبا! أنا نوفا. يمكنني مساعدتك في حجز موعد أو إلغائه أو تغييره. كيف يمكنني مساعدتك؟" },
+ faq_en: { default: `Hi! I'm Nova, the assistant for ${bizName || "this business"}. I can help you book, cancel or reschedule an appointment. What would you like to do?` },
+ faq_fr: { default: `Bonjour ! Je suis Nova, l'assistante de ${bizName || "ce cabinet"}. Je peux vous aider à prendre, annuler ou reporter un rendez-vous. Que souhaitez-vous ?` },
+ faq_ar: { default: `مرحبا! أنا نوفا، مساعدة ${bizName || "هذا المكان"}. يمكنني مساعدتك في حجز موعد أو إلغائه أو تغييره. كيف يمكنني مساعدتك؟` },
  };
  const k = action.kind === "none" ? "faq" : action.kind;
  return T[`${k}_${lang}`]?.default ?? T[`${k}_en`]?.default ?? "Thanks, we got your message.";
