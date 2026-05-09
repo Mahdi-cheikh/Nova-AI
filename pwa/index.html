@@ -243,14 +243,20 @@ async function detectRoles() {
  ROLES = []; PATIENT = null; DOCTOR = null; OWNER_BIZ = null;
  if (!SESSION) return;
  const uid = SESSION.user.id;
- const [{data: pu}, {data: doc}, {data: biz}] = await Promise.all([
+ const [{data: pu}, {data: doc}, {data: bizList}] = await Promise.all([
  sb.from('patient_users').select('*').eq('auth_uid', uid).maybeSingle(),
  sb.from('users').select('id, name, business_id, role, businesses(name, type)').eq('auth_uid', uid).eq('role','doctor').maybeSingle(),
- sb.from('businesses').select('id, name, type').eq('owner_user_id', uid).maybeSingle(),
+ sb.from('businesses').select('id, name, type').eq('owner_user_id', uid).order('created_at'),
  ]);
  if (pu) { PATIENT = pu; ROLES.push('patient'); }
  if (doc) { DOCTOR = doc; ROLES.push('doctor'); }
- if (biz) { OWNER_BIZ = biz; ROLES.push('owner'); }
+ // Owner of one or more businesses — pick the saved active business if known, else the first owned.
+ const ownedList = (bizList || []);
+ if (ownedList.length){
+   const savedId = localStorage.getItem('nova.active_business_id');
+   OWNER_BIZ = ownedList.find(b => b.id === savedId) || ownedList[0];
+   ROLES.push('owner');
+ }
  const stored = localStorage.getItem('nova_active_role');
  if (stored && ROLES.includes(stored)) ACTIVE_ROLE = stored;
  else if (ROLES.length === 1) ACTIVE_ROLE = ROLES[0];
