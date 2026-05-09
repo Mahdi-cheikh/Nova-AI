@@ -831,6 +831,36 @@ serve(async (req) => {
  }
  }
 
+ // 1.5. Post-confirmation idempotency — if the user just confirmed their
+ // booking and now sends another "yes/oui/نعم" (or even "no/non/لا") within
+ // a few minutes, the draft is already gone but they shouldn't get the
+ // generic FAQ greeting. Acknowledge what we already booked.
+ if (clientId) {
+   const isYesNo = /^\s*(yes|y|oui|o|ok|sure|نعم|اه|ايوه|اجل|no|n|non|nope|لا|كلا)\s*[!?.\u0660-\u0669]?\s*$/i.test(text);
+   if (isYesNo) {
+     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+     const { data: recent } = await sb.from("appointments")
+       .select("date, time, status")
+       .eq("business_id", business_id)
+       .eq("client_id", clientId)
+       .gte("created_at", fiveMinAgo)
+       .order("created_at", { ascending: false })
+       .limit(1);
+     if (recent && recent.length && (recent[0] as any).status === "confirmed") {
+       const apt = recent[0] as any;
+       const lang = (detected_language || "en") as string;
+       const ackReply = lang === "fr"
+         ? `C'est déjà confirmé ! Votre rendez-vous est le ${apt.date} à ${String(apt.time).slice(0,5)}. À très vite.`
+         : lang === "ar"
+         ? `تم التأكيد مسبقا ! موعدك يوم ${apt.date} على الساعة ${String(apt.time).slice(0,5)}. إلى اللقاء.`
+         : `Already confirmed! Your appointment is on ${apt.date} at ${String(apt.time).slice(0,5)}. See you then.`;
+       await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: ackReply });
+       await sendWhatsApp(channel, phone, ackReply);
+       return new Response(JSON.stringify({ ok: true, step: "already_confirmed_ack" }), { headers: { ...cors, "Content-Type": "application/json" } });
+     }
+   }
+ }
+
  // 2. Build customer-memory block from clients.profile + last visit
  let memoryBlock = "";
  if (clientId) {
