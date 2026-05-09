@@ -646,35 +646,48 @@ serve(async (req) => {
 
  // 30-MIN BUFFER CHECK — block any appointment within ±30 min of requested time
 
- const { data: dayApts } = await sb.from("appointments")
- .select("time")
- .eq("business_id", business_id)
- .eq("date", collected.date)
- .neq("status", "cancelled");
- const taken = (dayApts as any[] || []).map(a => timeToMin(a.time));
- const tooClose = taken.some(t => Math.abs(t - reqMin) < 30);
-
- if (tooClose) {
- // Suggest next free slot at least 30 min after any existing appointment
- let candidate = reqMin;
- for (let i=0; i<48; i++){
- if (!taken.some(t => Math.abs(t - candidate) < 30)) break;
- candidate += 30;
+ // Conflict check — exact-time clash AND ±30 min buffer.
+ // Per-doctor when a specific doctor was selected (multi-doctor clinic),
+ // otherwise business-wide (solo practitioner / salon / garage).
+ let conflictQuery = sb.from("appointments")
+   .select("time, doctor_id")
+   .eq("business_id", business_id)
+   .eq("date", collected.date)
+   .neq("status", "cancelled");
+ if (collected.doctor_id) {
+   conflictQuery = conflictQuery.eq("doctor_id", collected.doctor_id);
  }
- const suggestion = candidate <= 19*60 ? minToTime(candidate) : null;
- await sb.from("booking_drafts").update({
- state: "time",
- collected: { ...collected, time: null },
- updated_at: new Date().toISOString()
- }).eq("id", draft.id);
- const reply = lang==="fr"
- ? `Désolé, ${collected.time} le ${collected.date} n'est pas libre (un écart de 30 min entre rendez-vous est requis).${suggestion?` Le prochain créneau libre est ${suggestion}.`:""} Quelle autre heure ?`
- : lang==="ar"
- ? `للأسف، ${collected.time} يوم ${collected.date} غير متاح (يجب 30 دقيقة فاصل بين المواعيد).${suggestion?` أقرب وقت متاح ${suggestion}.`:""} أي وقت آخر تفضل؟`
- : `Sorry, ${collected.time} on ${collected.date} isn't free (we need a 30-min gap between appointments).${suggestion?` Next available is ${suggestion}.`:""} What time works?`;
- await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply });
- await sendWhatsApp(channel, phone, reply);
- return new Response(JSON.stringify({ ok: true, step: "buffer_conflict" }), { headers: { ...cors, "Content-Type": "application/json" } });
+ const { data: dayApts } = await conflictQuery;
+ const taken = (dayApts as any[] || []).map(a => timeToMin(a.time));
+ const exactClash = taken.some(t => t === reqMin);
+ const tooClose   = taken.some(t => Math.abs(t - reqMin) < 30);
+
+ if (exactClash || tooClose) {
+   // Find the next free 30-min slot, scanning forward from the requested time
+   let candidate = reqMin + 30;
+   const scheduleClose = todaySchedule && todaySchedule.to ? timeToMin(todaySchedule.to) : 19*60;
+   for (let i=0; i<48; i++){
+     if (candidate >= scheduleClose) { candidate = -1; break; }
+     if (!taken.some(t => Math.abs(t - candidate) < 30)) break;
+     candidate += 30;
+   }
+   const suggestion = candidate > 0 ? minToTime(candidate) : null;
+   await sb.from("booking_drafts").update({
+     state: "time",
+     collected: { ...collected, time: null },
+     updated_at: new Date().toISOString()
+   }).eq("id", draft.id);
+   const reasonFr = exactClash ? "ce créneau est déjà réservé" : "il faut 30 min entre les rendez-vous";
+   const reasonAr = exactClash ? "هذا الموعد محجوز مسبقا" : "يلزم 30 دقيقة بين المواعيد";
+   const reasonEn = exactClash ? "that exact slot is already booked" : "we need a 30-minute gap between appointments";
+   const reply = lang==="fr"
+     ? `Désolé, ${collected.time} le ${collected.date} n'est pas libre (${reasonFr}).${suggestion?` Le prochain créneau libre est ${suggestion}.`:""} Quelle autre heure ?`
+     : lang==="ar"
+     ? `للأسف، ${collected.time} يوم ${collected.date} غير متاح (${reasonAr}).${suggestion?` أقرب وقت متاح ${suggestion}.`:""} أي وقت آخر تفضل؟`
+     : `Sorry, ${collected.time} on ${collected.date} isn't free (${reasonEn}).${suggestion?` Next available is ${suggestion}.`:""} What time works?`;
+   await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply });
+   await sendWhatsApp(channel, phone, reply);
+   return new Response(JSON.stringify({ ok: true, step: exactClash ? "exact_clash" : "buffer_conflict" }), { headers: { ...cors, "Content-Type": "application/json" } });
  }
 
  // Lab-specific extras at booking time
