@@ -6407,11 +6407,32 @@ async function openAskNova(){
    // REPLACES the prior text instead of appending — no more "what's what's
    // the what's the weather" duplication.
    const finals = new Map();
-   const computeBuffer = () => Array.from(finals.entries())
-     .sort((a, b) => a[0] - b[0])
-     .map(([, txt]) => txt.trim())
-     .filter(Boolean)
-     .join(' ');
+   // Compute the user's spoken text from the finals map. Android Chrome
+   // sometimes emits each utterance refinement as a NEW final at a new
+   // index ("how" -> "how are" -> "how are you"). Joining them all gives
+   // garbage. Strategy: walk the indices in order; if the next final
+   // starts with (or contains) the previous one, keep only the longer
+   // version. Otherwise concatenate (different utterances = different
+   // chunks). The result reads cleanly even if Chrome split or merged.
+   const computeBuffer = () => {
+     const sorted = Array.from(finals.entries()).sort((a, b) => a[0] - b[0]);
+     const kept = [];
+     for (const [, raw] of sorted){
+       const txt = (raw || '').trim();
+       if (!txt) continue;
+       const prev = kept[kept.length - 1];
+       if (!prev) { kept.push(txt); continue; }
+       const lp = prev.toLowerCase();
+       const lt = txt.toLowerCase();
+       // If the new text already contains the previous, replace it.
+       if (lt.startsWith(lp) || lt.includes(lp)) { kept[kept.length - 1] = txt; continue; }
+       // If the previous already contains the new, keep previous.
+       if (lp.startsWith(lt) || lp.includes(lt)) { continue; }
+       // Otherwise it's a separate utterance — append.
+       kept.push(txt);
+     }
+     return kept.join(' ').trim();
+   };
 
    const flushFinal = () => {
      const text = computeBuffer().trim();
