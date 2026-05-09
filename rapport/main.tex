@@ -1,0 +1,123 @@
+% =============================================================================
+%  Rapport de Projet de Fin d'Etudes — Nova AI
+%  Auteur : MEHDI CHEIKH
+%  Annee  : 2025-2026
+%  Etablissement : ISIM Kairouan — Universite de Kairouan
+%  Format : conforme au modele de rapport ISIMK (Times New Roman 12pt,
+%           interligne 1,5, marges 2,5/2,5/3/2, numerotation romaine)
+% =============================================================================
+\documentclass[12pt,a4paper,oneside]{report}
+
+% ----- Encodage et langue -------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\frenchsetup{ItemLabeli=\textbullet, ItemLabelii=\textendash}
+
+% ----- Times New Roman --------------------------------------------------
+\usepackage{newtxtext,newtxmath}
+
+% ----- Mise en page (marges du modele ISIMK) ----------------------------
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=2cm,headheight=15pt]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{6pt}
+
+% ----- Entete et pied de page -------------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\nouppercase{\small\textsc{\leftmark}}}
+\fancyfoot[C]{\textbf{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ----- Numerotation romaine des chapitres (I, II, III...) ---------------
+\renewcommand{\thechapter}{\Roman{chapter}}
+\renewcommand{\thesection}{\thechapter.\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+% ----- Style des titres de chapitres ------------------------------------
+\usepackage{titlesec}
+\titleformat{\chapter}[block]
+  {\normalfont\Large\bfseries\centering}
+  {Chapitre \thechapter.}
+  {1ex}
+  {\Large}
+  [\vspace{2pt}\hrule]
+\titlespacing*{\chapter}{0pt}{-30pt}{20pt}
+
+% ----- Listes, tableaux, figures, code -----------------------------------
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,shapes.symbols,calc,fit,backgrounds}
+\usepackage{listings}
+\definecolor{codebg}{RGB}{245,247,251}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  numbers=left, numberstyle=\tiny\color{gray},
+  frame=single, framesep=4pt,
+  showstringspaces=false,
+  tabsize=2,
+}
+
+\usepackage[colorlinks=false,hidelinks]{hyperref}
+
+\usepackage{xspace}
+\newcommand{\nova}{Nova~AI\xspace}
+
+\begin{document}
+
+% ===== Page de garde =====================================================
+\input{front/page-de-garde}
+
+% ===== Dedicaces / Remerciements =========================================
+\input{front/dedicaces}
+\input{front/remerciements}
+
+% ===== Table des matieres et listes ======================================
+\renewcommand{\contentsname}{Table des matieres}
+\renewcommand{\listfigurename}{Liste des figures}
+\renewcommand{\listtablename}{Liste des tableaux}
+\pagenumbering{roman}
+\tableofcontents
+\listoffigures
+\listoftables
+\input{front/abreviations}
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% ===== Introduction generale =============================================
+\chapter*{Introduction generale}
+\addcontentsline{toc}{chapter}{Introduction generale}
+\markboth{INTRODUCTION GENERALE}{}
+\input{chapters/intro-generale}
+
+% ===== Chapitres =========================================================
+\input{chapters/chap1-cadre}
+\input{chapters/chap2-analyse}
+\input{chapters/chap3-sprint1}
+\input{chapters/chap4-sprint2}
+\input{chapters/chap5-sprint3}
+
+% ===== Conclusion generale ===============================================
+\chapter*{Conclusion generale}
+\addcontentsline{toc}{chapter}{Conclusion generale}
+\markboth{CONCLUSION GENERALE}{}
+\input{chapters/conclusion}
+
+% ===== Bibliographie =====================================================
+\bibliographystyle{ieeetr}
+\renewcommand{\

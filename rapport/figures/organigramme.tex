@@ -1,0 +1,80 @@
+% ===========================================================================
+% Organigramme de l'organisme d'accueil — version TikZ
+% Drop this snippet anywhere inside chap1-cadre.tex.
+% Requires: \usepackage{tikz} and \usetikzlibrary{positioning,arrows.meta,shapes.geometric}
+% ===========================================================================
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  node distance=10mm and 6mm,
+  every node/.style={align=center},
+  dir/.style    ={rectangle, rounded corners=2pt, draw=black, very thick,
+                  fill=black!85, text=white, minimum width=42mm, minimum height=10mm,
+                  font=\bfseries\small},
+  dept/.style   ={rectangle, rounded corners=2pt, draw=black,
+                  fill=gray!12, minimum width=38mm, minimum height=10mm,
+                  font=\bfseries\footnotesize},
+  unit/.style   ={rectangle, rounded corners=2pt, draw=gray!60,
+                  fill=white, minimum width=24mm, minimum height=9mm,
+                  font=\scriptsize},
+  stag/.style   ={rectangle, rounded corners=3pt, draw=orange!70!brown, very thick,
+                  fill=orange!15, minimum width=36mm, minimum height=10mm,
+                  font=\bfseries\footnotesize},
+  edge/.style   ={draw=black, thick},
+  edge-d/.style ={draw=black, thick, dashed},
+]
+
+% --- Niveau 1 ---
+\node[dir] (dg) {Direction Générale};
+
+% --- Niveau 2 (4 départements) ---
+\node[dept, below=18mm of dg, xshift=-66mm] (tech)  {Département\\Technique};
+\node[dept, right=4mm of tech]              (com)   {Département\\Commercial};
+\node[dept, right=4mm of com]               (admin) {Département\\Administratif};
+\node[dept, right=4mm of admin]             (rh)    {Département\\RH};
+
+% --- Niveau 3 — sous-unités Technique ---
+\node[unit, below=8mm of tech, xshift=-15mm] (dev)    {Pôle\\Développement};
+\node[unit, below=8mm of tech]               (ia)     {Pôle\\IA \& Data};
+\node[unit, below=8mm of tech, xshift=15mm]  (devops) {Pôle\\DevOps / QA};
+
+% --- Niveau 3 — sous-unités Commercial ---
+\node[unit, below=8mm of com, xshift=-9mm] (ventes)    {Service\\Ventes};
+\node[unit, below=8mm of com, xshift=9mm]  (marketing) {Service\\Marketing};
+
+% --- Niveau 3 — sous-unités Administratif ---
+\node[unit, below=8mm of admin, xshift=-9mm] (compta) {Service\\Comptabilité};
+\node[unit, below=8mm of admin, xshift=9mm]  (juri)   {Cellule\\Juridique};
+
+% --- Niveau 3 — sous-unités RH ---
+\node[unit, below=8mm of rh, xshift=-9mm] (recrut)    {Cellule\\Recrutement};
+\node[unit, below=8mm of rh, xshift=9mm]  (formation) {Cellule\\Formation};
+
+% --- Liens hiérarchiques ---
+\draw[edge] (dg.south) -- ++(0,-4mm) -| (tech.north);
+\draw[edge] (dg.south) -- ++(0,-4mm) -| (com.north);
+\draw[edge] (dg.south) -- ++(0,-4mm) -| (admin.north);
+\draw[edge] (dg.south) -- ++(0,-4mm) -| (rh.north);
+
+\draw[edge] (tech.south) -- ++(0,-3mm) -| (dev.north);
+\draw[edge] (tech.south) -- ++(0,-3mm) -| (ia.north);
+\draw[edge] (tech.south) -- ++(0,-3mm) -| (devops.north);
+
+\draw[edge] (com.south) -- ++(0,-3mm) -| (ventes.north);
+\draw[edge] (com.south) -- ++(0,-3mm) -| (marketing.north);
+
+\draw[edge] (admin.south) -- ++(0,-3mm) -| (compta.north);
+\draw[edge] (admin.south) -- ++(0,-3mm) -| (juri.north);
+
+\draw[edge] (rh.south) -- ++(0,-3mm) -| (recrut.north);
+\draw[edge] (rh.south) -- ++(0,-3mm) -| (formation.north);
+
+% --- Stagiaire rattaché au Pôle IA & Data ---
+\node[stag, below=10mm of ia] (stagiaire) {Stagiaire PFE\\Mehdi Cheikh — ISIMK};
+\draw[edge-d] (ia.south) -- (stagiaire.north);
+
+\end{tikzpicture}
+\caption{Organigramme de l'organisme d'accueil et positionnement du stagiaire au sein du Pôle IA \& Data.}
+\label{fig:organigramme}
+\end{figure}

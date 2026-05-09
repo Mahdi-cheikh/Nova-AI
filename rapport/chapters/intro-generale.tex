@@ -1,0 +1,55 @@
+Le tissu economique tunisien repose massivement sur des milliers de petites
+et moyennes entreprises (PME) de service : cliniques, cabinets medicaux,
+laboratoires d'analyses, salons de coiffure, garages automobiles, cabinets
+juridiques et professionnels independants. Toutes ces structures partagent
+un mode de fonctionnement quotidien remarquablement uniforme : les rendez-vous
+sont notes dans un agenda papier, les communications avec la clientele
+transitent par WhatsApp depuis le telephone personnel du proprietaire ou
+d'un secretaire, et la coordination entre les differents canaux d'information
+(agenda, conversations, facturation, dossier client) repose entierement sur
+la memoire et l'attention de l'operateur humain.
+
+Cette organisation, qui fonctionne tant que le volume reste modeste, devient
+rapidement le goulet d'etranglement de l'activite : les messages recus en
+dehors des heures de travail restent sans reponse, le proprietaire est
+constamment interrompu par des questions repetitives, les langues utilisees
+par la clientele (arabe dialectal tunisien, francais, anglais, souvent
+melangees dans une meme phrase) imposent une charge cognitive supplementaire,
+et aucune visibilite analytique n'est possible sur les flux de l'entreprise.
+
+L'evolution recente des technologies d'intelligence artificielle, en
+particulier la disponibilite de modeles de langage grand public (Large
+Language Models, ou LLM) capables de comprendre l'arabe dialectal et de
+produire des reponses structurees, ouvre une opportunite : celle d'automatiser
+le travail de receptionniste lui-meme, en l'integrant directement a l'interieur
+du canal que la clientele utilise deja, c'est-a-dire WhatsApp.
+
+Le present rapport presente le projet \textbf{Nova~AI}, une plateforme
+multi-tenant de Software-as-a-Service (SaaS) qui realise concretement cette
+opportunite. Nova~AI combine une intelligence artificielle conversationnelle
+basee sur Anthropic Claude, l'API Cloud officielle de WhatsApp Business, une
+base de donnees Postgres multi-locataire avec une securite au niveau des
+lignes (Row-Level Security), un tableau de bord temps reel pour le
+proprietaire, et une application web progressive (PWA) destinee aux clients
+finaux.
+
+Le projet a ete structure autour de la methodologie \textbf{Agile Scrum},
+adaptee aux contraintes d'une equipe d'une seule personne et aux iterations
+courtes imposees par le rythme du semestre. Quatre sprints successifs ont
+permis de produire un systeme complet, deploye en production, capable de
+recevoir et traiter des bookings reels via WhatsApp en arabe dialectal,
+francais et anglais.
+
+\section*{Plan du rapport}
+Ce rapport est organise comme suit. Le \textbf{Chapitre I} presente le
+cadre general du projet : l'organisme d'accueil, l'analyse du contexte
+tunisien, l'etude de l'existant, la problematique et la solution proposee,
+ainsi que la methodologie Scrum adoptee. Le \textbf{Chapitre II} (Sprint 0)
+detaille la phase preparatoire : identification des acteurs, analyse des
+besoins fonctionnels et non fonctionnels, choix techniques, diagrammes de
+conception et planification des sprints. Les \textbf{Chapitres III, IV et V}
+documentent les trois sprints de realisation : le sprint des fondations, le
+sprint des surfaces operationnelles, et le sprint de la couche
+d'intelligence. Enfin, la \textbf{Conclusion generale} fait le bilan du
+travail accompli, identifie les limites du systeme actuel, et trace les
+perspectives d'evolution future.

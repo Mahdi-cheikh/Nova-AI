@@ -1,0 +1,262 @@
+\chapter{Sprint 2 : Surfaces operationnelles}
+
+\section{Introduction}
+Le Sprint 1 a produit une colonne vertebrale qui fonctionnait de bout en
+bout mais sans aucune surface graphique. Un proprietaire ne pouvait voir
+ses donnees qu'a travers l'editeur de tables de Supabase Studio, ce qui
+convient a un developpeur mais reste inutilisable pour un proprietaire de
+clinique. Le Sprint 2 a donc ete consacre a la construction de chaque
+surface que le proprietaire et le patient touchent au quotidien : le
+tableau de bord multi-locataire avec sa barre laterale et sa barre
+superieure au theme anti-gravite, le calendrier, la gestion des
+rendez-vous et des clients, le pipeline specifique aux laboratoires (un
+tableau Kanban avec une etape OCR d'image de prescription), et la PWA
+patient avec son onboarding par OTP telephone.
+
+\section{Backlog du sprint}
+Le backlog du Sprint 2 a tire des exigences BF06--BF10 (surfaces du
+tableau de bord), BF24 (OCR des prescriptions), BF29--BF30 (PWA + OTP
+telephone), plus une longue liste d'exigences d'utilisabilite qui ont
+emerge lors de la revue du Sprint 1.
+
+\section{Coque du tableau de bord proprietaire}
+
+\subsection{Langage visuel}
+Le tableau de bord adopte ce que nous avons appele le theme
+\emph{anti-gravite} : (a) une paire d'orbes radiaux floutes a position
+fixe qui derivent lentement a travers la page (indigo et violet
+principalement, avec un accent cyan), (b) un confetti de minuscules
+particules qui flottent vers le haut spawnees par JS au chargement, (c)
+des cartes qui se bercent doucement avec une animation
+\texttt{translateY} de six secondes, (d) une pulsation lumineuse sur les
+boutons d'action principale, (e) un gradient coherent
+(\texttt{linear-gradient(135deg, \#6366f1, \#8b5cf6, \#22d3ee)}) utilise
+pour la marque, les boutons primaires et les chiffres du minuteur de
+consultation. Toutes les animations respectent
+\texttt{prefers-reduced-motion}.
+
+\subsection{Mise en page}
+Le tableau de bord utilise une grille CSS a deux colonnes : une barre
+laterale a largeur fixe (240 px sur ordinateur, tiroir hors-canevas en
+dessous de 1024 px) et un panneau principal fluide. La barre superieure
+contient le titre de la page, les boutons d'action (selecteur de theme,
+bouton de scan QR, cloche, pastille utilisateur), et sur mobile un
+hamburger qui bascule le tiroir.
+
+Le contenu de la barre laterale est sensible au role. Un proprietaire
+voit Vue d'ensemble, Rendez-vous, Calendrier, Clients, Equipe, Pipeline
+labo (si laboratoire), Catalogue de tests (si laboratoire), Vehicules
+(si garage), Services, Forfaits, Demand Fill, Schedule Insights,
+Prescrire (non-labo), Anniversaires, Messages, Notifications, Test
+assistant, Activite, Parametres.
+
+\subsection{Routage}
+Le tableau de bord utilise un routage cote client base sur les hashes
+--- pas de \texttt{history.pushState}, pas de bibliotheque de routeur
+--- implemente en environ quarante lignes de JS. Le routeur ecoute
+\texttt{hashchange} et \texttt{visibilitychange}, appelle une seule
+fonction \texttt{render()} qui prend \texttt{location.hash}, parse le
+segment de route, et delegue a la fonction \texttt{render*()}
+appropriee. Un \texttt{Promise.race} entoure l'appel d'un timeout de
+huit secondes qui fait apparaitre une carte de recuperation si quelque
+chose plante.
+
+\section{Page Vue d'ensemble}
+La Vue d'ensemble est la page sur laquelle le proprietaire atterrit
+apres connexion. Nous l'avons reorganisee deux fois durant le projet.
+La premiere version mettait la banniere IA en haut et le calendrier
+pres du bas ; les tests d'utilisabilite ont revele que les
+proprietaires se preoccupent surtout du \emph{jour meme} et veulent le
+voir immediatement. La seconde version a place le calendrier en haut.
+
+La disposition actuelle, du haut vers le bas : (1) pour les entreprises
+non-laboratoire, une grande carte \emph{Check-in QR} avec l'action
+principale \og Scanner le QR du patient \fg{} ; (2) le calendrier
+mensuel complet ; (3) la banniere Receptionniste IA on/off ; (4) les
+pastilles de statut (WhatsApp verifie, plan) ; (5) les tuiles KPI
+(rendez-vous du jour, clients, medecins, notifications 24h) ; (6) une
+section a deux colonnes : tableau des rendez-vous a venir a gauche, fil
+d'activite recente a droite.
+
+\section{Vue calendrier}
+Le calendrier est une grille mensuelle (sept colonnes par cinq ou six
+lignes). Chaque cellule affiche le numero du jour, la cellule du jour
+courant a une bordure indigo, et jusqu'a trois pastilles de rendez-vous
+listent l'heure et le nom du client. Les cellules avec plus de
+rendez-vous montrent un lien \og +N de plus \fg{} qui ouvre une fenetre
+modale avec la liste complete du jour.
+
+Le menu deroulant filtre-medecin, en haut a droite, permet au
+proprietaire de restreindre le calendrier a un seul praticien.
+
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox[c][6cm][c]{0.95\textwidth}{\centering\textit{(Inserer la capture d'ecran du calendrier)}}}
+  \caption{Vue mensuelle du calendrier}
+  \label{fig:calendar}
+\end{figure}
+
+\section{Gestion des rendez-vous}
+La vue Rendez-vous liste chaque rendez-vous jamais reserve, ordonne
+descendant par date et heure. Des filtres en haut (plage de dates,
+statut, source) permettent au proprietaire de restreindre la liste.
+Chaque ligne est cliquable et ouvre une fenetre modale ou le rendez-vous
+peut etre annule ou annote. Deux boutons d'action rapide se trouvent
+sur chaque ligne confirmee : \emph{Arrive} (horodate l'arrivee du
+patient) et \emph{Termine} (cloture la visite et marque
+\texttt{completed\_at}). Une fois une ligne completee, les boutons sont
+remplaces par une pastille verte montrant la duree reelle de la visite
+--- information que la fonctionnalite d'apprentissage de duree
+exploitera plus tard.
+
+\section{Gestion des clients}
+La vue Clients est l'annuaire des patients. Chaque client qui a deja
+envoye un message a l'entreprise dispose d'une ligne, avec un panneau
+de detail au clic montrant son historique complet : rendez-vous,
+conversations, ordres de laboratoire (si laboratoire), avis,
+notifications. Le bouton Editer ouvre une fenetre modale avec nom,
+telephone, age, email, anniversaire, et notes.
+
+Un filtre de recherche en direct en haut de la liste restreint les
+resultats au fur et a mesure de la frappe.
+
+\section{Pipeline laboratoire}
+Pour les locataires laboratoires, le tableau de bord montre une vue
+supplementaire que la clinique n'a pas besoin : un tableau Kanban a
+quatre colonnes representant les etapes de traitement des echantillons.
+\textbf{Demande}, \textbf{Echantillon collecte}, \textbf{En analyse},
+\textbf{Pret a envoyer}.
+
+Chaque colonne montre une carte par lot patient (une carte peut
+contenir plusieurs analyses pour la meme personne). Au sein d'une
+carte, les analyses individuelles peuvent etre avancees independamment,
+mais le \emph{lot} reste dans la colonne correspondant a son analyse la
+plus en retard. Un bouton de progression en lot permet au technicien de
+deplacer chaque patient d'une colonne a la suivante en un seul clic.
+
+Lorsqu'un lot atteint \emph{Pret a envoyer}, une automatisation
+(\texttt{lab-results-notify}) declenche un message WhatsApp au patient,
+optionnellement accompagne d'un PDF detaillant les resultats.
+
+\section{OCR des images de prescriptions}
+L'etape de pre-reservation dans un laboratoire est plus exigeante que
+dans une clinique. Le patient tient une prescription papier ; il a
+besoin de savoir quelles analyses vont lui etre facturees, quel est le
+total, si un jeune est requis. Demander au patient de taper les noms
+d'analyses dans un chat est lent et source d'erreurs --- les
+prescriptions manuscrites en francais utilisent souvent des
+abreviations (\texttt{NFS}, \texttt{TSH}, \texttt{Glycemie a jeun},
+\texttt{Bilan lipidique}) que le patient lui-meme ne sait pas lire.
+
+La solution : lorsqu'un message entrant contient une photo et que le
+locataire est un laboratoire, le webhook invoque le point de
+terminaison vision de Claude Sonnet avec l'image et un prompt systeme
+qui inclut le catalogue d'analyses reel du laboratoire comme
+vocabulaire. Claude renvoie un JSON structure avec les noms d'analyses
+reconnus, le nom du prescripteur, la date de prescription, et un score
+de confiance.
+
+Les analyses reconnues sont ensuite repassees au cerveau IA, qui les
+convertit en proposition de reservation.
+
+Une passe OCR typique prend entre quatre et huit secondes, et la
+precision sur les prescriptions francaises a ete excellente : 88\%
+des reconnaissances d'analyses dans notre echantillon interne ont ete
+correctes au premier passage.
+
+\section{Notifications et la cloche}
+Les notifications en temps reel sont essentielles. Un proprietaire qui
+fait une consultation ne peut pas constamment rafraichir le tableau de
+bord ; il a besoin d'un signal passif que quelque chose s'est passe.
+Nous avons superpose trois canaux de notification : (a) son (un bref
+ping Web Audio API a chaque nouvelle notification), (b) toast (une
+carte animee glisse depuis le coin superieur droit), (c) push native
+(notification systeme lorsque le tableau de bord est installe comme
+PWA et que la permission de notification est accordee).
+
+Le compteur de la pastille cloche s'incremente a chaque element non lu ;
+cliquer dessus ouvre la page Notifications ou chaque evenement des
+trente derniers jours est liste.
+
+\section{PWA patient}
+
+\subsection{Pourquoi une application monopage separee}
+Nous avons envisage de faire de l'experience patient une sous-route de
+l'application monopage du tableau de bord. Deux arguments nous ont
+pousse vers une application separee : le modele cognitif du patient
+est completement different de celui du proprietaire (un patient veut
+voir son prochain rendez-vous, sa position dans la file, ses fichiers ;
+il ne veut pas voir dix-huit elements de barre laterale) ; et
+l'installation mobile est une bete differente (les PWA ont besoin de
+leur propre manifeste, leur propre service worker, leur propre icone
+d'ecran d'accueil).
+
+La PWA reside sur \texttt{/pwa/} sur le meme domaine. Elle a son propre
+\texttt{index.html}, son propre \texttt{manifest.json}, son propre
+\texttt{sw.js}, sa propre couleur de theme (violet) et son propre
+numero de version (actuellement \texttt{nova-pwa-v12}, que nous
+incrementons a chaque changement cassant pour que le service worker
+recupere).
+
+\subsection{Detection de role}
+Un utilisateur se connectant a la PWA peut etre l'une de trois choses :
+un patient, un medecin (membre d'equipe avec un \texttt{auth\_uid}), ou
+un proprietaire dont le seul appareil est son telephone. Nous detectons
+le role au demarrage en interrogeant trois tables en parallele
+(\texttt{patient\_users}, \texttt{users}, \texttt{businesses}) et en
+stockant le role actif dans \texttt{localStorage}.
+
+\subsection{Onboarding par OTP telephone}
+Les patients se connectent par lien magique, mais pour debloquer les
+fonctionnalites cote patient, nous avons besoin de leur numero de
+telephone --- et nous avons besoin de savoir qu'il est vraiment a eux.
+Nous envoyons un code a six chiffres via WhatsApp ; le patient le tape
+dans la PWA ; la fonction de verification hache le code (SHA-256 avec
+le telephone comme sel), compare au hache stocke, decremente un
+compteur d'essai en cas d'echec, et en cas de succes appelle une RPC
+Postgres \texttt{pwa\_claim\_phone} qui declenche un trigger
+\texttt{link\_clients\_to\_patient\_on\_verify} au niveau base. Ce
+trigger est la magie qui connecte l'identite PWA du patient a toutes
+les lignes \texttt{clients} eparpillees dans les entreprises qu'il a
+visitees.
+
+\subsection{Ecran d'accueil patient}
+Apres verification du telephone, le patient atterrit sur une carte hero
+montrant la salutation (bonjour / bon apres-midi / bonsoir), le
+prochain rendez-vous a venir, une liste de rendez-vous a venir
+en-dessous, et des boutons d'action rapide (Trouver une entreprise,
+Fichiers). La navigation inferieure a quatre onglets : Accueil,
+Decouvrir, Fichiers, Moi.
+
+\subsection{Journee du medecin dans la PWA}
+Pour les praticiens, la PWA montre une page d'accueil differente :
+les rendez-vous du jour tries par heure, avec actions rapides
+\emph{Termine} et \emph{Absent} sur chaque ligne, et un grand bouton
+violet \og Scanner le QR du patient \fg{} en haut (lorsque l'entreprise
+n'est pas un laboratoire) qui ouvre la camera.
+
+\section{Revue du sprint et tests}
+Nous avons teste le Sprint 2 avec une journee simulee complete dans
+une vraie clinique. Un patient a ecrit depuis l'exterieur, Nova a
+reserve un rendez-vous, le proprietaire a vu la reservation apparaitre
+en direct dans le calendrier avec un son, le patient est arrive et a
+ete marque \emph{Arrive}, la consultation s'est deroulee et a ete
+marquee \emph{Termine}, et la duree reelle s'est affichee sur la ligne
+du rendez-vous. En parallele, un partenaire laboratoire a teste l'OCR
+de prescriptions avec une pile de quinze prescriptions ; treize ont ete
+reconnues correctement au premier passage.
+
+La retrospective a fait remonter une intuition majeure : les
+proprietaires de telephones essayant de se connecter a l'URL du
+tableau de bord sur un telephone obtenaient une mise en page bureau
+non adaptee. Nous avons ajoute le parametre d'echappement
+\texttt{forceWeb=1} et la logique de redirection automatique vers la
+PWA dans l'iteration suivante.
+
+\section{Conclusion}
+A la fin du Sprint 2, chaque ecran que le proprietaire et le patient
+touchent au quotidien etait en place. Le sprint final ajoute la couche
+d'intelligence qui distingue Nova~AI d'un simple outil de prise de
+rendez-vous : remplissage de creneaux, apprentissage des durees,
+securite des medicaments, profils vehicules, surprises d'anniversaire,
+check-in QR, et file d'attente en temps reel.

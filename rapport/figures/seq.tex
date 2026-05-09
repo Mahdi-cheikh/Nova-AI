@@ -1,0 +1,72 @@
+% ===========================================================================
+% Diagramme de séquence — parcours de prise de rendez-vous multi-tour
+% ===========================================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\scriptsize,
+  every node/.style={align=center},
+  actor/.style ={rectangle, rounded corners=2pt, draw=black!75,
+                 fill=cyan!12, minimum width=22mm, minimum height=8mm,
+                 font=\scriptsize\bfseries},
+  msg/.style   ={->, thick, draw=black!80, >=Stealth},
+  msg-d/.style ={->, thick, draw=black!60, >=Stealth, dashed},
+  ret/.style   ={<-, thick, draw=black!60, >=Stealth, dashed},
+  lab/.style   ={font=\scriptsize, fill=white, inner sep=1pt},
+]
+
+% Vertical lifelines
+\foreach \i/\name/\x in {0/Patient/0, 1/{Meta WhatsApp}/3, 2/{whatsapp-\\webhook}/6, 3/{classify-\\message}/9, 4/{Anthropic\\Claude}/12, 5/{Postgres\\(Supabase)}/15} {
+  \node[actor] (a\i) at (\x, 0) {\name};
+  \draw[dashed, gray!60] (a\i.south) -- ++(0,-13);
+}
+
+% Step 1 — patient sends "نحب نعمل ECG"
+\node[lab] at (1.5, -1)   {1. Message WhatsApp \og je veux un ECG \fg{}};
+\draw[msg] (a0.south)|-(1.5, -1)-|(a1.north);
+
+% Step 2 — Meta delivers webhook
+\node[lab] at (4.5, -2.0) {2. POST webhook (texte + métadonnées)};
+\draw[msg] (a1.south)|-(4.5, -2.0)-|(a2.north);
+
+% Step 3 — webhook stores message + triggers classify
+\node[lab] at (7.5, -3.0) {3. INSERT messages, appel classify};
+\draw[msg] (a2.south)|-(7.5, -3.0)-|(a3.north);
+
+% Step 4 — classify calls Claude for intent + parsing
+\node[lab] at (10.5, -4.0) {4. Prompt strict-JSON};
+\draw[msg] (a3.south)|-(10.5, -4.0)-|(a4.north);
+\node[lab] at (10.5, -4.7) {5. \texttt{intent="book"} + champs};
+\draw[ret] (a3.south)|-(10.5, -4.7)-|(a4.north);
+
+% Step 5 — classify writes booking_drafts
+\node[lab] at (12, -5.6)   {6. UPSERT booking\_drafts (state="time")};
+\draw[msg] (a3.south)|-(12, -5.6)-|(a5.north);
+
+% Step 6 — classify formats clarification + sends back
+\node[lab] at (4.5, -6.6)  {7. Réponse \og Quelle heure ? \fg{} via API Meta};
+\draw[ret] (a2.south)|-(4.5, -6.6)-|(a3.north);
+\draw[msg] (a2.south)|-(1.5, -7.4)-|(a1.north);
+\node[lab] at (1.5, -7.4)  {8. Question reçue par patient};
+\draw[msg] (a1.south)|-(1.5, -8.2)-|(a0.north);
+
+% Step 7 — patient replies "14h"
+\node[lab] at (1.5, -9.2)  {9. Réponse \og 14h \fg{}};
+\draw[msg] (a0.south)|-(1.5, -9.2)-|(a1.north);
+\draw[msg] (a1.south)|-(4.5, -9.9)-|(a2.north);
+\draw[msg] (a2.south)|-(7.5, -10.4)-|(a3.north);
+
+% Step 8 — classify validates working_hours + buffer + creates appointment
+\node[lab] at (12, -11.2)  {10. SELECT working\_hours \& slots};
+\draw[msg] (a3.south)|-(12, -11.2)-|(a5.north);
+\node[lab] at (12, -11.9)  {11. INSERT appointments status="confirmed"};
+\draw[msg] (a3.south)|-(12, -11.9)-|(a5.north);
+
+% Step 9 — confirmation back
+\node[lab] at (4.5, -12.6) {12. \og C'est confirmé !\fg{} via API Meta};
+\draw[ret] (a2.south)|-(4.5, -12.6)-|(a3.north);
+
+\end{tikzpicture}
+\caption{Diagramme de séquence simplifié de la prise de rendez-vous multi-tours : du message WhatsApp initial du patient jusqu'à la création effective de la ligne \texttt{appointments} et le retour de confirmation. Les flèches pointillées indiquent les réponses asynchrones.}
+\label{fig:seq}
+\end{figure}

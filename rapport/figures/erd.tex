@@ -1,0 +1,65 @@
+% ===========================================================================
+% Modèle conceptuel des données — schéma central
+% Notation entités-relations simplifiée (non Crow's Foot strict).
+% ===========================================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  every node/.style={align=center},
+  ent/.style    ={rectangle, rounded corners=2pt, draw=black!75,
+                  minimum width=34mm, minimum height=22mm,
+                  font=\scriptsize\bfseries},
+  ent-c/.style  ={ent, fill=violet!12},   % core
+  ent-s/.style  ={ent, fill=cyan!10},     % schedule
+  ent-m/.style  ={ent, fill=orange!10},   % messaging
+  ent-a/.style  ={ent, fill=green!10},    % auth/notifs
+  link/.style   ={-, thick, draw=black!75},
+  card/.style   ={font=\scriptsize, fill=white, inner sep=1pt},
+]
+
+% Center — businesses
+\node[ent-c] (biz) at (0,0) {businesses\\(\textit{tenant}\\\scriptsize id, name, type, phone\\plan, working\_hours)};
+
+% Top-left — users (team)
+\node[ent-c] (users) at (-5, 2.4) {users\\\scriptsize (id, business\_id\\auth\_uid, name, role)};
+
+% Top-right — services
+\node[ent-s] (svc) at (5, 2.4) {services\\\scriptsize (id, business\_id\\name, duration, price)};
+
+% Mid-left — clients
+\node[ent-c] (cli) at (-5, -0.3) {clients\\\scriptsize (id, business\_id\\name, phone, age,\\allergies, medications)};
+
+% Mid-right — appointments
+\node[ent-s] (apt) at (5, -0.3) {appointments\\\scriptsize (id, business\_id\\client\_id, doctor\_id\\service\_id, date, time, status)};
+
+% Bottom-left — messages
+\node[ent-m] (msg) at (-5, -3.0) {messages\\\scriptsize (id, business\_id\\client\_id, direction\\text, intent, language)};
+
+% Bottom-right — notifications
+\node[ent-a] (notif) at (5, -3.0) {notifications\\\scriptsize (id, business\_id\\type, title, message,\\urgent, read)};
+
+% Bottom-center — lab\_orders / lab\_tests / vehicles (verticals)
+\node[ent-m] (lab) at (-2.5, -5.4) {lab\_orders\\\scriptsize (id, appointment\_id\\test\_id, status, price)};
+\node[ent-m] (vehicle) at (2.5, -5.4) {vehicles\\\scriptsize (id, client\_id, vin\\make, model, mileage)};
+
+% Relationships — biz centric
+\draw[link] (biz) -- node[card,pos=0.3]{1} node[card,pos=0.85]{N} (users);
+\draw[link] (biz) -- node[card,pos=0.3]{1} node[card,pos=0.85]{N} (svc);
+\draw[link] (biz) -- node[card,pos=0.3]{1} node[card,pos=0.85]{N} (cli);
+\draw[link] (biz) -- node[card,pos=0.3]{1} node[card,pos=0.85]{N} (apt);
+\draw[link] (biz) -- node[card,pos=0.3]{1} node[card,pos=0.85]{N} (msg);
+\draw[link] (biz) -- node[card,pos=0.3]{1} node[card,pos=0.85]{N} (notif);
+
+% Cross-entity
+\draw[link] (cli) -- node[card,pos=0.2]{1} node[card,pos=0.85]{N} (apt);
+\draw[link] (svc) -- node[card,pos=0.2]{1} node[card,pos=0.85]{N} (apt);
+\draw[link] (users) to[bend right=15] node[card,pos=0.2]{1} node[card,pos=0.85]{N} (apt);
+\draw[link] (cli) -- node[card,pos=0.2]{1} node[card,pos=0.85]{N} (msg);
+\draw[link] (apt) -- node[card,pos=0.2]{1} node[card,pos=0.85]{N} (lab);
+\draw[link] (cli) to[bend right=10] node[card,pos=0.2]{1} node[card,pos=0.85]{N} (vehicle);
+
+\end{tikzpicture}
+\caption{Modèle entités-relations simplifié du schéma central : la table \texttt{businesses} est l'unité de cloisonnement multi-locataire ; toutes les autres tables y sont rattachées par une clé étrangère \texttt{business\_id}, protégée par Row-Level Security.}
+\label{fig:erd}
+\end{figure}
