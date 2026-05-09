@@ -2352,8 +2352,8 @@ async function renderDashboard(route){
  ${navItem('packages','Packages','')}
  ${navItem('demandfill','Demand Fill','◐')}
  ${navItem('insights','Schedule Insights','◧')}
- ${biz.type !== 'laboratoire' ? navItem('rxcheck','Prescribe','℞') : ''}
- ${biz.type !== 'laboratoire' && biz.type !== 'garage' ? navItem('observation','Observation','◎') : ''}
+ ${(biz.type === 'doctor' || biz.type === 'clinic') ? navItem('rxcheck','Prescribe','℞') : ''}
+ ${(biz.type === 'doctor' || biz.type === 'clinic') ? navItem('observation','Observation','◎') : ''}
  ${navItem('birthdays','Birthdays','✦')}
  ${biz.voice_feature_enabled ? navItem('voice','Voice avatar','◔') : ''}
  ${navItem('messages','Messages','')}
@@ -3955,7 +3955,7 @@ async function renderOverview(){
  <div class="stats">
  <div class="stat"><div class="lbl">Today's appointments</div><div class="val">${aptToday.count||0}</div><div class="delta">scheduled</div></div>
  <div class="stat"><div class="lbl">Total clients</div><div class="val">${clients.count||0}</div><div class="delta">all-time</div></div>
- <div class="stat"><div class="lbl">Doctors</div><div class="val">${doctors.count||0}</div><div class="delta">team</div></div>
+ ${(bizLabels(SESSION.business.type).team) ? `<div class="stat"><div class="lbl">${escapeHtml(bizLabels(SESSION.business.type).team)}</div><div class="val">${doctors.count||0}</div><div class="delta">${escapeHtml(bizLabels(SESSION.business.type).single+'s')}</div></div>` : `<div class="stat"><div class="lbl">Avg booking</div><div class="val">${(aptToday.count||0)>0 ? Math.round(((apts && apts.length) ? apts.reduce((s,a)=>s+(a.total_amount||0),0)/apts.length : 0)) : 0} TND</div><div class="delta">recent</div></div>`}
  <div class="stat"><div class="lbl">Notifications (24h)</div><div class="val">${notifs24.count||0}</div><div class="delta">live</div></div>
  </div>
  <div class="dash-2col">
