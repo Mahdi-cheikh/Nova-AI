@@ -435,6 +435,12 @@
    .cal-head > div{ font-size:9.5px }
    .cal-grid, .cal-head{ gap:3px }
  }
+ @media (max-width:760px){
+   .cal-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+   .cal-head, .cal-grid { min-width:700px; }
+   .panel-body.no-pad { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+   .panel-body table { min-width:640px; }
+ }
  @media (max-width:640px){
    .main{ padding:64px 14px 20px }
    .topbar{ gap:10px;margin-bottom:14px }
@@ -3985,14 +3991,14 @@ async function renderAppointments(){
  return `<div class="panel">
  <div class="panel-head"><h3>All appointments (${apts.length})</h3><button class="btn btn-primary btn-sm" id="add-apt">+ New</button></div>
  <div class="panel-body no-pad">${apts.length===0?`<div class="empty"><div class="ic">◷</div>No appointments yet</div>`:`
- <table><thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Doctor</th><th>Service</th><th>Status</th><th>Source</th><th></th></tr></thead>
+ <table class="responsive-stack"><thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Doctor</th><th>Service</th><th>Status</th><th>Source</th><th></th></tr></thead>
  <tbody>${apts.map(a=>`<tr data-apt="${a.id}" style="cursor:pointer">
- <td>${a.date}</td><td>${a.time}</td>
- <td>${escapeHtml(a.clients?.name||'—')}</td>
- <td>${escapeHtml(a.users?.name||'—')}</td>
- <td>${escapeHtml(a.services?.name||'—')}</td>
- <td><span class="pill ${a.status==='confirmed'?'green':a.status==='pending'?'amber':'red'}">${a.status}</span></td>
- <td><span class="pill ${a.source==='whatsapp_ai'?'blue':a.source==='whatsapp_voice'?'green':'gray'}">${a.source||'manual'}</span></td>
+ <td data-l="Date">${a.date}</td><td data-l="Time">${a.time}</td>
+ <td data-l="Client">${escapeHtml(a.clients?.name||'—')}</td>
+ <td data-l="Doctor">${escapeHtml(a.users?.name||'—')}</td>
+ <td data-l="Service">${escapeHtml(a.services?.name||'—')}</td>
+ <td data-l="Status"><span class="pill ${a.status==='confirmed'?'green':a.status==='pending'?'amber':'red'}">${a.status}</span></td>
+ <td data-l="Source"><span class="pill ${a.source==='whatsapp_ai'?'blue':a.source==='whatsapp_voice'?'green':'gray'}">${a.source||'manual'}</span></td>
  <td class="text-right" onclick="event.stopPropagation()" style="white-space:nowrap">
  ${!a.arrived_at && a.status==='confirmed' ? `<button class="btn btn-secondary btn-sm" data-arrived="${a.id}" title="Mark patient arrived">Arrived</button>` : ''}
  ${a.arrived_at && !a.completed_at ? `<button class="btn btn-secondary btn-sm" data-done="${a.id}" title="Mark visit completed">Done</button>` : ''}
@@ -4149,10 +4155,12 @@ async function renderCalendar(){
  </div>
  </div>
  <div class="panel-body">
+ <div class="cal-wrap">
  <div class="cal-head">
  <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
  </div>
  <div class="cal-grid">${cells}</div>
+ </div>
  </div>
  </div>`;
 }
