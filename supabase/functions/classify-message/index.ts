@@ -592,10 +592,58 @@ serve(async (req) => {
  doctor = svc?.users;
  }
 
- // 30-MIN BUFFER CHECK — block any appointment within ±30 min of requested time
+ // WORKING-HOURS CHECK — block any appointment outside the business's
+ // configured opening hours for that weekday.
  const timeToMin = (t: string) => { const [h,m] = String(t).slice(0,5).split(":").map(Number); return (h||0)*60 + (m||0); };
  const minToTime = (m: number) => `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
  const reqMin = timeToMin(collected.time);
+ const { data: bizHoursRow } = await sb.from("businesses").select("working_hours").eq("id", business_id).maybeSingle();
+ const wh: any = (bizHoursRow as any)?.working_hours || {};
+ const dayKeys = ['sun','mon','tue','wed','thu','fri','sat'];
+ const dayKey = dayKeys[new Date(collected.date + 'T00:00:00').getUTCDay()];
+ const todaySchedule = wh[dayKey];
+ const dayLabels: any = { fr:{sun:'dimanche',mon:'lundi',tue:'mardi',wed:'mercredi',thu:'jeudi',fri:'vendredi',sat:'samedi'},
+   en:{sun:'Sunday',mon:'Monday',tue:'Tuesday',wed:'Wednesday',thu:'Thursday',fri:'Friday',sat:'Saturday'},
+   ar:{sun:'الأحد',mon:'الإثنين',tue:'الثلاثاء',wed:'الأربعاء',thu:'الخميس',fri:'الجمعة',sat:'السبت'} };
+ if (todaySchedule && todaySchedule.open === false){
+   await sb.from("booking_drafts").update({
+     state: "date",
+     collected: { ...collected, date: null, time: null },
+     updated_at: new Date().toISOString()
+   }).eq("id", draft.id);
+   const dn = (dayLabels[lang] || dayLabels.en)[dayKey];
+   const reply = lang==="fr"
+     ? `Désolé, on est fermé le ${dn}. Quel autre jour vous arrange ?`
+     : lang==="ar"
+     ? `للأسف، نحن مغلقون يوم ${dn}. أي يوم آخر يناسبك؟`
+     : `Sorry, we're closed on ${dn}. Which other day works for you?`;
+   await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply });
+   await sendWhatsApp(channel, phone, reply);
+   return new Response(JSON.stringify({ ok: true, step: "closed_day" }), { headers: { ...cors, "Content-Type": "application/json" } });
+ }
+ if (todaySchedule && todaySchedule.open !== false){
+   const openMin = timeToMin(todaySchedule.from || "08:30");
+   const closeMin = timeToMin(todaySchedule.to || "17:30");
+   if (reqMin < openMin || reqMin >= closeMin){
+     await sb.from("booking_drafts").update({
+       state: "time",
+       collected: { ...collected, time: null },
+       updated_at: new Date().toISOString()
+     }).eq("id", draft.id);
+     const fromTxt = todaySchedule.from || "08:30";
+     const toTxt   = todaySchedule.to   || "17:30";
+     const reply = lang==="fr"
+       ? `Cet horaire est en dehors de nos heures d'ouverture (${fromTxt}–${toTxt}). Une autre heure dans ce créneau ?`
+       : lang==="ar"
+       ? `هذا الوقت خارج ساعات العمل (${fromTxt}–${toTxt}). هل تختار وقتا آخر داخل هذا الفاصل؟`
+       : `That's outside our opening hours (${fromTxt}–${toTxt}). Could you pick a time inside that window?`;
+     await sb.from("messages").insert({ business_id, client_id: clientId, direction: "out", channel, text: reply });
+     await sendWhatsApp(channel, phone, reply);
+     return new Response(JSON.stringify({ ok: true, step: "outside_hours" }), { headers: { ...cors, "Content-Type": "application/json" } });
+   }
+ }
+
+ // 30-MIN BUFFER CHECK — block any appointment within ±30 min of requested time
 
  const { data: dayApts } = await sb.from("appointments")
  .select("time")

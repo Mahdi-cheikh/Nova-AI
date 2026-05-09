@@ -5446,7 +5446,8 @@ function renderSettings(){
    <tbody id="hours-body">
    ${['mon','tue','wed','thu','fri','sat','sun'].map(d => {
      const dayLabels = {mon:'Lundi',tue:'Mardi',wed:'Mercredi',thu:'Jeudi',fri:'Vendredi',sat:'Samedi',sun:'Dimanche'};
-     const h = novaSetting('hours_'+d, d==='sun' ? {open:false,from:'09:00',to:'13:00'} : {open:true,from:'08:30',to:'17:30'});
+     const dbHours = (biz.working_hours || {})[d];
+     const h = dbHours || novaSetting('hours_'+d, d==='sun' ? {open:false,from:'09:00',to:'13:00'} : {open:true,from:'08:30',to:'17:30'});
      return `<tr data-day="${d}">
        <td style="padding:6px 0;font-weight:600">${dayLabels[d]}</td>
        <td><input type="checkbox" data-h-open ${h.open?'checked':''} /></td>
@@ -5597,15 +5598,22 @@ function bindSettings(){
 
  // Working hours save
  const saveHours = $('#save-hours');
- if (saveHours) saveHours.onclick = ()=>{
+ if (saveHours) saveHours.onclick = async ()=>{
+   saveHours.disabled = true;
+   const newHours = {};
    document.querySelectorAll('#hours-body tr[data-day]').forEach(tr => {
      const day = tr.dataset.day;
      const open = tr.querySelector('[data-h-open]').checked;
      const from = tr.querySelector('[data-h-from]').value;
      const to   = tr.querySelector('[data-h-to]').value;
+     newHours[day] = { open, from, to };
      novaSettingSet('hours_'+day, { open, from, to });
    });
-   toast({title:'Hours saved', message:'Working hours updated.', type:'booking'});
+   const { error } = await sb.from('businesses').update({ working_hours: newHours }).eq('id', SESSION.business.id);
+   saveHours.disabled = false;
+   if (error){ toast({title:'Save failed', message:error.message, urgent:true}); return; }
+   SESSION.business.working_hours = newHours;
+   toast({title:'Horaires sauvegardés', message:'Nova respectera ces horaires sur WhatsApp.', type:'booking'});
  };
 
  // AI settings
