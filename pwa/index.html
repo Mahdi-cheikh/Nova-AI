@@ -343,6 +343,7 @@ async function openScanner() {
     <div id="qr-reader"></div>
     <div id="qr-msg" class="scan-msg" style="display:none"></div>
     <div class="scan-actions">
+      <button class="btn btn-secondary" id="qr-flip">Switch camera</button>
       <button class="btn btn-secondary btn-block" id="qr-cancel">Cancel</button>
     </div>`;
   document.body.appendChild(overlay);
@@ -361,28 +362,40 @@ async function openScanner() {
   const reader = new Html5Qrcode("qr-reader");
   window.__qr = reader;
   let scanning = true;
-  try {
-    await reader.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 240, height: 240 } },
-      async (decodedText) => {
-        if (!scanning) return;
-        scanning = false;
-        // Extract token from URL or use raw text
-        let token = decodedText;
-        try {
-          const u = new URL(decodedText);
-          token = u.searchParams.get('qr') || u.searchParams.get('a') || decodedText;
-        } catch (_e) { /* not a URL — use raw */ }
-        msg('QR detected — starting visit...', 'ok');
-        await close();
-        startConsultation(token);
-      },
-      () => { /* per-frame errors are noisy; ignore */ }
-    );
-  } catch (e) {
-    msg('Could not access camera: ' + (e.message || 'permission denied'), 'err');
-  }
+  // Remember the last camera the user picked across sessions.
+  let currentFacing = localStorage.getItem('nova_qr_facing') || 'environment';
+  const onDecode = async (decodedText) => {
+    if (!scanning) return;
+    scanning = false;
+    let token = decodedText;
+    try {
+      const u = new URL(decodedText);
+      token = u.searchParams.get('qr') || u.searchParams.get('a') || decodedText;
+    } catch (_e) { /* not a URL — use raw */ }
+    msg('QR detected — starting visit...', 'ok');
+    await close();
+    startConsultation(token);
+  };
+  const startWithFacing = async (facing) => {
+    try {
+      try { await reader.stop(); } catch (_e) {}
+      await reader.start(
+        { facingMode: facing },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        onDecode,
+        () => { /* per-frame errors are noisy; ignore */ }
+      );
+      currentFacing = facing;
+      localStorage.setItem('nova_qr_facing', facing);
+    } catch (e) {
+      msg('Could not access camera: ' + (e.message || 'permission denied'), 'err');
+    }
+  };
+  overlay.querySelector('#qr-flip').onclick = async () => {
+    scanning = true;
+    await startWithFacing(currentFacing === 'environment' ? 'user' : 'environment');
+  };
+  await startWithFacing(currentFacing);
 }
 
 async function startConsultation(token) {

@@ -4017,11 +4017,24 @@ async function bindAppointments(){
    render();
  });
  $$('[data-done]').forEach(b => b.onclick = async ()=>{
+   const aptId = b.dataset.done;
    const {error} = await sb.from('appointments')
      .update({completed_at: new Date().toISOString(), status: 'completed'})
-     .eq('id', b.dataset.done);
+     .eq('id', aptId);
    if (error){ toast({title:'Could not mark done', message:error.message, urgent:true}); return; }
    toast({title:'Visit completed', message:'Duration logged for self-learning.', type:'booking'});
+   // Fire-and-forget thank-you WhatsApp. The edge function checks
+   // businesses.thanks_after server-side and skips if disabled, so the
+   // client toggle is only a UX hint; the source of truth is the DB.
+   if (novaSetting('thanks_after', false)){
+     try {
+       fetch(`${CFG.url}/functions/v1/send-thanks`, {
+         method:'POST',
+         headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.key}`, 'apikey': CFG.key },
+         body: JSON.stringify({ appointment_id: aptId }),
+       }).catch(()=>{});
+     } catch(_e){}
+   }
    render();
  });
  $$('[data-cancel]').forEach(b => b.onclick = async ()=>{
@@ -5640,10 +5653,18 @@ function bindSettings(){
    toast({title:'AI settings saved', message:'Language and greeting updated.', type:'booking'});
  };
 
- // Reminder toggles — save on each change
+ // Reminder toggles — save on each change. The thanks_after toggle also
+ // mirrors into businesses.thanks_after so the send-thanks edge function
+ // can gate the WhatsApp send server-side (the localStorage flag alone is
+ // not visible to Edge functions).
  document.querySelectorAll('[data-rem]').forEach(cb => {
-   cb.onchange = ()=>{
+   cb.onchange = async ()=>{
      novaSettingSet(cb.dataset.rem, cb.checked);
+     if (cb.dataset.rem === 'thanks_after'){
+       try {
+         await sb.from('businesses').update({ thanks_after: cb.checked }).eq('id', SESSION.business.id);
+       } catch(_e){}
+     }
      toast({title:'Saved', message:cb.dataset.rem+': '+(cb.checked?'on':'off'), type:'info'});
    };
  });
@@ -6621,61 +6642,58 @@ async function openAskNova(){
 async function openDashScanner(){
  const html = `<div style="text-align:center;min-width:320px">
    <h3 style="margin:0 0 6px">Scan patient QR</h3>
-   <p style="margin:0 0 16px;color:var(--text-dim);font-size:13.5px">Hold the patient's QR up to your camera. No camera? Type the token manually.</p>
+   <p style="margin:0 0 16px;color:var(--text-dim);font-size:13.5px">Hold the patient's QR up to your camera to start the consultation.</p>
    <div id="dash-qr-reader" style="width:100%;max-width:380px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px solid var(--primary);min-height:60px"></div>
    <div id="dash-qr-msg" style="margin-top:12px;font-size:13px;color:var(--warn);min-height:18px"></div>
-   <div style="margin:18px auto 0;max-width:380px;text-align:left">
-     <div style="font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600">Or enter the token manually</div>
-     <div class="row" style="gap:8px">
-       <input id="dash-qr-manual" placeholder="Paste check-in token" style="flex:1;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px" />
-       <button class="btn btn-primary btn-sm" id="dash-qr-go">Start</button>
-     </div>
+   <div class="row" style="justify-content:center;gap:10px;margin-top:14px">
+     <button class="btn btn-secondary btn-sm" id="dash-qr-flip">Switch camera</button>
+     <button class="btn btn-secondary btn-sm" onclick="closeDashScanner()">Cancel</button>
    </div>
-   <div class="row" style="justify-content:center;margin-top:18px"><button class="btn btn-secondary" onclick="closeDashScanner()">Cancel</button></div>
  </div>`;
  openModal(html);
  const setMsg = (text, color) => {
    const el = document.getElementById('dash-qr-msg');
    if (el){ el.textContent = text; el.style.color = color || 'var(--warn)'; }
  };
- // Wire the manual entry — works even if the camera library can't load
- const goBtn = document.getElementById('dash-qr-go');
- const inp = document.getElementById('dash-qr-manual');
- if (goBtn && inp){
-   const submit = async () => {
-     const token = (inp.value || '').trim();
-     if (!token) { setMsg('Paste a token first.', 'var(--warn)'); return; }
-     await closeDashScanner();
-     startDashConsultation(token);
-   };
-   goBtn.onclick = submit;
-   inp.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') submit(); });
- }
 
  // Try to load the camera scanner library
  const ok = await loadQrLib();
  if (!ok){
-   setMsg('Camera scanner could not load — use manual entry below.', 'var(--warn)');
+   setMsg('Camera scanner could not load — check your connection and try again.', 'var(--danger)');
    return;
  }
  try {
    const reader = new Html5Qrcode("dash-qr-reader");
    window.__dashQr = reader;
    let scanning = true;
-   await reader.start(
-     { facingMode: 'environment' },
-     { fps: 10, qrbox: { width: 240, height: 240 } },
-     async (decoded) => {
-       if (!scanning) return;
-       scanning = false;
-       let token = decoded;
-       try { const u = new URL(decoded); token = u.searchParams.get('qr') || u.searchParams.get('a') || decoded; } catch(_e){}
-       setMsg('QR detected — starting visit...', 'var(--accent)');
-       await closeDashScanner();
-       startDashConsultation(token);
-     },
-     ()=>{}
-   );
+   let curFacing = localStorage.getItem('nova_qr_facing') || 'environment';
+   const onDecode = async (decoded) => {
+     if (!scanning) return;
+     scanning = false;
+     let token = decoded;
+     try { const u = new URL(decoded); token = u.searchParams.get('qr') || u.searchParams.get('a') || decoded; } catch(_e){}
+     setMsg('QR detected — starting visit...', 'var(--accent)');
+     await closeDashScanner();
+     startDashConsultation(token);
+   };
+   const startWith = async (facing) => {
+     try { await reader.stop(); } catch(_e){}
+     await reader.start(
+       { facingMode: facing },
+       { fps: 10, qrbox: { width: 240, height: 240 } },
+       onDecode,
+       ()=>{}
+     );
+     curFacing = facing;
+     localStorage.setItem('nova_qr_facing', facing);
+   };
+   const flipBtn = document.getElementById('dash-qr-flip');
+   if (flipBtn) flipBtn.onclick = async () => {
+     scanning = true;
+     try { await startWith(curFacing === 'environment' ? 'user' : 'environment'); }
+     catch(e){ setMsg('Could not switch camera: ' + (e.message||'unknown'), 'var(--danger)'); }
+   };
+   await startWith(curFacing);
  } catch (e){
    setMsg('Could not access camera: ' + (e.message||'permission denied') + ' — use manual entry below.', 'var(--danger)');
  }
