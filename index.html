@@ -1675,22 +1675,22 @@ function renderLanding(){
  </div>
  </section>
 
- <section id="discover" class="lp-search-band" style="position:relative;z-index:2;max-width:1280px;margin:8px auto 0;padding:0 24px">
-   <div style="background:rgba(255,255,255,0.55);backdrop-filter:blur(14px);border:1px solid rgba(99,102,241,0.22);border-radius:20px;padding:22px 24px;box-shadow:0 18px 40px -28px rgba(99,102,241,0.45)">
-     <div style="text-align:center;margin-bottom:16px">
-       <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;margin:0 0 4px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent">Trouvez votre praticien</h2>
-       <p style="font-size:13.5px;color:#64748b;margin:0">Recherchez par nom, spécialité ou ville. Aucune connexion requise.</p>
+ <section id="discover" class="lp-search-band" style="position:relative;z-index:5;max-width:1280px;margin:24px auto 8px;padding:0 24px;color:#0f172a">
+   <div style="background:#ffffff;border:2px solid #6366f1;border-radius:20px;padding:24px;box-shadow:0 18px 40px -18px rgba(99,102,241,0.55)">
+     <div style="text-align:center;margin-bottom:18px">
+       <h2 style="font-size:24px;font-weight:800;letter-spacing:-0.4px;margin:0 0 6px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent">Trouvez votre praticien</h2>
+       <p style="font-size:14px;color:#475569;margin:0">Recherchez par nom, spécialité ou ville. Aucune connexion requise.</p>
      </div>
-     <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
-       <input id="lp-disc-q" type="search" placeholder="Nom, spécialité, ville..." style="flex:1 1 280px;min-width:220px;padding:13px 16px;border:1px solid #cbd5e1;border-radius:12px;font-size:15px;background:#fff;color:#0f172a;outline:none" />
-       <button class="btn btn-secondary" id="lp-disc-filters" type="button" style="padding:11px 18px;font-size:14px">Filtres</button>
-       <button class="btn btn-primary" id="lp-disc-search" type="button" style="padding:11px 24px;font-size:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:0;color:#fff;font-weight:600">Rechercher</button>
+     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+       <input id="lp-disc-q" type="search" placeholder="Nom, spécialité, ville..." style="flex:1 1 280px;min-width:220px;padding:14px 18px;border:1px solid #cbd5e1;border-radius:12px;font-size:15px;background:#ffffff;color:#0f172a;outline:none" />
+       <button id="lp-disc-filters" type="button" style="padding:12px 20px;font-size:14px;background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;border-radius:12px;font-weight:600;cursor:pointer">Filtres</button>
+       <button id="lp-disc-search" type="button" style="padding:12px 26px;font-size:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#ffffff;border:0;border-radius:12px;font-weight:700;cursor:pointer">Rechercher</button>
      </div>
-     <div id="lp-disc-filters-panel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(99,102,241,0.25)">
-       <div class="row" style="gap:12px;flex-wrap:wrap">
+     <div id="lp-disc-filters-panel" style="display:none;margin-top:16px;padding-top:16px;border-top:1px dashed rgba(99,102,241,0.35)">
+       <div style="display:flex;gap:12px;flex-wrap:wrap">
          <label style="flex:1 1 180px;font-size:12.5px;color:#475569">
-           <span style="display:block;margin-bottom:4px;font-weight:600">Type de praticien</span>
-           <select id="lp-disc-type" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff;color:#0f172a">
+           <span style="display:block;margin-bottom:6px;font-weight:600;color:#0f172a">Type de praticien</span>
+           <select id="lp-disc-type" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#ffffff;color:#0f172a">
              <option value="">Tous types</option>
              <option value="clinic">Clinique</option>
              <option value="laboratoire">Laboratoire</option>
@@ -1701,21 +1701,21 @@ function renderLanding(){
            </select>
          </label>
          <label style="flex:1 1 180px;font-size:12.5px;color:#475569">
-           <span style="display:block;margin-bottom:4px;font-weight:600">Ville</span>
-           <input id="lp-disc-city" type="text" placeholder="Ex: Kairouan" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff;color:#0f172a" />
+           <span style="display:block;margin-bottom:6px;font-weight:600;color:#0f172a">Ville</span>
+           <input id="lp-disc-city" type="text" placeholder="Ex: Kairouan" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#ffffff;color:#0f172a" />
          </label>
          <label style="flex:1 1 180px;font-size:12.5px;color:#475569">
-           <span style="display:block;margin-bottom:4px;font-weight:600">Distance maximale (km)</span>
-           <input id="lp-disc-radius" type="number" min="1" max="500" value="50" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff;color:#0f172a" />
+           <span style="display:block;margin-bottom:6px;font-weight:600;color:#0f172a">Distance maximale (km)</span>
+           <input id="lp-disc-radius" type="number" min="1" max="500" value="50" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#ffffff;color:#0f172a" />
          </label>
        </div>
      </div>
-     <div class="row" style="gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
-       <button class="btn btn-secondary btn-sm" id="lp-disc-nearby" type="button" style="padding:8px 14px;font-size:13px">Près de vous</button>
-       <button class="btn btn-secondary btn-sm" id="lp-disc-reco" type="button" style="padding:8px 14px;font-size:13px">Recommandés</button>
+     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+       <button id="lp-disc-nearby" type="button" style="padding:9px 16px;font-size:13px;background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-weight:600;cursor:pointer">Près de vous</button>
+       <button id="lp-disc-reco" type="button" style="padding:9px 16px;font-size:13px;background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-weight:600;cursor:pointer">Recommandés</button>
      </div>
    </div>
-   <div id="lp-disc-status" style="text-align:center;font-size:13.5px;color:#64748b;min-height:18px;margin:16px 0 8px"></div>
+   <div id="lp-disc-status" style="text-align:center;font-size:13.5px;color:#475569;min-height:18px;margin:16px 0 8px"></div>
    <div id="lp-disc-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
  </section>
 
