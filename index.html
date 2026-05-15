@@ -1504,7 +1504,22 @@ function renderLanding(){
  @keyframes lp-rise { 0%{transform:translateY(0) translateX(0);opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{transform:translateY(-120vh) translateX(40px);opacity:0} }
 
  /* All landing content sits ABOVE the orb layer */
- .lp-nav, .lp-hero, .lp-features-row, .lp-section, .lp-install-card, .lp-footer { position:relative;z-index:1; }
+ .lp-nav, .lp-hero, .lp-features-row, .lp-section, .lp-install-card, .lp-footer, .lp-search-band { position:relative;z-index:1; }
+
+ /* Mobile polish for the public discovery search bar */
+ @media (max-width:640px){
+   .lp-search-band { margin-top:32px !important; padding:0 14px !important; }
+   .lp-search-band > div:first-child { padding:16px !important; border-radius:16px !important; }
+   .lp-search-band h2 { font-size:20px !important; }
+   .lp-search-band p { font-size:13px !important; }
+   .lp-search-band #lp-disc-q,
+   .lp-search-band #lp-disc-filters,
+   .lp-search-band #lp-disc-search { width:100% !important; flex:1 1 100% !important; padding:12px 16px !important; font-size:14px !important; }
+   .lp-search-band #lp-disc-search { padding:14px 16px !important; }
+   .lp-search-band #lp-disc-nearby,
+   .lp-search-band #lp-disc-reco { flex:1 1 calc(50% - 5px) !important; }
+   .lp-search-band #lp-disc-results { grid-template-columns:1fr !important; }
+ }
 
  /* Levitating cards — every card bobs gently with a staggered phase. */
  .lp-feature, .lp-step, .lp-num-opt, .lp-who, .lp-mockup {
