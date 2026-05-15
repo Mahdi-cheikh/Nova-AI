@@ -1780,6 +1780,33 @@ function renderLanding(){
  </div>
  </section>
 
+ <section id="discover" class="lp-section">
+ <div class="lp-section-h">
+ <h2>Trouvez un praticien près de vous</h2>
+ <p>Recherchez par nom, spécialité ou ville. Ou parcourez les praticiens proches de chez vous et les mieux notés par les patients.</p>
+ </div>
+ <div style="max-width:1100px;margin:0 auto 18px;background:rgba(255,255,255,0.6);backdrop-filter:blur(10px);border:1px solid rgba(99,102,241,0.18);border-radius:16px;padding:16px">
+   <div class="row" style="gap:10px;flex-wrap:wrap">
+     <input id="lp-disc-q" type="search" placeholder="Rechercher (ex : cardiologie, garage, Yasmine)" style="flex:1 1 240px;min-width:200px;padding:11px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff;color:#0f172a" />
+     <select id="lp-disc-type" style="padding:11px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff;color:#0f172a">
+       <option value="">Tous types</option>
+       <option value="clinic">Clinique</option>
+       <option value="laboratoire">Laboratoire</option>
+       <option value="doctor">Médecin</option>
+       <option value="salon">Salon</option>
+       <option value="other">Autre</option>
+     </select>
+     <button class="btn btn-primary" id="lp-disc-search">🔍 Rechercher</button>
+   </div>
+   <div class="row" style="gap:14px;justify-content:center;flex-wrap:wrap;margin-top:14px">
+     <button class="btn btn-secondary" id="lp-disc-nearby">📍 Près de vous</button>
+     <button class="btn btn-secondary" id="lp-disc-reco">⭐ Recommandés</button>
+   </div>
+ </div>
+ <div id="lp-disc-status" style="text-align:center;font-size:14px;color:#64748b;min-height:20px;margin-bottom:14px"></div>
+ <div id="lp-disc-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;max-width:1100px;margin:0 auto"></div>
+ </section>
+
  <section id="features" class="lp-section">
  <div class="lp-section-h">
  <h2>Everything Nova does</h2>
@@ -1856,6 +1883,100 @@ function bindLanding(){
  if (target) { ev.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
  });
  });
+
+ /* Public discovery — Près de vous / Recommandés. Calls the discover-businesses
+    edge function. Works without login because the function has verify_jwt=false. */
+ (function bindLandingDiscover(){
+   const status  = document.getElementById('lp-disc-status');
+   const results = document.getElementById('lp-disc-results');
+   const nearby  = document.getElementById('lp-disc-nearby');
+   const reco    = document.getElementById('lp-disc-reco');
+   if (!nearby || !reco || !results) return;
+
+   const setMsg = (t) => { if (status) status.textContent = t; };
+   const renderCards = (items, mode) => {
+     if (!items || !items.length) {
+       results.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;font-size:14px">Aucun praticien trouvé pour le moment.</div>';
+       return;
+     }
+     results.innerHTML = items.map(b => {
+       const meta = mode === 'nearby'
+         ? `${(b.distance_km ?? 0).toFixed(1)} km`
+         : `★ ${(b.avg_score ?? 0).toFixed(1)} · ${b.review_count || 0} avis`;
+       const desc = b.description ? `<div style="font-size:13.5px;color:#475569;margin-top:8px;line-height:1.45">${escapeHtml(b.description)}</div>` : '';
+       const phone = b.phone ? `<a href="tel:${b.phone}" style="display:inline-block;margin-top:12px;padding:8px 14px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">📞 Appeler</a>` : '';
+       return `<div style="background:rgba(255,255,255,0.7);border:1px solid rgba(99,102,241,0.18);border-radius:14px;padding:18px;backdrop-filter:blur(8px)">
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+           <div style="min-width:0">
+             <div style="font-weight:700;font-size:15px;color:#0f172a">${escapeHtml(b.name || 'Sans nom')}</div>
+             <div style="font-size:12.5px;color:#64748b;margin-top:2px;text-transform:capitalize">${escapeHtml(b.type || '')}</div>
+             ${desc}
+           </div>
+           <span style="white-space:nowrap;font-size:12px;font-weight:600;background:#eef2ff;color:#4338ca;padding:4px 10px;border-radius:999px">${meta}</span>
+         </div>
+         ${phone}
+       </div>`;
+     }).join('');
+   };
+
+   const fetchDiscover = async (mode, extra = {}) => {
+     setMsg('Chargement…');
+     try {
+       const res = await fetch(`${CFG.url}/functions/v1/discover-businesses`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CFG.key}`, 'apikey': CFG.key },
+         body: JSON.stringify({ mode, ...extra }),
+       });
+       const data = await res.json();
+       if (!data?.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+       setMsg(`${data.results.length} résultat(s)`);
+       renderCards(data.results, mode);
+     } catch (e) {
+       setMsg('Erreur : ' + (e.message || e));
+     }
+   };
+
+   nearby.onclick = () => {
+     if (!navigator.geolocation) { setMsg('Géolocalisation non disponible.'); return; }
+     setMsg('Lecture de la position…');
+     navigator.geolocation.getCurrentPosition(
+       (pos) => fetchDiscover('nearby', { lat: pos.coords.latitude, lng: pos.coords.longitude, limit: 24 }),
+       (err) => setMsg('Position refusée : ' + err.message),
+       { enableHighAccuracy: true, timeout: 10000 }
+     );
+   };
+   reco.onclick = () => fetchDiscover('recommended', { limit: 24 });
+
+   // Search — text query + type filter, optionally enriched with the user's
+   // GPS so results sort by distance when both are provided.
+   const qInput = document.getElementById('lp-disc-q');
+   const typeSel = document.getElementById('lp-disc-type');
+   const searchBtn = document.getElementById('lp-disc-search');
+   const runSearch = () => {
+     const q = (qInput?.value || '').trim();
+     const type = typeSel?.value || '';
+     if (!q && !type) { setMsg('Tapez une recherche ou choisissez un type.'); return; }
+     const payload = { q: q || undefined, type: type || undefined, radius_km: 200, limit: 30 };
+     // If geolocation is available AND already granted, add it for distance sort
+     if (navigator.geolocation && navigator.permissions) {
+       navigator.permissions.query({ name: 'geolocation' }).then(p => {
+         if (p.state === 'granted') {
+           navigator.geolocation.getCurrentPosition(
+             (pos) => fetchDiscover('search', { ...payload, lat: pos.coords.latitude, lng: pos.coords.longitude }),
+             () => fetchDiscover('search', payload),
+             { timeout: 4000 }
+           );
+         } else {
+           fetchDiscover('search', payload);
+         }
+       }).catch(() => fetchDiscover('search', payload));
+     } else {
+       fetchDiscover('search', payload);
+     }
+   };
+   if (searchBtn) searchBtn.onclick = runSearch;
+   if (qInput) qInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') runSearch(); });
+ })();
 
  /* Reveal cards on scroll */
  if ('IntersectionObserver' in window) {
@@ -4035,6 +4156,16 @@ async function bindAppointments(){
        }).catch(()=>{});
      } catch(_e){}
    }
+   // Immediate rating prompt — 3 interactive WhatsApp buttons. Idempotent
+   // server-side via appointments.rating_prompt_sent_at, so a double-click
+   // never spams the patient.
+   try {
+     fetch(`${CFG.url}/functions/v1/send-rating-prompt`, {
+       method:'POST',
+       headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${CFG.key}`, 'apikey': CFG.key },
+       body: JSON.stringify({ appointment_id: aptId }),
+     }).catch(()=>{});
+   } catch(_e){}
    render();
  });
  $$('[data-cancel]').forEach(b => b.onclick = async ()=>{
@@ -5527,6 +5658,39 @@ function renderSettings(){
  </div>
 
  <div class="panel">
+ <div class="panel-head"><h3>Découverte publique</h3></div>
+ <div class="panel-body">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+     <div>
+       <div style="font-weight:600;font-size:13.5px">Apparaître dans le répertoire patient</div>
+       <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Permet aux patients de vous trouver depuis la PWA et la page d'accueil publique (par proximité ou recommandation).</div>
+     </div>
+     <label class="nv-tg nv-tg-sm">
+       <input type="checkbox" id="set-discoverable" ${SESSION.business.discoverable ? 'checked' : ''} />
+       <span class="nv-tg-slider"></span>
+     </label>
+   </div>
+   <div class="field"><label>Description courte (240 caractères max)</label><textarea id="set-discovery-desc" rows="2" maxlength="240" placeholder="Ex: Cabinet de cardiologie spécialisé, ouvert du lundi au samedi.">${escapeHtml(SESSION.business.discovery_description || '')}</textarea></div>
+   <div class="field"><label>Adresse</label>
+     <input id="set-address" type="text" placeholder="Ex: 12 avenue de la Liberté, Kairouan" value="${escapeHtml(SESSION.business.address || '')}" style="width:100%" />
+   </div>
+   <div class="field"><label>Ville</label>
+     <input id="set-city" type="text" placeholder="Ex: Kairouan" value="${escapeHtml(SESSION.business.city || '')}" style="width:240px" />
+   </div>
+   <div class="field"><label>Coordonnées GPS</label>
+     <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+       <input id="set-lat" type="number" step="0.0000001" placeholder="Latitude" value="${SESSION.business.latitude ?? ''}" style="width:160px" />
+       <input id="set-lng" type="number" step="0.0000001" placeholder="Longitude" value="${SESSION.business.longitude ?? ''}" style="width:160px" />
+       <button class="btn btn-secondary btn-sm" id="set-geo-capture">📍 Capturer ma position</button>
+       <span id="set-geo-status" style="font-size:12px;color:var(--text-dim)"></span>
+     </div>
+     <div style="font-size:11.5px;color:var(--text-dim);margin-top:6px">La capture remplit aussi automatiquement l'adresse et la ville (via OpenStreetMap).</div>
+   </div>
+   <button class="btn btn-primary btn-sm" id="save-discovery">Enregistrer</button>
+ </div>
+ </div>
+
+ <div class="panel">
  <div class="panel-head"><h3>Politique d'annulation</h3></div>
  <div class="panel-body">
  <div class="field"><label>Délai d'annulation gratuit (heures avant le RDV)</label><input id="set-cancel-h" type="number" value="${novaSetting('cancel_window_h',24)}" min="0" max="168" style="width:120px" /></div>
@@ -5677,6 +5841,66 @@ function bindSettings(){
    novaSettingSet('cancel_window_h', h);
    novaSettingSet('cancel_msg', $('#set-cancel-msg').value.trim());
    toast({title:'Policy saved', message:'Cancellation policy updated.', type:'booking'});
+ };
+
+ // Discoverability — capture GPS button uses navigator.geolocation, then
+ // calls Nominatim's reverse-geocode API to auto-fill the address + city.
+ const geoBtn = $('#set-geo-capture');
+ const geoStatus = $('#set-geo-status');
+ if (geoBtn) geoBtn.onclick = () => {
+   if (!navigator.geolocation) { geoStatus.textContent = 'Géolocalisation non disponible.'; return; }
+   geoStatus.textContent = 'Lecture en cours...';
+   navigator.geolocation.getCurrentPosition(
+     async (pos) => {
+       const lat = pos.coords.latitude;
+       const lng = pos.coords.longitude;
+       $('#set-lat').value = lat.toFixed(7);
+       $('#set-lng').value = lng.toFixed(7);
+       geoStatus.textContent = `Position OK (±${Math.round(pos.coords.accuracy)} m). Recherche de l'adresse…`;
+       // Reverse-geocode via OpenStreetMap Nominatim (free, no API key)
+       try {
+         const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=fr`;
+         const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+         if (!res.ok) throw new Error('HTTP ' + res.status);
+         const j = await res.json();
+         const display = j.display_name || '';
+         const city = j.address?.city || j.address?.town || j.address?.village
+                   || j.address?.municipality || j.address?.county || '';
+         if (display && !$('#set-address').value.trim()) $('#set-address').value = display;
+         if (city && !$('#set-city').value.trim()) $('#set-city').value = city;
+         geoStatus.textContent = `OK${city ? ` — ${city}` : ''} (±${Math.round(pos.coords.accuracy)} m)`;
+       } catch (e) {
+         geoStatus.textContent = `Position OK (±${Math.round(pos.coords.accuracy)} m). Adresse non récupérée : ${e.message || e}`;
+       }
+     },
+     (err) => { geoStatus.textContent = 'Refusé : ' + err.message; },
+     { enableHighAccuracy: true, timeout: 10000 }
+   );
+ };
+ // Save discovery settings (toggle + description + address + city + coords)
+ const saveDisc = $('#save-discovery');
+ if (saveDisc) saveDisc.onclick = async () => {
+   const lat = parseFloat($('#set-lat').value);
+   const lng = parseFloat($('#set-lng').value);
+   const desc = $('#set-discovery-desc').value.trim().slice(0, 240);
+   const address = $('#set-address').value.trim() || null;
+   const city = $('#set-city').value.trim() || null;
+   const discoverable = $('#set-discoverable').checked;
+   if (discoverable && (isNaN(lat) || isNaN(lng))) {
+     toast({title:'GPS requis', message:'Une position GPS est nécessaire pour activer la découverte.', urgent:true});
+     return;
+   }
+   const update = {
+     discoverable,
+     discovery_description: desc || null,
+     address, city,
+     latitude: isNaN(lat) ? null : lat,
+     longitude: isNaN(lng) ? null : lng,
+   };
+   const { error } = await sb.from('businesses').update(update).eq('id', SESSION.business.id);
+   if (error) { toast({title:'Échec', message:error.message, urgent:true}); return; }
+   Object.assign(SESSION.business, update);
+   toast({title:'Découverte enregistrée', message: discoverable ? 'Visible dans le répertoire.' : 'Hors du répertoire.', type:'booking'});
  };
 }
 

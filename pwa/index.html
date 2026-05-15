@@ -685,12 +685,122 @@ function bindPatientHome() {
 }
 
 function renderDiscover() {
- return `<div class="wrap"><div class="topbar"><div class="logo"><div class="logo-mark">N</div> Discover</div></div>
- <div class="card placeholder-page"><div class="ic">◎</div>
- <h3 style="margin:0 0 6px">Find a business near you</h3>
- <p class="sub" style="margin:0 0 16px">Cross-business search lands in iteration #2.</p>
+ // Search bar + filter dropdown + two quick-access buttons. Geolocation is
+ // only requested if the user taps Près de vous (or already granted).
+ setTimeout(() => bindDiscover(), 0);
+ return `<div class="wrap"><div class="topbar"><div class="logo"><div class="logo-mark">N</div> Découvrir</div></div>
+ <div class="card" style="padding:12px;margin-bottom:12px">
+   <input id="disc-q" type="search" placeholder="Rechercher (cardio, garage, ville…)" style="width:100%;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:8px" />
+   <div class="row" style="gap:8px">
+     <select id="disc-type" style="flex:1;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13.5px">
+       <option value="">Tous types</option>
+       <option value="clinic">Clinique</option>
+       <option value="laboratoire">Laboratoire</option>
+       <option value="doctor">Médecin</option>
+       <option value="salon">Salon</option>
+       <option value="other">Autre</option>
+     </select>
+     <button class="btn btn-primary" id="disc-search">🔍</button>
+   </div>
  </div>
+ <div class="row" style="gap:10px;margin-bottom:14px">
+   <button class="btn btn-secondary btn-block" id="disc-nearby" style="flex:1">📍 Près de vous</button>
+   <button class="btn btn-secondary btn-block" id="disc-reco" style="flex:1">⭐ Recommandés</button>
+ </div>
+ <div id="disc-status" style="font-size:13px;color:var(--text-dim);min-height:18px;margin-bottom:10px"></div>
+ <div id="disc-results"></div>
  </div>${renderNav('discover')}`;
+}
+
+async function bindDiscover() {
+ const status = document.getElementById('disc-status');
+ const results = document.getElementById('disc-results');
+ const setMsg = (t) => { if (status) status.textContent = t; };
+
+ const renderResults = (items, mode) => {
+   if (!items || !items.length) {
+     results.innerHTML = '<div class="card"><div class="sub">Aucun résultat pour le moment.</div></div>';
+     return;
+   }
+   results.innerHTML = items.map(b => {
+     const meta = mode === 'nearby'
+       ? `${(b.distance_km ?? 0).toFixed(1)} km`
+       : `★ ${(b.avg_score ?? 0).toFixed(1)} (${b.review_count || 0} avis)`;
+     const desc = b.description ? `<div class="sub" style="margin-top:4px">${escapeHtml(b.description)}</div>` : '';
+     const phone = b.phone ? `<a href="tel:${b.phone}" class="btn btn-secondary btn-sm" style="margin-top:8px">Appeler</a>` : '';
+     return `<div class="card" style="margin-bottom:10px">
+       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+         <div>
+           <div style="font-weight:600;font-size:14.5px">${escapeHtml(b.name || 'Sans nom')}</div>
+           <div class="sub" style="margin-top:2px">${escapeHtml(b.type || '')}</div>
+           ${desc}
+         </div>
+         <div class="pill pill-blue" style="white-space:nowrap">${meta}</div>
+       </div>
+       ${phone}
+     </div>`;
+   }).join('');
+ };
+
+ const callDiscover = async (mode, extra = {}) => {
+   setMsg('Chargement…');
+   try {
+     const { data, error } = await sb.functions.invoke('discover-businesses', {
+       body: { mode, ...extra },
+     });
+     if (error) throw error;
+     if (!data?.ok) throw new Error(data?.error || 'Erreur inconnue');
+     setMsg(`${data.results.length} résultat(s)`);
+     renderResults(data.results, mode);
+   } catch (e) {
+     setMsg('Erreur : ' + (e.message || e));
+   }
+ };
+
+ const nearby = document.getElementById('disc-nearby');
+ const reco = document.getElementById('disc-reco');
+ if (nearby) nearby.onclick = () => {
+   if (!navigator.geolocation) { setMsg('Géolocalisation non disponible.'); return; }
+   setMsg('Lecture de la position…');
+   navigator.geolocation.getCurrentPosition(
+     (pos) => callDiscover('nearby', { lat: pos.coords.latitude, lng: pos.coords.longitude, limit: 20 }),
+     (err) => setMsg('Position refusée : ' + err.message),
+     { enableHighAccuracy: true, timeout: 10000 }
+   );
+ };
+ if (reco) reco.onclick = () => callDiscover('recommended', { limit: 20 });
+
+ // Search — text query + type filter, optionally enriched with GPS if
+ // already granted (so results sort by distance when both are available).
+ const qInput = document.getElementById('disc-q');
+ const typeSel = document.getElementById('disc-type');
+ const searchBtn = document.getElementById('disc-search');
+ const runSearch = () => {
+   const q = (qInput?.value || '').trim();
+   const type = typeSel?.value || '';
+   if (!q && !type) { setMsg('Tapez une recherche ou choisissez un type.'); return; }
+   const payload = { q: q || undefined, type: type || undefined, radius_km: 200, limit: 30 };
+   if (navigator.geolocation && navigator.permissions) {
+     navigator.permissions.query({ name: 'geolocation' }).then(p => {
+       if (p.state === 'granted') {
+         navigator.geolocation.getCurrentPosition(
+           (pos) => callDiscover('search', { ...payload, lat: pos.coords.latitude, lng: pos.coords.longitude }),
+           () => callDiscover('search', payload),
+           { timeout: 4000 }
+         );
+       } else {
+         callDiscover('search', payload);
+       }
+     }).catch(() => callDiscover('search', payload));
+   } else {
+     callDiscover('search', payload);
+   }
+ };
+ if (searchBtn) searchBtn.onclick = runSearch;
+ if (qInput) qInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') runSearch(); });
+
+ // Default view on first open: load recommended (no geolocation prompt)
+ callDiscover('recommended', { limit: 10 });
 }
 function renderFiles() {
  return `<div class="wrap"><div class="topbar"><div class="logo"><div class="logo-mark">N</div> Files</div></div>
