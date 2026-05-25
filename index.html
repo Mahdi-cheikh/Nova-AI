@@ -6135,7 +6135,7 @@ function pickNovaVoice(lang){
   const preferred = {
     en: ["Google UK English Male","Microsoft Ryan Online","Microsoft Guy Online","Microsoft George","Microsoft Mark","Microsoft David","Daniel","Daniel (Enhanced)","Alex","Albert","Arthur","Google US English"],
     fr: ["Google français","Microsoft Paul Online","Microsoft Henri Online","Microsoft Claude","Thomas","Thomas (Enhanced)","Nicolas"],
-    ar: ["Microsoft Hamed Online","Microsoft Naayf Online","Microsoft Naayf","Microsoft Salma","Microsoft Hoda","Maged","Maged (Enhanced)","Tarik","Hassan","Google العربية","Google عربى"],
+    ar: ["Microsoft Hamed Online","Microsoft Naayf Online","Microsoft Naayf","Microsoft Salma","Microsoft Hoda","Maged","Maged (Enhanced)","Tarik","Hassan","Google العربية","Google عربى","Google Arabic"],
   };
   const prefList = preferred[lang] || preferred.en;
   for (const name of prefList){
@@ -6143,6 +6143,18 @@ function pickNovaVoice(lang){
     if (v) return { voice: v, matched: true };
   }
   const langPrefix = lang === "ar" ? "ar" : lang === "fr" ? "fr" : "en";
+
+  // ============ Aggressive Arabic search ============
+  // The OS may have Arabic voices with non-obvious names (ar-EG, ar-SA, etc).
+  // Catch ANY voice whose language tag starts with "ar-" OR whose name
+  // mentions Arabic / عرب in any form.
+  if (lang === "ar"){
+    const arByName = voices.find(v => /arab|عرب|hamed|naayf|salma|hoda|maged|tarik|hassan/i.test(v.name));
+    if (arByName) return { voice: arByName, matched: true };
+    const arByLang = voices.find(v => (v.lang || "").toLowerCase().startsWith("ar"));
+    if (arByLang) return { voice: arByLang, matched: true };
+  }
+
   const maleish = voices.find(v => (v.lang || "").startsWith(langPrefix) && /male|man|guy|david|ryan|paul|thomas|tarik|hamed|naayf/i.test(v.name));
   if (maleish) return { voice: maleish, matched: true };
   const anyLang = voices.find(v => (v.lang || "").startsWith(langPrefix));
@@ -6397,17 +6409,42 @@ async function openAskNova(){
    //      voices may take it) and fall back to a length-based timer so
    //      the always-on listening loop keeps cycling.
    if (!pick.matched && lang === 'ar'){
-     // Show a one-time gentle warning toast so the user knows why.
-     if (!window.__nova.warnedNoArabicVoice){
-       window.__nova.warnedNoArabicVoice = true;
-       try {
-         toast({
-           title: 'No Arabic voice installed',
-           message: 'Nova will speak the answer in French and show the Arabic on screen. Install Microsoft Hamed (Windows) or Maged (macOS) to hear Nova in Arabic.',
-           type: 'info',
-         });
-       } catch(_e){}
-     }
+     // Even if we did not find a perfect-name Arabic voice, MANY systems
+     // still pronounce Arabic correctly when we just hand the utterance an
+     // ar-* locale. So try the Arabic utterance FIRST and only fall back to
+     // the French line if that genuinely produces no sound.
+     setState('speaking', 'Speaking (Arabic)...', 'live');
+     const uAr = new SpeechSynthesisUtterance(text);
+     uAr.lang = 'ar-SA';
+     uAr.rate = 0.92;
+     uAr.pitch = 0.85;
+     uAr.volume = 1.0;
+     let arSpoke = false;
+     uAr.onstart = () => { arSpoke = true; setState('speaking', 'Speaking (Arabic)...', 'live'); };
+     uAr.onend = onSpeakDone;
+     uAr.onerror = () => {
+       // Genuine TTS failure on Arabic — fall back to French line if we have one.
+       if (!arSpoke && fallbackFrText){
+         if (!window.__nova.warnedNoArabicVoice){
+           window.__nova.warnedNoArabicVoice = true;
+           try { toast({ title:'No Arabic voice', message:'Falling back to French audio. Install Microsoft Hamed (Windows) or Maged (macOS) for Arabic TTS.', type:'info' }); } catch(_e){}
+         }
+         const frPick = pickNovaVoice('fr');
+         const u = new SpeechSynthesisUtterance(fallbackFrText);
+         if (frPick.voice) u.voice = frPick.voice;
+         u.lang = frPick.voice ? frPick.voice.lang : 'fr-FR';
+         u.rate = 0.9; u.pitch = 0.78; u.volume = 1.0;
+         u.onend = onSpeakDone; u.onerror = onSpeakDone;
+         TTS.speak(u);
+       } else {
+         onSpeakDone();
+       }
+     };
+     try { TTS.speak(uAr); } catch(_e){ onSpeakDone(); }
+     return;
+   }
+   if (false && !pick.matched && lang === 'ar'){
+     // (legacy branch kept for diff context — unused)
      if (fallbackFrText){
        const frPick = pickNovaVoice('fr');
        const u = new SpeechSynthesisUtterance(fallbackFrText);
@@ -6472,9 +6509,21 @@ async function openAskNova(){
    if (!transcript) return;
    isProcessing = true;
    setState('thinking', 'Thinking...', 'live');
-   // The user explicitly picked the language; tell Claude to reply in it.
-   const hintLang = window.__nova.userLang || 'fr';
+   // Auto-detect Arabic script in the transcript: if the user spoke in
+   // Arabic (regardless of which tab they picked), force lang=ar so Claude
+   // replies in Arabic.
+   const arabicScript = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+   const detectedAr = arabicScript.test(transcript);
+   const hintLang = detectedAr ? 'ar' : (window.__nova.userLang || 'fr');
    const hintLocale = currentSrLocale() || '';
+
+   // If we detected Arabic but the user had a different pill active, switch
+   // the active pill so the next turn uses the Arabic SR locale.
+   if (detectedAr && window.__nova.userLang !== 'ar'){
+     window.__nova.userLang = 'ar';
+     try { refreshLangPills(); } catch(_e){}
+   }
+
    try {
      const r = await fetch(`${CFG.supabaseUrl}/functions/v1/ask-nova`, {
        method:'POST',
@@ -6485,6 +6534,12 @@ async function openAskNova(){
      if (!r.ok || !j.ok) throw new Error(j.error || 'Network error');
      const { lang, text, speakFr } = parseAnswer(j.answer);
      window.__nova.lastLang = lang;
+     // If Claude replied in a language different from the active pill, follow
+     // it: switch the pill so the next listening cycle uses the right SR locale.
+     if (lang && ['en','fr','ar'].includes(lang) && window.__nova.userLang !== lang){
+       window.__nova.userLang = lang;
+       try { refreshLangPills(); } catch(_e){}
+     }
      setPrompt(transcript, text);
      speak(text, lang, { fallbackFrText: speakFr });
    } catch (e){
