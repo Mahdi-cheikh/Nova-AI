@@ -513,18 +513,36 @@ function bindAuth() {
  };
 }
 
+/* ---------- USE WHATSAPP (replaces patient-as-user flow) ---------- */
+function renderUseWhatsApp() {
+ return `<div class="auth-wrap"><div class="auth-card" style="max-width:440px;text-align:center">
+   <div class="logo-mark" style="margin:0 auto 16px">N</div>
+   <h2 style="margin:0 0 8px;font-size:22px;font-weight:700">Nova AI uses WhatsApp</h2>
+   <p class="sub" style="margin:0 0 18px;line-height:1.55">
+     Patients and clients interact with Nova exclusively through WhatsApp.
+     There is nothing to install, no account to create, and no password to remember.
+     Just text the WhatsApp number of your clinic, lab, garage or salon and Nova
+     will take care of the rest — 24/7, in French, Arabic or English.
+   </p>
+   <a class="btn btn-primary btn-block" style="text-decoration:none" href="https://wa.me/" target="_blank" rel="noopener">Open WhatsApp</a>
+   <p class="sub" style="margin-top:14px;font-size:11.5px;color:var(--text-faint)">
+     You're a doctor or business owner? <a href="#/" id="back-to-role">Sign in as a practitioner</a> instead.
+   </p>
+ </div></div>`;
+}
+
 /* ---------- ROLE PICKER (only when no role yet, or multi-role) ---------- */
 function renderRolePicker() {
  const opts = [];
- // Always offer the patient flow (it's how new users opt in)
- opts.push({key:'patient', icon:'', t:"I'm a patient", d:'Find clinics, manage my appointments, see my results.'});
+ // Nova PWA is for practitioners and business owners only.
+ // Patients interact exclusively via WhatsApp — no app needed.
  if (DOCTOR) opts.push({key:'doctor', icon:'', t:"I'm a doctor", d:`See your day at ${escapeHtml(DOCTOR.businesses?.name || '')}`});
  if (OWNER_BIZ) opts.push({key:'owner', icon:'⚙', t:"I'm a business owner", d:`Open ${escapeHtml(OWNER_BIZ.name)} dashboard`});
 
  return `<div class="auth-wrap"><div class="auth-card" style="max-width:440px;text-align:left">
  <div class="logo-mark" style="margin:0 auto 16px">N</div>
- <h2 style="margin:0 0 6px;font-size:22px;font-weight:700;text-align:center">How will you use Nova?</h2>
- <p class="sub" style="margin:0 0 22px;text-align:center">Pick the experience that fits — you can switch later.</p>
+ <h2 style="margin:0 0 6px;font-size:22px;font-weight:700;text-align:center">Welcome to Nova</h2>
+ <p class="sub" style="margin:0 0 22px;text-align:center">Choose your role. Patients use WhatsApp directly — no app needed.</p>
  ${opts.map(o => `<div class="role-card" data-role="${o.key}">
  <div class="ic">${o.icon}</div>
  <div><div class="t">${o.t}</div><div class="d">${o.d}</div></div>
@@ -534,12 +552,8 @@ function renderRolePicker() {
 function bindRolePicker() {
  document.querySelectorAll('.role-card').forEach(c => c.onclick = async () => {
  const role = c.getAttribute('data-role');
- if (role === 'patient' && !PATIENT) {
- // Create the patient_users row now (idempotent RPC)
- const { data, error } = await sb.rpc('pwa_ensure_patient_user', { p_full_name: SESSION.user.user_metadata?.full_name || null });
- if (error) { toast('Could not start patient setup: ' + error.message); return; }
- PATIENT = data; ROLES.push('patient');
- }
+ // Patient role is no longer supported in the PWA — patients use WhatsApp directly.
+ if (role === 'patient') return;
  localStorage.setItem('nova_active_role', role);
  ACTIVE_ROLE = role;
  navigate('#/');
@@ -973,8 +987,8 @@ async function render() {
  }
  if (!SESSION) { $('#app').innerHTML = renderAuth(); bindAuth(); return; }
 
- // Newly-arrived user with no role yet → role picker
- if (ROLES.length === 0) { $('#app').innerHTML = renderRolePicker(); bindRolePicker(); return; }
+ // New user with no doctor/owner role attached → patients should use WhatsApp.
+ if (ROLES.length === 0) { $('#app').innerHTML = renderUseWhatsApp(); return; }
 
  // Multi-role with no choice persisted → ask once
  if (!ACTIVE_ROLE && ROLES.length > 1) { $('#app').innerHTML = renderRolePicker(); bindRolePicker(); return; }
@@ -982,14 +996,11 @@ async function render() {
  // Owner role: render an "Owner mode" landing page inside the PWA (no auto-redirect).
  if (ACTIVE_ROLE === 'owner') { $('#app').innerHTML = renderOwnerHome(); bindOwnerHome(); return; }
 
- // Patient role: phone-OTP onboarding gate
+ // Patient flows have been removed from the PWA.
+ // If a user lands here with the patient role, redirect them to WhatsApp.
  if (ACTIVE_ROLE === 'patient') {
- if (!PATIENT?.phone_verified) { $('#app').innerHTML = renderPhoneOnboarding('phone'); bindPhoneStep(); return; }
- const r = route();
- if (r === '/profile') { $('#app').innerHTML = await renderProfile(); bindProfile(); return; }
- if (r === '/discover') { $('#app').innerHTML = renderDiscover(); bindNav(); return; }
- if (r === '/files') { $('#app').innerHTML = renderFiles(); bindNav(); return; }
- $('#app').innerHTML = await renderPatientHome(); bindPatientHome();
+ localStorage.removeItem('nova_active_role');
+ $('#app').innerHTML = renderUseWhatsApp();
  return;
  }
 
