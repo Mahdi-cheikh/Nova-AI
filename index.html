@@ -4346,7 +4346,7 @@ async function renderCalendar(){
  <div class="panel-head">
  <h3>${escapeHtml(monthLabel)}</h3>
  <div class="row" style="gap:8px">
- ${doctorList.length > 1 ? `<select id="cal-doctor-filter" style="padding:7px 10px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:13px">
+ ${(doctorList.length > 1 && SESSION.business.type !== 'doctor') ? `<select id="cal-doctor-filter" style="padding:7px 10px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:13px">
  <option value="">All doctors</option>
  ${doctorList.map(d=>`<option value="${d.id}" ${filterDoc===d.id?'selected':''}>${escapeHtml(d.name)}</option>`).join('')}
  </select>` : ''}
@@ -7211,16 +7211,25 @@ async function addAppointmentModal(){
  sb.from('users').select('id,name').eq('business_id',SESSION.business.id).eq('role','doctor'),
  sb.from('services').select('id,name').eq('business_id',SESSION.business.id)
  ]);
+ // For a single-practitioner business (type='doctor'), the owner IS the
+ // only doctor. Auto-pick that doctor and hide the dropdown — no point in
+ // forcing the user to choose from a one-row list every time.
+ const isSoloDoctor = SESSION.business.type === 'doctor';
+ const soloDoctorId = isSoloDoctor && docs.data && docs.data.length === 1 ? docs.data[0].id : null;
  window.__modalSubmit = async (d)=>{
- if (!d.client_id||!d.doctor_id||!d.date||!d.time){alert('Fill all fields');return;}
- const {data:apt, error} = await sb.from('appointments').insert({business_id:SESSION.business.id, client_id:d.client_id, doctor_id:d.doctor_id, service_id:d.service_id||null, date:d.date, time:d.time, status:'confirmed', source:'manual'}).select().single();
+ const doctorId = d.doctor_id || soloDoctorId;
+ if (!d.client_id||!doctorId||!d.date||!d.time){alert('Fill all fields');return;}
+ const {data:apt, error} = await sb.from('appointments').insert({business_id:SESSION.business.id, client_id:d.client_id, doctor_id:doctorId, service_id:d.service_id||null, date:d.date, time:d.time, status:'confirmed', source:'manual'}).select().single();
  if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
  closeModal(); render();
  };
  /* Trick: addAppointmentModal is async, but openModal expects sync html. We'll just openModal here. */
+ const doctorField = (isSoloDoctor && soloDoctorId)
+   ? `<input type="hidden" name="doctor_id" value="${soloDoctorId}" />`
+   : `<div class="field"><label>Doctor</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}</select></div>`;
  const html = modalShell('New appointment',
  `<div class="field"><label>Client</label><select name="client_id" required>${(cls.data||[]).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select></div>
- <div class="field"><label>Doctor</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}</select></div>
+ ${doctorField}
  <div class="field"><label>Service</label><select name="service_id">${(svcs.data||[]).map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}</select></div>
  <div class="row"><div class="field grow"><label>Date</label><input name="date" type="date" value="${isoDate(1)}" required /></div>
  <div class="field grow"><label>Time</label><input name="time" type="time" value="10:00" required /></div></div>`);
