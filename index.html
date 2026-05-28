@@ -1872,7 +1872,7 @@ function renderLanding(){
 
  <footer class="lp-footer">
  <div>Nova AI · 24/7 multilingual receptionist for appointment-driven businesses</div>
- <div style="margin-top:6px">Designed and built by <b>Mehdi Cheikh</b> · © ${new Date().getFullYear()}</div>
+ <div style="margin-top:6px">Designed and built by <a href="https://www.linkedin.com/in/mehdi-cheikh-b000a2294/" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;border-bottom:1px dashed currentColor" title="Mehdi Cheikh on LinkedIn"><b>Mehdi Cheikh</b></a> · © ${new Date().getFullYear()}</div>
  </footer>
  </div>`;
 }
@@ -1937,7 +1937,7 @@ function bindLanding(){
          ? `${(b.distance_km ?? 0).toFixed(1)} km`
          : `★ ${(b.avg_score ?? 0).toFixed(1)} · ${b.review_count || 0} avis`;
        const desc = b.description ? `<div style="font-size:13.5px;color:#475569;margin-top:8px;line-height:1.45">${escapeHtml(b.description)}</div>` : '';
-       const phone = b.phone ? `<a href="tel:${b.phone}" style="display:inline-block;margin-top:12px;padding:8px 14px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">📞 Appeler</a>` : '';
+       const phone = b.phone ? `<a href="https://wa.me/${(b.phone||'').replace(/\D/g,'')}?text=${encodeURIComponent('Bonjour, je vous contacte via Nova AI pour prendre un rendez-vous.')}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 14px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600"><span>💬</span> Contacter sur WhatsApp</a>` : '';
        return `<div style="background:rgba(255,255,255,0.7);border:1px solid rgba(99,102,241,0.18);border-radius:14px;padding:18px;backdrop-filter:blur(8px)">
          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
            <div style="min-width:0">
