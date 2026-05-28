@@ -1428,6 +1428,31 @@ function renderLanding(){
  .lp-who h4 { margin:0 0 4px;font-size:15px;font-weight:700; }
  .lp-who p { margin:0;font-size:12.5px;color:#64748b;line-height:1.5; }
 
+ /* Founder section */
+ .lp-founder { max-width:1180px;margin:80px auto 40px;padding:0 24px; }
+ @media (max-width:560px) { .lp-founder{ margin:48px auto 24px;padding:0 16px } }
+ .lp-founder-card { background:linear-gradient(135deg,#eef2ff 0%,#ecfeff 100%);border:1px solid rgba(99,102,241,0.14);border-radius:28px;padding:48px;display:flex;align-items:center;gap:48px;box-shadow:0 24px 60px -22px rgba(99,102,241,0.28);position:relative;overflow:hidden; }
+ @media (prefers-color-scheme:dark){ .lp-founder-card{background:linear-gradient(135deg,#171a2b 0%,#0f1a23 100%);border-color:rgba(99,102,241,0.28)} }
+ @media (max-width:880px) { .lp-founder-card{ flex-direction:column;text-align:center;padding:32px 24px;gap:28px } }
+ .lp-founder-card::before { content:'';position:absolute;top:-40%;right:-15%;width:380px;height:380px;background:radial-gradient(circle,rgba(99,102,241,0.18) 0%,transparent 70%);border-radius:50%;pointer-events:none; }
+ .lp-founder-card::after { content:'';position:absolute;bottom:-30%;left:-10%;width:300px;height:300px;background:radial-gradient(circle,rgba(34,211,238,0.18) 0%,transparent 70%);border-radius:50%;pointer-events:none; }
+ .lp-founder-photo { flex-shrink:0;width:260px;height:340px;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#6366f1,#22d3ee);padding:6px;box-shadow:0 18px 40px -14px rgba(15,23,42,0.35);position:relative;z-index:1; }
+ @media (max-width:880px) { .lp-founder-photo{ width:200px;height:260px } }
+ .lp-founder-photo img { width:100%;height:100%;object-fit:cover;border-radius:18px;display:block; }
+ .lp-founder-body { flex:1;min-width:0;position:relative;z-index:1; }
+ .lp-founder-kicker { font-size:12.5px;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;color:#6366f1;margin-bottom:10px; }
+ .lp-founder-title { font-size:34px;letter-spacing:-0.6px;margin:0;font-weight:800;color:#0f172a;line-height:1.15; }
+ @media (prefers-color-scheme:dark){ .lp-founder-title{color:#f8fafc} }
+ @media (max-width:560px) { .lp-founder-title{ font-size:26px } }
+ .lp-founder-accent { width:80px;height:4px;background:linear-gradient(90deg,#22d3ee,#6366f1);border-radius:4px;margin:14px 0 22px; }
+ @media (max-width:880px) { .lp-founder-accent{ margin-left:auto;margin-right:auto } }
+ .lp-founder-body p { margin:0 0 14px;font-size:15.5px;line-height:1.65;color:#334155; }
+ @media (prefers-color-scheme:dark){ .lp-founder-body p{color:#cbd5e1} }
+ .lp-founder-body p b { color:#0f172a;font-weight:700; }
+ @media (prefers-color-scheme:dark){ .lp-founder-body p b{color:#f1f5f9} }
+ .lp-founder-linkedin { color:#0a66c2;text-decoration:none;border-bottom:1px solid rgba(10,102,194,0.35);transition:border-color .15s; }
+ .lp-founder-linkedin:hover { border-bottom-color:#0a66c2; }
+
  /* Install CTA */
  .lp-install-card { max-width:1080px;margin:80px auto;padding:0 24px; }
  @media (max-width:560px) { .lp-install-card{ margin:48px auto;padding:0 16px } }
@@ -1852,6 +1877,22 @@ function renderLanding(){
  <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue"></div><h3>Prescription OCR</h3><p>Patient sends a photo, Claude Vision reads it &amp; pre-fills the booking.</p></div>
  <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink">⚗</div><h3>Lab pipeline</h3><p>Sample → analysis → results delivery on a kanban grouped per patient.</p></div>
  <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple"></div><h3>Real-time alerts</h3><p>Instant notifications when bookings, cancels or urgent flags arrive.</p></div>
+ </div>
+ </section>
+
+ <section id="founder" class="lp-section lp-founder">
+ <div class="lp-founder-card lp-fadein">
+   <div class="lp-founder-photo">
+     <img src="./e326a76b-e827-43a8-8729-19f277dbe675.jpg" alt="Mehdi Cheikh — Founder of Nova AI" loading="lazy" />
+   </div>
+   <div class="lp-founder-body">
+     <div class="lp-founder-kicker">Meet the founder</div>
+     <h2 class="lp-founder-title">Founder of Nova AI</h2>
+     <div class="lp-founder-accent"></div>
+     <p>I'm <b>Mehdi Cheikh</b>, a Computer Science student passionate about applied AI and real-world automation. I built <b>Nova AI</b> to give clinics, labs, salons, garages, doctors and lawyers a 24/7 multilingual receptionist that answers WhatsApp messages and phone calls, books appointments, reads prescriptions and frees small teams from repetitive coordination work.</p>
+     <p>My goal is to put large-language-model reasoning, speech and vision at the service of <b>everyday businesses</b>, so customer relations become faster, more natural and accessible to everyone — in Arabic, French or English.</p>
+     <p>Discover my professional profile and follow my journey on <a href="https://www.linkedin.com/in/mehdi-cheikh-b000a2294/" target="_blank" rel="noopener noreferrer" class="lp-founder-linkedin"><b>LinkedIn</b></a>.</p>
+   </div>
  </div>
  </section>
 
