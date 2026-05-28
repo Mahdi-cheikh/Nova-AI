@@ -1113,7 +1113,7 @@ function renderSetup(errMsg){
  <button class="btn btn-primary btn-block" type="submit">Connect</button>
  </form>
  <div style="margin-top:16px;font-size:12px;color:var(--text-faint);text-align:center">
- Both come from your project's <strong>Settings → API</strong> page. The anon key is meant to be public.
+ Both come from your project's <strong>Paramètres → API</strong> page. The anon key is meant to be public.
  </div>
  </div></div>`;
 }
@@ -1445,7 +1445,7 @@ function renderLanding(){
  @media (prefers-color-scheme:dark){ .lp-footer{border-color:rgba(255,255,255,0.06)} }
  .lp-footer b { color:#6366f1; }
 
- /* How it works steps */
+ /* Comment ça marche steps */
  .lp-steps { display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:48px; }
  @media (max-width:980px) { .lp-steps{ grid-template-columns:repeat(2,1fr) } }
  @media (max-width:560px) { .lp-steps{ grid-template-columns:1fr } }
@@ -1598,8 +1598,8 @@ function renderLanding(){
  <a href="#install">Mobile app</a>
  </nav>
  <div class="lp-nav-cta">
- <a href="#/auth" class="lp-btn lp-btn-outline">Log in</a>
- <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary">Sign up</a>
+ <a href="#/auth" class="lp-btn lp-btn-outline">Connexion</a>
+ <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary">S'inscrire</a>
  </div>
  </div>
  </header>
@@ -1610,7 +1610,7 @@ function renderLanding(){
  <h1>Your 24/7 AI <span class="lp-grad-text">Receptionist</span></h1>
  <p>Nova helps clinics, labs, doctors, salons and companies automate appointments, communicate with clients in Arabic, French and English on WhatsApp — and never miss an opportunity.</p>
  <div class="lp-cta-row">
- <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary lp-btn-lg">Start free demo →</a>
+ <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary lp-btn-lg">Démarrer gratuitement demo →</a>
  <a href="#install" class="lp-btn lp-btn-outline lp-btn-lg"> Install the app</a>
  </div>
  <div class="lp-trust">
@@ -1683,7 +1683,7 @@ function renderLanding(){
  <div class="lp-notif">
  <div class="lp-notif-icon">N</div>
  <div>
- <div class="lp-notif-t">New appointment</div>
+ <div class="lp-notif-t">Nouveau rendez-vous</div>
  <div class="lp-notif-d">${notifPatient.split(' ')[0]} booked with ${notifDoctor} · 2 min ago</div>
  </div>
  </div>
@@ -1735,31 +1735,31 @@ function renderLanding(){
  </section>
 
  <section class="lp-features-row">
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple"></div><h3>AI chat &amp; voice</h3><p>WhatsApp + voice calls in Arabic, French, English. Auto-detects language.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic green"></div><h3>Smart scheduling</h3><p>Books, reschedules, cancels with calendar sync &amp; conflict checks.</p></div>
+ <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple"></div><h3>Chat &amp; voix IA</h3><p>WhatsApp + appels vocaux en arabe, français, anglais. Détection automatique de la langue.</p></div>
+ <div class="lp-feature lp-fadein"><div class="lp-feat-ic green"></div><h3>Planification intelligente</h3><p>Réserve, déplace, annule avec sync calendrier et vérification de conflits.</p></div>
  <div class="lp-feature lp-fadein"><div class="lp-feat-ic orange"></div><h3>Instant alerts</h3><p>Real-time push to your team for new bookings, urgent triage, no-shows.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue"></div><h3>Multi-user access</h3><p>Owner dashboard, doctor mobile app, lab technician kanban — one platform.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink"></div><h3>Analytics</h3><p>Bookings, revenue, no-shows, popular services — beautiful weekly reports.</p></div>
+ <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue"></div><h3>Accès multi-utilisateurs</h3><p>Tableau de bord admin, app mobile médecin, kanban technicien labo — une plateforme.</p></div>
+ <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink"></div><h3>Analytique</h3><p>Réservations, revenu, no-shows, services populaires — beaux rapports hebdo.</p></div>
  </section>
 
  <section id="how" class="lp-section">
  <div class="lp-section-h">
- <h2>How Nova works for your business</h2>
- <p>From sign-up to your first WhatsApp booking in under 10 minutes — no app to install for you or your customers.</p>
+ <h2>Comment Nova travaille pour votre entreprise</h2>
+ <p>De l'inscription à votre première réservation WhatsApp en moins de 10 minutes — aucune application à installer, ni pour vous ni pour vos clients.</p>
  </div>
 
  <div class="lp-steps">
  <div class="lp-step lp-fadein">
  <div class="lp-step-num">1</div>
  <div class="lp-step-ic"></div>
- <h3>Sign up &amp; create your business</h3>
- <p>Pick your type — clinic, lab, salon, garage, lawyer — and Nova pre-loads the right services, reminder templates and forms for your industry. Free 14-day trial, no card required.</p>
+ <h3>Inscrivez-vous et créez votre entreprise</h3>
+ <p>Choisissez votre type — clinique, labo, salon, garage, avocat — and Nova pre-loads the right services, reminder templates and forms for your industry. Free 14-day trial, no card required.</p>
  </div>
 
  <div class="lp-step lp-fadein">
  <div class="lp-step-num">2</div>
  <div class="lp-step-ic"></div>
- <h3>Get your WhatsApp number</h3>
+ <h3>Obtenez votre numéro WhatsApp</h3>
  <p>This is the address customers text Nova at. Three ways to do it — we handle the Meta verification &amp; the green-tick paperwork either way.</p>
  </div>
 
@@ -1788,7 +1788,7 @@ function renderLanding(){
  <div class="lp-step-num">6</div>
  <div class="lp-step-ic"></div>
  <h3>You see everything live</h3>
- <p>Real-time alerts on your dashboard the moment a booking comes in or a triage flag fires. Sound + popup + native push — even when the tab is hidden. Calendar, history, revenue, all in one place.</p>
+ <p>Alertes en temps réel sur votre tableau de bord dès qu'une réservation arrive ou qu'un signalement urgent se déclenche. Son + popup + notifications natives — même quand l'onglet est masqué. Calendrier, historique, revenu, tout au même endroit.</p>
  </div>
  </div>
 
@@ -1850,8 +1850,8 @@ function renderLanding(){
  <div class="lp-feature lp-fadein"><div class="lp-feat-ic green"></div><h3>Voice + text</h3><p>Same number for calls and chat. Whisper transcribes voice notes.</p></div>
  <div class="lp-feature lp-fadein"><div class="lp-feat-ic orange"></div><h3>Built-in calendar</h3><p>30-min buffer between visits, remembers preferences across visits.</p></div>
  <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue"></div><h3>Prescription OCR</h3><p>Patient sends a photo, Claude Vision reads it &amp; pre-fills the booking.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink">⚗</div><h3>Lab pipeline</h3><p>Sample → analysis → results delivery on a kanban grouped per patient.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple"></div><h3>Real-time alerts</h3><p>Instant notifications when bookings, cancels or urgent flags arrive.</p></div>
+ <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink">⚗</div><h3>Pipeline laboratoire</h3><p>Sample → analysis → results delivery on a kanban grouped per patient.</p></div>
+ <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple"></div><h3>Alertes en temps réel</h3><p>Notifications instantanées quand des réservations, annulations ou alertes urgentes arrivent.</p></div>
  </div>
  </section>
 
@@ -1871,8 +1871,8 @@ function renderLanding(){
  </section>
 
  <footer class="lp-footer">
- <div>Nova AI · 24/7 multilingual receptionist for appointment-driven businesses</div>
- <div style="margin-top:6px">Designed and built by <a href="https://www.linkedin.com/in/mehdi-cheikh-b000a2294/" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;border-bottom:1px dashed currentColor" title="Mehdi Cheikh on LinkedIn"><b>Mehdi Cheikh</b></a> · © ${new Date().getFullYear()}</div>
+ <div>Nova AI · réceptionniste multilingue 24h/24 pour les entreprises sur rendez-vous</div>
+ <div style="margin-top:6px">Conçu et développé par <a href="https://www.linkedin.com/in/mehdi-cheikh-b000a2294/" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;border-bottom:1px dashed currentColor" title="Mehdi Cheikh sur LinkedIn"><b>Mehdi Cheikh</b></a> · © ${new Date().getFullYear()}</div>
  </footer>
  </div>`;
 }
@@ -2092,11 +2092,11 @@ function renderAuth(){
  <div class="logo" style="justify-content:center;margin-bottom:14px"><div class="logo-mark">N</div> Nova AI</div>
 
  <div style="display:flex;background:rgba(99,102,241,0.08);border-radius:8px;padding:4px;margin-bottom:18px">
- <a href="#/auth" class="auth-tab ${!isSignup?'active':''}" style="flex:1;text-align:center;padding:8px;border-radius:6px;text-decoration:none;font-size:14px;${!isSignup?'background:var(--accent);color:white;font-weight:600':'color:var(--text-dim)'}">Sign in</a>
+ <a href="#/auth" class="auth-tab ${!isSignup?'active':''}" style="flex:1;text-align:center;padding:8px;border-radius:6px;text-decoration:none;font-size:14px;${!isSignup?'background:var(--accent);color:white;font-weight:600':'color:var(--text-dim)'}">Se connecter</a>
  <a href="#/auth?mode=signup" class="auth-tab ${isSignup?'active':''}" style="flex:1;text-align:center;padding:8px;border-radius:6px;text-decoration:none;font-size:14px;${isSignup?'background:var(--accent);color:white;font-weight:600':'color:var(--text-dim)'}">Create account</a>
  </div>
 
- <h2 style="text-align:center;margin:0 0 6px;font-size:20px">${isSignup ? 'Get Nova running for your business' : 'Welcome back'}</h2>
+ <h2 style="text-align:center;margin:0 0 6px;font-size:20px">${isSignup ? 'Lancez Nova pour votre entreprise' : 'Bon retour'}</h2>
  <p style="text-align:center;color:var(--text-dim);font-size:13.5px;margin:0 0 18px;line-height:1.5">${isSignup
  ? "Free 14-day trial · no card required · cancel any time. We'll send a magic link to confirm your email."
  : "Enter the email you signed up with. We'll send a one-time magic link — no passwords to remember."}</p>
@@ -2191,7 +2191,7 @@ function bindAuth(){
 
  if (error) {
  submit.disabled = false;
- label.textContent = 'Try again';
+ label.textContent = 'Réessayer';
  status.style.display = 'block';
  status.style.background = 'rgba(239,68,68,0.1)';
  status.style.color = '#ef4444';
@@ -2251,12 +2251,12 @@ function renderCreateBusiness(){
  <label>WhatsApp phone (international format) *</label>
  <div class="row" style="gap:6px">
  <input id="cb-phone" name="phone" placeholder="+212600000000" required style="flex:1" />
- <button type="button" class="btn btn-ghost btn-sm" id="send-code-btn">Send code</button>
+ <button type="button" class="btn btn-ghost btn-sm" id="send-code-btn">Envoyer le code</button>
  </div>
  <div id="otp-row" class="hidden" style="margin-top:10px">
  <div class="row" style="gap:6px">
  <input id="cb-otp" maxlength="6" placeholder="6-digit code" style="flex:1;text-align:center;letter-spacing:.4em;font-family:'JetBrains Mono',monospace" />
- <button type="button" class="btn btn-primary btn-sm" id="verify-code-btn">Verify</button>
+ <button type="button" class="btn btn-primary btn-sm" id="verify-code-btn">Vérifier</button>
  </div>
  <div style="font-size:11.5px;color:var(--text-faint);margin-top:6px">Code is sent via WhatsApp to the number above. Expires in 10 min.</div>
  </div>
@@ -2272,7 +2272,7 @@ function renderCreateBusiness(){
  </div>
 
  <button class="btn btn-primary btn-block" type="submit" id="cb-submit" disabled>Create my business</button>
- <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-faint)">Add doctors, services and more later in Settings.</div>
+ <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-faint)">Ajouter un médecins, services and more later in Settings.</div>
  </form>
  </div></div>`;
 }
@@ -2302,7 +2302,7 @@ function bindCreateBusiness(){
  if (existing){ bizIdPending = existing.id; }
  else {
  const {data:draft, error} = await sb.from('businesses').insert({
- name: ($('input[name=name]').value||'Pending'),
+ name: ($('input[name=name]').value||'En attente'),
  type: ($('select[name=type]').value||'clinic'),
  phone: phone, email: SESSION.user.email,
  owner_user_id: SESSION.user.id,
@@ -2366,7 +2366,7 @@ function bindCreateBusiness(){
  });
  }
  SESSION = await loadSession();
- toast({title:'Welcome to Nova AI', message:'You are on the '+PLANS[chosenPlan].name+' plan', type:'booking'});
+ toast({title:'Bienvenue sur Nova AI', message:'Vous êtes sur le '+PLANS[chosenPlan].name+' plan', type:'booking'});
  navigate('#/dashboard');
  };
 }
@@ -2380,7 +2380,7 @@ function renderOnboarding(){
  if (step===1){
  body = `<h2>Step 1 · Verify WhatsApp</h2>
  <p class="lede">We'll call <strong>${escapeHtml(biz.phone)}</strong> via WhatsApp Business API and send a 6-digit code.</p>
- <button class="btn btn-primary btn-block" id="send-otp">Send code</button>
+ <button class="btn btn-primary btn-block" id="send-otp">Envoyer le code</button>
  <div id="otp-row" class="hidden">
  <div class="verify-row"><input id="otp" maxlength="6" placeholder="••••••" autocomplete="off" /></div>
  <button class="btn btn-primary btn-block" id="verify-btn">Verify code</button>
@@ -2399,7 +2399,7 @@ function renderOnboarding(){
  </div>`;
  } else {
  body = `<h2>Step 3 · Pick a plan</h2>
- <p class="lede">Free trial on every plan. Cancel anytime. You can change later.</p>
+ <p class="lede">Essai gratuit on every plan. Cancel anytime. You can change later.</p>
  <div class="plans" id="plans">${Object.entries(PLANS).map(([k,p])=>`<div class="plan ${k==='pro'?'selected':''}" data-plan="${k}"><div class="name">${p.name}</div><div class="price">${p.price} TND<small>/mo</small></div><div class="desc">${p.desc}</div></div>`).join('')}</div>
  <button class="btn btn-primary btn-block" id="finish">Start using Nova AI →</button>`;
  }
@@ -2460,7 +2460,7 @@ function bindOnboarding(){
  }).eq('id', SESSION.business.id);
  if (error){ toast({title:'Update failed', message:error.message, urgent:true}); return; }
  SESSION = await loadSession();
- toast({title:'Welcome to Nova AI', message:'You are on the '+PLANS[chosen].name+' plan', type:'booking'});
+ toast({title:'Bienvenue sur Nova AI', message:'Vous êtes sur le '+PLANS[chosen].name+' plan', type:'booking'});
  navigate('#/dashboard');
  };
  }
@@ -2480,9 +2480,9 @@ function bizLabels(type){
  case 'garage':
  return { team: 'Mechanics', single: 'mechanic', viewSelf: false };
  case 'company':
- return { team: 'Team', single: 'team member', viewSelf: false };
+ return { team: 'Équipe', single: 'team member', viewSelf: false };
  default:
- return { team: 'Team', single: 'staff', viewSelf: false };
+ return { team: 'Équipe', single: 'staff', viewSelf: false };
  }
 }
 
@@ -2504,7 +2504,7 @@ async function renderDashboard(route){
  <aside class="sidebar">
  <div class="logo"><div class="logo-mark">N</div> Nova AI</div>
  ${(SESSION.ownedBusinesses && SESSION.ownedBusinesses.length > 1)
- ? `<div class="biz-pill biz-switcher" id="biz-switcher" tabindex="0" role="button" title="Switch business" style="cursor:pointer;position:relative">
+ ? `<div class="biz-pill biz-switcher" id="biz-switcher" tabindex="0" role="button" title="Changer d'entreprise" style="cursor:pointer;position:relative">
      <div class="name">${escapeHtml(biz.name)} <span style="float:right;color:var(--text-dim);font-size:10px;margin-top:2px">▼</span></div>
      <div class="type">${escapeHtml(biz.type)}</div>
      <div class="plan">● ${escapeHtml(planName)} plan</div>
@@ -2524,11 +2524,11 @@ async function renderDashboard(route){
      <div class="type">${escapeHtml(biz.type)}</div>
      <div class="plan">● ${escapeHtml(planName)} plan</div>
    </div>`}
- ${navItem('overview','Overview','▦')}
- ${navItem('appointments','Appointments','◷')}
- ${navItem('calendar','Calendar','⌗')}
+ ${navItem('overview','Vue d'ensemble','▦')}
+ ${navItem('appointments','Rendez-vous','◷')}
+ ${navItem('calendar','Calendrier','⌗')}
  ${navItem('clients','Clients','◉')}
- ${biz.type === 'garage' ? navItem('vehicles','Vehicles','▣') : ''}
+ ${biz.type === 'garage' ? navItem('vehicles','Véhicules','▣') : ''}
  ${L.team ? navItem('doctors', L.team, '◊') : ''}
  ${biz.type==='laboratoire' ? navItem('lab','Lab pipeline','⚗') : ''}
  ${biz.type==='laboratoire' ? navItem('tests','Test catalog','') : ''}
@@ -2543,10 +2543,10 @@ async function renderDashboard(route){
  ${navItem('messages','Messages','')}
  ${navItem('notifications','Notifications','♪',unreadBadge>0?String(unreadBadge):'')}
  ${navItem('activity','Activity','≡')}
- ${navItem('settings','Settings','⚙')}
+ ${navItem('settings','Paramètres','⚙')}
  <div class="sidebar-foot">
  ${L.viewSelf ? `<button class="nav-item" id="view-doctor"><span class="ic">→</span>${escapeHtml(L.single.charAt(0).toUpperCase()+L.single.slice(1))} view</button>` : ''}
- <button class="nav-item" id="logout"><span class="ic">⎋</span>Sign out</button>
+ <button class="nav-item" id="logout"><span class="ic">⎋</span>Se déconnecter</button>
  </div>
  </aside>
  <main class="main">
@@ -2556,9 +2556,9 @@ async function renderDashboard(route){
  <div class="sub">${pageSub(sub)}</div>
  </div>
  <div class="topbar-actions">
- <button class="icon-btn" id="theme-btn" title="Toggle theme">${currentThemeIcon()}</button>
- ${biz.type !== 'laboratoire' ? `<button class="icon-btn" id="dash-scan-btn" title="Scan patient QR to start consultation" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:0;font-size:16px">▦</button>` : ''}
- <button class="ask-nova-btn" id="ask-nova-btn" title="Ask Nova - voice AI assistant"><span class="an-pulse"></span><span class="an-text">Ask Nova</span></button>
+ <button class="icon-btn" id="theme-btn" title="Basculer le thème">${currentThemeIcon()}</button>
+ ${biz.type !== 'laboratoire' ? `<button class="icon-btn" id="dash-scan-btn" title="Scanner le QR du patient pour démarrer la consultation" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:0;font-size:16px">▦</button>` : ''}
+ <button class="ask-nova-btn" id="ask-nova-btn" title="Demander à Nova — assistant vocal IA"><span class="an-pulse"></span><span class="an-text">Ask Nova</span></button>
  <button class="icon-btn bell" id="bell-btn" title="Notifications">♪<span class="dot" id="bell-dot" style="display:none">0</span></button>
  ${userPill()}
  </div>
@@ -2568,7 +2568,7 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',observation:'Patient observation',vehicles:'Vehicles',vehicle:'Vehicle profile',birthdays:'Birthdays',voice:'Voice avatar',messages:'Messages',notifications:'Notifications',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Vue d'ensemble',appointments:'Rendez-vous',calendar:'Calendrier',clients:'Clients',doctors:'Équipe',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',observation:'Patient observation',vehicles:'Véhicules',vehicle:'Vehicle profile',birthdays:'Birthdays',voice:'Voice avatar',messages:'Messages',notifications:'Notifications',activity:'Activity log',settings:'Paramètres'})[s]||'Vue d'ensemble'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
@@ -2587,7 +2587,7 @@ function pageSub(s){return ({
  vehicles:'Per-car profiles: VIN, mileage, service history, photos',
  vehicle:'Full service log + photo timeline for this vehicle',
  messages:'WhatsApp conversation history',
- notifications:'Real-time alerts triggered by AI actions',
+ notifications:'Alertes en temps réel triggered by AI actions',
  activity:'Audit trail of every system event',
  settings:'Subscription, integrations, theme, business profile'
 })[s]||''}
@@ -2768,7 +2768,7 @@ async function renderVoiceAvatar(){
  return `<div class="stats" style="margin-bottom:18px">
    <div class="stat"><div class="lbl">Voice clone</div><div class="val" style="font-size:18px;text-transform:uppercase;letter-spacing:.4px">${status}</div><div class="delta">${voiceId ? voiceId.slice(0,8)+'...' : 'no clone'}</div></div>
    <div class="stat"><div class="lbl">Replies last 30d</div><div class="val">${k.voice_replies_30d||0}</div><div class="delta">audio messages</div></div>
-   <div class="stat"><div class="lbl">Patients reached</div><div class="val">${k.patients_reached_30d||0}</div><div class="delta">last 30 days</div></div>
+   <div class="stat"><div class="lbl">Patients touchés</div><div class="val">${k.patients_reached_30d||0}</div><div class="delta">30 derniers jours</div></div>
    <div class="stat"><div class="lbl">All-time</div><div class="val">${k.voice_replies_total||0}</div><div class="delta">total voice notes</div></div>
  </div>
 
@@ -2816,7 +2816,7 @@ async function renderVoiceAvatar(){
  </div>
 
  <div class="panel">
-   <div class="panel-head"><h3>How it works</h3></div>
+   <div class="panel-head"><h3>Comment ça marche</h3></div>
    <div class="panel-body" style="font-size:13.5px;line-height:1.7;color:var(--text-dim)">
      <p style="margin:0 0 10px"><b style="color:var(--text)">1. Record</b> — read 30 seconds of natural speech. Quiet room, normal voice, no music.</p>
      <p style="margin:0 0 10px"><b style="color:var(--text)">2. Clone</b> — ElevenLabs trains your voice clone in about 30 seconds.</p>
@@ -3056,8 +3056,8 @@ async function renderBirthdays(){
        <div style="font-size:11.5px;color:var(--text-faint);margin-top:4px">Auto-translates to French / Arabic from the customer's saved language when no template is set.</div>
      </div>
      <div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px">
-       <button class="btn btn-secondary btn-sm" id="bd-test" ${todays.length===0?'disabled':''} title="${todays.length===0?'No birthdays today — add a test patient with today\'s birthday':'Send to today\'s birthdays now'}">Send to today's ${todays.length>0?`(${todays.length})`:''}</button>
-       <button class="btn btn-primary btn-sm" id="bd-save">Save</button>
+       <button class="btn btn-secondary btn-sm" id="bd-test" ${todays.length===0?'disabled':''} title="${todays.length===0?'Aucun anniversaire aujourd'hui — add a test patient with today\'s birthday':'Send to today\'s birthdays now'}">Send to today's ${todays.length>0?`(${todays.length})`:''}</button>
+       <button class="btn btn-primary btn-sm" id="bd-save">Enregistrer</button>
      </div>
    </div>
  </div>
@@ -3126,7 +3126,7 @@ function bindBirthdays(){
    const { error } = await sb.from('businesses').update({ birthday_config: cfg }).eq('id', SESSION.business.id);
    if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
    SESSION.business.birthday_config = cfg;
-   toast({title:'Saved', message: cfg.enabled ? 'Nova will send birthday vouchers tomorrow at 9am.' : 'Birthday auto-send is OFF.', type:'info'});
+   toast({title:'Enregistré', message: cfg.enabled ? 'Nova will send birthday vouchers tomorrow at 9am.' : 'Birthday auto-send is OFF.', type:'info'});
  };
 
  if (test) test.onclick = async () => {
@@ -3201,7 +3201,7 @@ async function renderVehicles(){
  const flagPill = (label, n, cls) => n > 0 ? `<span class="pill ${cls}">${n} ${label}</span>` : '';
 
  return `<div class="stats" style="margin-bottom:18px">
-   <div class="stat"><div class="lbl">Vehicles</div><div class="val">${kpi.vehicles_total||0}</div><div class="delta">tracked</div></div>
+   <div class="stat"><div class="lbl">Véhicules</div><div class="val">${kpi.vehicles_total||0}</div><div class="delta">tracked</div></div>
    <div class="stat"><div class="lbl">New (30d)</div><div class="val">${kpi.new_30d||0}</div><div class="delta">added</div></div>
    <div class="stat"><div class="lbl">Oil change due</div><div class="val" style="color:${kpi.oil_change_due?'var(--warn)':'inherit'}">${kpi.oil_change_due||0}</div><div class="delta">overdue</div></div>
    <div class="stat"><div class="lbl">Insurance &lt;30d</div><div class="val" style="color:${kpi.insurance_due?'var(--danger)':'inherit'}">${kpi.insurance_due||0}</div><div class="delta">expiring</div></div>
@@ -3210,10 +3210,10 @@ async function renderVehicles(){
 
  <div class="panel">
    <div class="panel-head"><h3>All vehicles (${vehicles.length})</h3>
-     <button class="btn btn-primary btn-sm" id="add-vehicle">+ Add vehicle</button>
+     <button class="btn btn-primary btn-sm" id="add-vehicle">+ Ajouter un véhicule</button>
    </div>
    <div class="panel-body no-pad">${vehicles.length === 0 ?
-     `<div class="empty"><div class="ic">▣</div>No vehicles yet — tap <b>+ Add vehicle</b> to register your first car.</div>` :
+     `<div class="empty"><div class="ic">▣</div>No vehicles yet — tap <b>+ Ajouter un véhicule</b> to register your first car.</div>` :
      `<table class="responsive-stack">
        <thead><tr><th>Vehicle</th><th>Plate / VIN</th><th>Owner</th><th>Mileage</th><th>Last service</th><th>Flags</th><th></th></tr></thead>
        <tbody>${vehicles.map(v => {
@@ -3247,7 +3247,7 @@ async function bindVehicles(){
 
 function addVehicleModal(){
  sb.from('clients').select('id,name,phone').eq('business_id', SESSION.business.id).order('name').then(({data: clients=[]}) => {
-   const html = `<h3>Add vehicle</h3>
+   const html = `<h3>Ajouter un véhicule</h3>
      <form>
        <div class="field"><label>Owner *</label>
          <select name="client_id" required>
@@ -3267,7 +3267,7 @@ function addVehicleModal(){
        <div class="row" style="gap:8px"><div class="field grow"><label>Insurance expires</label><input name="insurance_expires_at" type="date" /></div>
          <div class="field grow"><label>Inspection expires</label><input name="inspection_expires_at" type="date" /></div></div>
        <div class="field"><label>Notes</label><textarea name="notes" rows="2" placeholder="Any quirks, history, owner preferences..."></textarea></div>
-       <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">Add vehicle</button></div>
+       <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Annuler</button><button class="btn btn-primary btn-sm" type="submit">Ajouter un véhicule</button></div>
      </form>`;
    window.__modalSubmit = async (d) => {
      if (!d.client_id) { alert('Select an owner first.'); return; }
@@ -3330,7 +3330,7 @@ async function renderVehicleDetail(){
        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);font-weight:600;margin-bottom:4px">CURRENT MILEAGE</div>
        <div style="font-size:36px;font-weight:200;letter-spacing:-1px;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">${v.current_mileage_km ? v.current_mileage_km.toLocaleString() : '—'}<span style="font-size:14px;color:var(--text-dim)"> km</span></div>
        ${v.km_until_oil!=null?`<div style="font-size:12px;color:${oilOverdue?'var(--warn)':'var(--text-dim)'};margin-top:6px">${oilOverdue?Math.abs(v.km_until_oil).toLocaleString()+' km overdue':v.km_until_oil.toLocaleString()+' km until next oil'}</div>`:''}
-       <div class="row" style="justify-content:flex-end;margin-top:12px;gap:6px"><button class="btn btn-secondary btn-sm" id="veh-edit">Edit</button><button class="btn btn-primary btn-sm" id="veh-add-svc">+ Add service</button></div>
+       <div class="row" style="justify-content:flex-end;margin-top:12px;gap:6px"><button class="btn btn-secondary btn-sm" id="veh-edit">Modifier</button><button class="btn btn-primary btn-sm" id="veh-add-svc">+ Ajouter un service</button></div>
      </div>
    </div>
    ${v.owner_name?`<div class="panel-body" style="border-top:1px solid var(--border);padding:12px 18px;display:flex;gap:14px;align-items:center">
@@ -3396,7 +3396,7 @@ function editVehicleModal(vehicleId){
          <div class="field grow"><label>Inspection expires</label><input name="inspection_expires_at" type="date" value="${v.inspection_expires_at||''}" /></div></div>
        <div class="field"><label>Notes</label><textarea name="notes" rows="3">${escapeHtml(v.notes||'')}</textarea></div>
        <div class="row mt-2" style="justify-content:space-between"><button type="button" class="btn btn-danger btn-sm" id="veh-del">Delete vehicle</button>
-         <div><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit" style="margin-left:8px">Save</button></div></div>
+         <div><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Annuler</button><button class="btn btn-primary btn-sm" type="submit" style="margin-left:8px">Enregistrer</button></div></div>
      </form>`;
    window.__modalSubmit = async (d) => {
      const upd = {};
@@ -3405,7 +3405,7 @@ function editVehicleModal(vehicleId){
      ['insurance_expires_at','inspection_expires_at'].forEach(k => upd[k] = d[k] || null);
      const { error } = await sb.from('vehicles').update(upd).eq('id', vehicleId);
      if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
-     closeModal(); toast({title:'Saved', type:'info'}); render();
+     closeModal(); toast({title:'Enregistré', type:'info'}); render();
    };
    openModal(html);
    const del = document.getElementById('veh-del');
@@ -3419,7 +3419,7 @@ function editVehicleModal(vehicleId){
 }
 
 function addServiceModal(vehicleId){
- const html = `<h3>Add service entry</h3>
+ const html = `<h3>Ajouter un service entry</h3>
    <form>
      <div class="field"><label>Service type</label>
        <select name="service_type" required>
@@ -3442,7 +3442,7 @@ function addServiceModal(vehicleId){
        <div class="field grow"><label>Labour total (TND)</label><input name="labour_total" type="number" step="0.01" /></div></div>
      <div class="field"><label>Parts (one per line: name | qty)</label><textarea name="parts_text" rows="3" placeholder="Oil filter | 1&#10;Engine oil 5W30 | 4"></textarea></div>
      <div class="field"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
-     <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">Save</button></div>
+     <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Annuler</button><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button></div>
    </form>`;
  window.__modalSubmit = async (d) => {
    const parts = (d.parts_text||'').split(/\n/).map(l => l.trim()).filter(Boolean).map(line => {
@@ -3501,7 +3501,7 @@ async function renderRxCheck(){
 
  return `<div class="stats" style="margin-bottom:18px">
    <div class="stat"><div class="lbl">Checks (all-time)</div><div class="val">${kpi.checks_total || 0}</div><div class="delta">prescriptions reviewed</div></div>
-   <div class="stat"><div class="lbl">Last 30 days</div><div class="val">${kpi.checks_30d || 0}</div><div class="delta">checks</div></div>
+   <div class="stat"><div class="lbl">30 derniers jours</div><div class="val">${kpi.checks_30d || 0}</div><div class="delta">checks</div></div>
    <div class="stat"><div class="lbl">High-risk caught</div><div class="val" style="color:var(--danger)">${kpi.warnings_caught || 0}</div><div class="delta">flags raised</div></div>
    <div class="stat"><div class="lbl">Prescriptions amended</div><div class="val">${(kpi.prescriptions_amended || 0) + (kpi.prescriptions_cancelled || 0)}</div><div class="delta">avoided harm</div></div>
  </div>
@@ -3731,8 +3731,8 @@ function openMedAllergyEditor(clientId){
    </div>
 
    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:18px">
-     <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
-     <button class="btn btn-primary btn-sm" id="rx-meds-save">Save changes</button>
+     <button class="btn btn-secondary btn-sm" onclick="closeModal()">Annuler</button>
+     <button class="btn btn-primary btn-sm" id="rx-meds-save">Enregistrer les modifications</button>
    </div>`;
  };
 
@@ -3780,7 +3780,7 @@ function openMedAllergyEditor(clientId){
        window.__rxClients[clientId].allergies   = cleanAl;
        window.__rxClients[clientId].conditions  = cleanCd;
      }
-     toast({title:'Saved', message:`${c.name}'s record updated — ${cleanMeds.length} med${cleanMeds.length===1?'':'s'}, ${cleanAl.length} allerg${cleanAl.length===1?'y':'ies'}.`, type:'info'});
+     toast({title:'Enregistré', message:`${c.name}'s record updated — ${cleanMeds.length} med${cleanMeds.length===1?'':'s'}, ${cleanAl.length} allerg${cleanAl.length===1?'y':'ies'}.`, type:'info'});
      closeModal(); render();
    };
  };
@@ -3825,7 +3825,7 @@ async function renderInsights(){
  };
 
  return `<div class="panel" style="margin-bottom:18px">
-   <div class="panel-head"><h3>How it works</h3></div>
+   <div class="panel-head"><h3>Comment ça marche</h3></div>
    <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
      Nova logs how long each visit actually takes (from check-in to checkout) and computes a 90-day average per service and per doctor. When reality drifts by more than <b>15%</b> for at least <b>5 visits</b>, it suggests a new duration so your day stops running late. Switch <b>Auto-adjust</b> on for any service to let Nova apply changes automatically every Monday morning.
      <div style="margin-top:14px">
@@ -3912,7 +3912,7 @@ function bindInsights(){
      .update({ auto_adjust_duration: cb.checked })
      .eq('id', cb.dataset.insToggle);
    if (error) { toast({title:'Could not save', message:error.message, urgent:true}); cb.checked = !cb.checked; return; }
-   toast({title:'Saved', message: cb.checked ? 'Auto-adjust ON for this service.' : 'Auto-adjust OFF.', type:'info'});
+   toast({title:'Enregistré', message: cb.checked ? 'Auto-adjust ON for this service.' : 'Auto-adjust OFF.', type:'info'});
  });
 }
 
@@ -3956,7 +3956,7 @@ async function renderDemandFill(){
    sent: 'Pinged',
    filled: 'Filled',
    expired: 'Expired',
-   cancelled: 'Cancelled',
+   cancelled: 'Annulé',
  })[s] || s;
  const statusPill = (s) => {
    const cls = s === 'filled' ? 'green' : s === 'sent' ? 'blue' : s === 'pending_approval' ? 'amber' : 'gray';
@@ -3965,17 +3965,17 @@ async function renderDemandFill(){
 
  return `<div class="stats" style="margin-bottom:18px">
    <div class="stat"><div class="lbl">Campaigns sent</div><div class="val">${kpi.campaigns_sent || 0}</div><div class="delta">all-time</div></div>
-   <div class="stat"><div class="lbl">Last 7 days</div><div class="val">${kpi.last_7d || 0}</div><div class="delta">campaigns</div></div>
+   <div class="stat"><div class="lbl">7 derniers jours</div><div class="val">${kpi.last_7d || 0}</div><div class="delta">campaigns</div></div>
    <div class="stat"><div class="lbl">Slots filled</div><div class="val">${kpi.slots_filled_total || 0}</div><div class="delta">recovered</div></div>
    <div class="stat"><div class="lbl">Fill rate</div><div class="val">${Math.round(kpi.fill_rate_pct || 0)}%</div><div class="delta">filled / pinged</div></div>
  </div>
 
  <div class="panel" style="margin-bottom:18px">
    <div class="panel-head">
-     <h3>How it works</h3>
+     <h3>Comment ça marche</h3>
    </div>
    <div class="panel-body" style="font-size:13.5px;line-height:1.6;color:var(--text-dim)">
-     Nova scans the next 7 days for empty slots in your calendar. When it finds a long gap (3+ open slots in a row), it builds a ranked list of patients who haven't booked recently, have a low no-show history, and match the service. You approve the list with one tap, and Nova WhatsApps every candidate with the open times. The first ones to say <i>Yes</i> get booked automatically.
+     Nova scans the next 7 days for empty slots in your calendar. When it finds a long gap (3+ open slots in a row), it builds a ranked list of patients who haven't booked recently, have a low no-show history, and match the service. You approve the list with one tap, and Nova WhatsApps every candidate with the open times. The first ones to say <i>Oui</i> get booked automatically.
      <div style="margin-top:14px">
        <button class="btn btn-primary btn-sm" id="df-scan">Scan now</button>
        <span id="df-scan-status" style="margin-left:10px;color:var(--text-faint);font-size:12.5px"></span>
@@ -4069,7 +4069,7 @@ function bindDemandFill(){
            </tr>`).join('')}</tbody></table>`}
      </div>
      <div class="row" style="margin-top:14px;justify-content:flex-end">
-       <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+       <button class="btn btn-secondary" onclick="closeModal()">Fermer</button>
      </div>`;
    openModal(html);
  });
@@ -4144,7 +4144,7 @@ async function renderOverview(){
  </div>
  <div class="dash-2col">
  <div class="panel">
- <div class="panel-head"><h3>Upcoming appointments</h3><a class="meta" href="#/dashboard/appointments">View all →</a></div>
+ <div class="panel-head"><h3>Upcoming appointments</h3><a class="meta" href="#/dashboard/appointments">Tout voir →</a></div>
  <div class="panel-body no-pad">${apts.length===0?`<div class="empty"><div class="ic">◷</div>No upcoming appointments</div>`:`
  <table><thead><tr><th>Client</th><th>Service</th><th>Doctor</th><th>When</th><th>Status</th></tr></thead>
  <tbody>${apts.map(a=>`<tr>
@@ -4178,10 +4178,10 @@ async function renderAppointments(){
  <td data-l="Status"><span class="pill ${a.status==='confirmed'?'green':a.status==='pending'?'amber':'red'}">${a.status}</span></td>
  <td data-l="Source"><span class="pill ${a.source==='whatsapp_ai'?'blue':a.source==='whatsapp_voice'?'green':'gray'}">${a.source||'manual'}</span></td>
  <td class="text-right" onclick="event.stopPropagation()" style="white-space:nowrap">
- ${!a.arrived_at && a.status==='confirmed' ? `<button class="btn btn-secondary btn-sm" data-arrived="${a.id}" title="Mark patient arrived">Arrived</button>` : ''}
+ ${!a.arrived_at && a.status==='confirmed' ? `<button class="btn btn-secondary btn-sm" data-arrived="${a.id}" title="Mark patient arrived">Arrivé</button>` : ''}
  ${a.arrived_at && !a.completed_at ? `<button class="btn btn-secondary btn-sm" data-done="${a.id}" title="Mark visit completed">Done</button>` : ''}
  ${a.completed_at ? `<span class="pill green" title="Took ${a.actual_duration_min || '?'} min">✓ ${a.actual_duration_min || '?'} min</span>` : ''}
- <button class="btn btn-danger btn-sm" data-cancel="${a.id}" style="margin-left:6px">Cancel</button>
+ <button class="btn btn-danger btn-sm" data-cancel="${a.id}" style="margin-left:6px">Annuler</button>
 </td>
  </tr>`).join('')}</tbody></table>`}</div></div>`;
 }
@@ -4191,7 +4191,7 @@ async function bindAppointments(){
      .update({arrived_at: new Date().toISOString(), status: 'confirmed'})
      .eq('id', b.dataset.arrived);
    if (error){ toast({title:'Could not mark arrived', message:error.message, urgent:true}); return; }
-   toast({title:'Arrived', message:'Visit started — Nova is timing it.', type:'info'});
+   toast({title:'Arrivé', message:'Visit started — Nova is timing it.', type:'info'});
    render();
  });
  $$('[data-done]').forEach(b => b.onclick = async ()=>{
@@ -4228,7 +4228,7 @@ async function bindAppointments(){
  $$('[data-cancel]').forEach(b => b.onclick = async ()=>{
  if (!confirm('Cancel this appointment?')) return;
  const {error} = await sb.from('appointments').update({status:'cancelled'}).eq('id', b.dataset.cancel);
- if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error){ toast({title:'Échec', message:error.message, urgent:true}); return; }
  render();
  });
  $$('tr[data-apt]').forEach(r => r.onclick = ()=>{
@@ -4292,7 +4292,7 @@ function apptDetailModal(a){
 
  <div class="row mt-2" style="justify-content:space-between">
  <button class="btn btn-danger btn-sm" id="apt-cancel-modal" data-id="${a.id}">Cancel appointment</button>
- <button class="btn btn-primary btn-sm" onclick="closeModal()">Close</button>
+ <button class="btn btn-primary btn-sm" onclick="closeModal()">Fermer</button>
  </div>`;
 }
 
@@ -4351,7 +4351,7 @@ async function renderCalendar(){
  ${doctorList.map(d=>`<option value="${d.id}" ${filterDoc===d.id?'selected':''}>${escapeHtml(d.name)}</option>`).join('')}
  </select>` : ''}
  <a class="btn btn-ghost btn-sm" href="#/dashboard/calendar?m=${offset-1}${filterDoc?'&doctor='+filterDoc:''}">&larr;</a>
- <a class="btn btn-ghost btn-sm" href="#/dashboard/calendar${filterDoc?'?doctor='+filterDoc:''}">Today</a>
+ <a class="btn btn-ghost btn-sm" href="#/dashboard/calendar${filterDoc?'?doctor='+filterDoc:''}">Aujourd'hui</a>
  <a class="btn btn-ghost btn-sm" href="#/dashboard/calendar?m=${offset+1}${filterDoc?'&doctor='+filterDoc:''}">&rarr;</a>
  </div>
  </div>
@@ -4409,7 +4409,7 @@ function dayListModal(dayKey){
  }).join('')}
  </div>`}
  <div class="row mt-2" style="justify-content:flex-end">
- <button class="btn btn-primary btn-sm" onclick="closeModal()">Close</button>
+ <button class="btn btn-primary btn-sm" onclick="closeModal()">Fermer</button>
  </div>`;
 }
 
@@ -4576,7 +4576,7 @@ async function openPatientHistory(clientId){
 
  ${client?.notes ? `<div style="background:rgba(234,179,8,0.08);padding:10px;border-radius:8px;margin:8px 0;font-size:.9em"><b>Internal note:</b> ${escapeHtml(client.notes)}</div>` : ''}
 
- <h4 style="margin-top:18px"> Appointments (${apts.length})</h4>
+ <h4 style="margin-top:18px">Rendez-vous (${apts.length})</h4>
  ${apts.length === 0 ? '<div class="sub">None yet.</div>' : `
  <div style="overflow:auto"><table class="data" style="width:100%;font-size:.88em">
  <thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Doctor</th><th>Status</th><th>Amount</th><th>Triage</th></tr></thead>
@@ -4591,7 +4591,7 @@ async function openPatientHistory(clientId){
  </table></div>` : ''}
 
  ${reviews.length ? `
- <h4 style="margin-top:18px"> Reviews (${reviews.length})</h4>
+ <h4 style="margin-top:18px">Avis (${reviews.length})</h4>
  ${reviews.filter(r=>r.rating).map(r => `<div style="padding:8px;background:rgba(99,102,241,0.05);border-radius:6px;margin:4px 0;font-size:.9em">
  ${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)} <span class="sub">${new Date(r.responded_at||r.prompted_at).toLocaleDateString()}</span>
  ${r.comment?`<div style="margin-top:4px">${escapeHtml(r.comment)}</div>`:''}
@@ -4605,7 +4605,7 @@ async function openPatientHistory(clientId){
  </table></div>`}
 
  <div class="modal-actions" style="margin-top:18px">
- <button type="button" class="btn-ghost" id="m-cancel">Close</button>
+ <button type="button" class="btn-ghost" id="m-cancel">Fermer</button>
  <button type="button" class="btn-ghost" id="cli-edit-notes"> Edit internal note</button>
  ${client?.phone?`<a class="btn-ghost" target="_blank" href="https://wa.me/${(client.phone||'').replace(/\\D/g,'')}" style="text-decoration:none"> WhatsApp this patient</a>`:''}
  </div>
@@ -4634,7 +4634,7 @@ async function openPatientHistory(clientId){
 
 async function renderDoctors(){
  const {data:team=[]} = await sb.from('users').select('*').eq('business_id', SESSION.business.id).order('created_at');
- return `<div class="panel"><div class="panel-head"><h3>Team (${team.length})</h3><button class="btn btn-primary btn-sm" id="add-doc">+ Add member</button></div>
+ return `<div class="panel"><div class="panel-head"><h3>Équipe (${team.length})</h3><button class="btn btn-primary btn-sm" id="add-doc">+ Add member</button></div>
  <div class="panel-body no-pad"><table><thead><tr><th>Name</th><th>Role</th><th>Specialty</th><th>Phone</th><th>Email</th></tr></thead>
  <tbody>${team.map(u=>`<tr><td>${escapeHtml(u.name)}</td><td><span class="pill ${u.role==='doctor'?'blue':'gray'}">${u.role}</span></td><td>${escapeHtml(u.specialty||'—')}</td><td>${escapeHtml(u.phone||'—')}</td><td>${escapeHtml(u.email||'—')}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
@@ -4753,7 +4753,7 @@ async function renderLabPipeline(){
           <h3 style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">◷</span> Live queue · ${waiting.length} waiting${inProgress ? ' · 1 with technician' : ''}</h3>
           <div class="row" style="gap:8px">
             <button class="btn btn-secondary btn-sm" id="lq-show-qr">Show reception QR</button>
-            <button class="btn btn-primary btn-sm" id="lq-call-next" ${waiting.length===0 || inProgress ? 'disabled':''}>Call next →</button>
+            <button class="btn btn-primary btn-sm" id="lq-call-next" ${waiting.length===0 || inProgress ? 'disabled':''}>Appeler le suivant →</button>
           </div>
         </div>
         <div class="panel-body" style="padding:12px 18px">
@@ -4792,8 +4792,8 @@ async function renderLabPipeline(){
  <input id="lab-search" placeholder=" Search patient, phone, or test name..." style="flex:1;min-width:240px;padding:8px 10px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:inherit" />
  <select id="lab-date-filter" style="padding:8px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:inherit">
  <option value="all">All dates</option>
- <option value="today">Today only</option>
- <option value="week">Last 7 days</option>
+ <option value="today">Aujourd'hui only</option>
+ <option value="week">7 derniers jours</option>
  </select>
  <button class="btn-ghost" id="lab-refresh">↻ Refresh</button>
  </div></div>
@@ -4822,18 +4822,18 @@ async function bindLabPipeline(){
      <div class="code" style="word-break:break-all;font-size:11.5px;padding:8px 10px">${queueUrl}</div>
      <div class="row" style="margin-top:18px;justify-content:flex-end">
        <button class="btn btn-secondary" onclick="window.print()">Print</button>
-       <button class="btn btn-secondary" onclick="closeModal()" style="margin-left:8px">Close</button>
+       <button class="btn btn-secondary" onclick="closeModal()" style="margin-left:8px">Fermer</button>
      </div>
    </div>`);
  };
  // Call next: claim the oldest waiting entry
  const callBtn = document.getElementById('lq-call-next');
  if (callBtn) callBtn.onclick = async () => {
-   callBtn.disabled = true; callBtn.textContent = 'Calling...';
+   callBtn.disabled = true; callBtn.textContent = 'Appel...';
    const { data, error } = await sb.rpc('queue_call_next', { p_business_id: bizId });
-   if (error) { toast({title:'Could not call next', message:error.message, urgent:true}); callBtn.disabled = false; callBtn.textContent = 'Call next →'; return; }
+   if (error) { toast({title:'Could not call next', message:error.message, urgent:true}); callBtn.disabled = false; callBtn.textContent = 'Appeler le suivant →'; return; }
    const next = Array.isArray(data) && data[0];
-   if (next) toast({title:'Calling ' + (next.name||'next patient'), message:'Their PWA just lit up.', type:'booking'});
+   if (next) toast({title:'Appel ' + (next.name||'next patient'), message:'Leur PWA vient de s'éclairer.', type:'booking'});
    render();
  };
  // Mark done
@@ -4975,7 +4975,7 @@ async function bindLabPipeline(){
  <div class="sub" style="margin:6px 0"> ${escapeHtml(cli.phone||'—')} · ${apt?.date||''} ${(apt?.time||'').slice(0,5)}</div>
  ${perTest}
  <div class="modal-actions" style="margin-top:14px">
- <button type="button" class="btn-ghost" id="m-cancel">Close</button>
+ <button type="button" class="btn-ghost" id="m-cancel">Fermer</button>
  <button type="button" class="btn-primary" id="lab-mark-all-ready">Mark all Ready</button>
  </div>
  </div>`, () => {/* save callback unused — buttons inside handle their own saves */});
@@ -5006,7 +5006,7 @@ async function bindLabPipeline(){
  pdf_path: pdfPath,
  });
  await sb.from('lab_orders').update({status:'ready', ready_at: new Date().toISOString()}).eq('id', orderId);
- toast({title:'Saved', message:'Result recorded, test moved to Ready', type:'info'});
+ toast({title:'Enregistré', message:'Result recorded, test moved to Ready', type:'info'});
  btn.textContent = ' Saved'; btn.disabled = true;
  });
 
@@ -5058,7 +5058,7 @@ async function bindLabPipeline(){
  </div>
  <div class="field"><label>Text value (qualitative)</label><input name="text_value" placeholder="Negative / Positive / Normal..." /></div>
  <div class="field"><label><input type="checkbox" name="is_critical" /> Mark as critical (auto-flags patient and owner)</label></div>
- <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Close</button>
+ <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Fermer</button>
  <button class="btn-primary">Save result &amp; mark Ready</button></div>
  </form>
  </div>`, async () => {
@@ -5131,7 +5131,7 @@ async function renderTestCatalog(){
  return `<div class="panel"><div class="panel-head"><h3>Test catalog (${tests.length})</h3>
  <button class="btn-primary" id="add-test">+ Add test</button></div>
  <div class="panel-body no-pad"><table class="data">
- <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Sample</th><th>Fasting</th><th>TAT (h)</th><th>Price</th><th>Active</th></tr></thead>
+ <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Sample</th><th>Fasting</th><th>TAT (h)</th><th>Price</th><th>Actif</th></tr></thead>
  <tbody>${tests.map(t=>`<tr data-id="${t.id}">
  <td>${escapeHtml(t.code||'—')}</td>
  <td>${escapeHtml(t.name)}</td>
@@ -5154,9 +5154,9 @@ async function bindTestCatalog(){
  <div class="field"><label>Turnaround (h)</label><input name="turnaround_hours" type="number" value="${t?.turnaround_hours||24}" /></div></div>
  <div class="row"><div class="field grow"><label>Price (TND) *</label><input name="price" type="number" step="0.01" value="${t?.price||0}" required /></div>
  <div class="field"><label>Reference range</label><input name="reference_range" value="${t?.reference_range||''}" placeholder="e.g. 70-110 mg/dL" /></div></div>
- <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Cancel</button>
- ${t?`<button type="button" class="btn-ghost" id="m-del" style="color:#ef4444">Delete</button>`:''}
- <button class="btn-primary">Save</button></div></form>`,async ()=>{
+ <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Annuler</button>
+ ${t?`<button type="button" class="btn-ghost" id="m-del" style="color:#ef4444">Supprimer</button>`:''}
+ <button class="btn-primary">Enregistrer</button></div></form>`,async ()=>{
  const fd = Object.fromEntries(new FormData($('#test-form')).entries());
  const row = {business_id: SESSION.business.id, code: fd.code||null, name: fd.name, category: fd.category, sample_type: fd.sample_type, fasting_required: !!fd.fasting_required, fasting_hours: parseInt(fd.fasting_hours||'0',10), turnaround_hours: parseInt(fd.turnaround_hours||'24',10), price: parseFloat(fd.price||'0'), reference_range: fd.reference_range||null, active:true};
  if (t) await sb.from('lab_tests').update(row).eq('id', t.id);
@@ -5185,8 +5185,8 @@ async function renderServices(){
  <td>${escapeHtml(s.category||'—')}</td>
  <td>${s.price?s.price+' TND':'—'}</td>
  <td class="text-right">
- <button class="btn btn-ghost btn-sm" data-edit-svc="${s.id}">Edit</button>
- <button class="btn btn-danger btn-sm" data-del-svc="${s.id}">Delete</button>
+ <button class="btn btn-ghost btn-sm" data-edit-svc="${s.id}">Modifier</button>
+ <button class="btn btn-danger btn-sm" data-del-svc="${s.id}">Supprimer</button>
  </td>
  </tr>`).join('')}</tbody>
  </table>`}</div></div>`;
@@ -5222,7 +5222,7 @@ async function renderPackages(){
  <td>${k.revenue_total||0} ${p.currency||'TND'}</td>
  <td><span class="pill ${p.active?'green':'gray'}">${p.active?'on':'off'}</span></td>
  <td>
- <button class="btn-ghost btn-sm" data-pkg-edit="${p.id}">Edit</button>
+ <button class="btn-ghost btn-sm" data-pkg-edit="${p.id}">Modifier</button>
  <button class="btn-ghost btn-sm" data-pkg-toggle="${p.id}" data-active="${p.active}">${p.active?'Pause':'Activate'}</button>
  <button class="btn-ghost btn-sm" data-pkg-share="${p.id}" data-name="${escapeHtml(p.name)}">Share</button>
  </td>
@@ -5240,7 +5240,7 @@ async function renderPackages(){
  <td>${pp.paid_at ? new Date(pp.paid_at).toLocaleDateString() : '—'}</td>
  <td>
  ${pp.status==='pending' ? `<button class="btn-primary btn-sm" data-pp-activate="${pp.id}"> Mark paid</button>` : ''}
- ${pp.status==='pending' ? `<button class="btn-ghost btn-sm" data-pp-cancel="${pp.id}" style="color:#ef4444">Cancel</button>` : ''}
+ ${pp.status==='pending' ? `<button class="btn-ghost btn-sm" data-pp-cancel="${pp.id}" style="color:#ef4444">Annuler</button>` : ''}
  ${pp.payment_url && pp.status==='pending' ? `<a href="${pp.payment_url}" target="_blank" class="pill blue" style="margin-left:6px">Pay link</a>` : ''}
  </td>
  </tr>`;
@@ -5264,7 +5264,7 @@ async function renderPackages(){
  <div class="panel-body no-pad">${pkgs.length===0
  ? `<div class="empty"><div class="ic"></div>No packages yet — create one to start selling subscriptions.</div>`
  : `<table class="data" style="width:100%;font-size:.9em">
- <thead><tr><th>Name</th><th>For service</th><th>Sessions</th><th>Price</th><th>Validity</th><th>Active</th><th>Revenue</th><th>Status</th><th></th></tr></thead>
+ <thead><tr><th>Name</th><th>For service</th><th>Sessions</th><th>Price</th><th>Validity</th><th>Actif</th><th>Revenue</th><th>Status</th><th></th></tr></thead>
  <tbody>${pkgs.map(pkgRow).join('')}</tbody>
  </table>`}
  </div>
@@ -5300,9 +5300,9 @@ async function bindPackages(){
  <div class="field"><label>Validity (days)</label><input name="validity_days" type="number" min="1" value="${p?.validity_days||365}" /></div>
  <div class="field"><label>Discount %</label><input name="discount_percent" type="number" min="0" max="100" value="${p?.discount_percent||0}" /></div>
  </div>
- <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Cancel</button>
- ${p?`<button type="button" class="btn-ghost" id="m-del" style="color:#ef4444">Delete</button>`:''}
- <button class="btn-primary">Save</button></div>
+ <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Annuler</button>
+ ${p?`<button type="button" class="btn-ghost" id="m-del" style="color:#ef4444">Supprimer</button>`:''}
+ <button class="btn-primary">Enregistrer</button></div>
  </form>`, async ()=>{
  const fd = Object.fromEntries(new FormData($('#pkg-form')).entries());
  const row = {
@@ -5354,7 +5354,7 @@ async function bindPackages(){
  const link = `https://wa.me/${(SESSION.business.phone||'').replace(/\D/g,'')}?text=${encodeURIComponent('I want to buy: ' + name)}`;
  try {
  await navigator.clipboard.writeText(link);
- toast({ title:'Copied', message:'Share this link on Instagram, FB, business cards. Customers tap → message Nova → get a checkout link.', type:'info' });
+ toast({ title:'Copié', message:'Share this link on Instagram, FB, business cards. Customers tap → message Nova → get a checkout link.', type:'info' });
  } catch {
  prompt('Share link:', link);
  }
@@ -5379,7 +5379,7 @@ async function bindPackages(){
  expires_at,
  notes: note ? note : null,
  }).eq('id', id);
- if (error) { toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error) { toast({title:'Échec', message:error.message, urgent:true}); return; }
  toast({title:' Activated', message:`${total} sessions for ${pp.service_packages?.name}`, type:'booking'});
  // Send receipt to patient
  try {
@@ -5417,7 +5417,7 @@ async function bindPackages(){
  <option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="card">Card on site</option><option value="other">Other</option>
  </select></div>
  <div class="field"><label>Notes (optional)</label><input name="notes" placeholder="receipt #, voucher code, etc." /></div>
- <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Cancel</button><button class="btn-primary">Activate package</button></div>
+ <div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Annuler</button><button class="btn-primary">Activate package</button></div>
  </form>`, async () => {
  const fd = Object.fromEntries(new FormData($('#sell-form')).entries());
  if (!fd.package_id || !fd.client_id) { toast({title:'Pick a package and a client', urgent:true}); return; }
@@ -5436,7 +5436,7 @@ async function bindPackages(){
  payment_provider: fd.method || 'manual',
  notes: fd.notes || null,
  });
- if (error) { toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error) { toast({title:'Échec', message:error.message, urgent:true}); return; }
  toast({title:' Sold', message:`${total} sessions activated for the customer.`, type:'booking'});
  await render();
  });
@@ -5457,7 +5457,7 @@ async function bindServices(){
  $$('[data-del-svc]').forEach(b => b.onclick = async ()=>{
  if (!confirm('Delete this service?')) return;
  const {error} = await sb.from('services').delete().eq('id', b.dataset.delSvc);
- if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error){ toast({title:'Échec', message:error.message, urgent:true}); return; }
  render();
  });
 }
@@ -5477,10 +5477,10 @@ function serviceModal(svc, docs){
  ? sb.from('services').update(row).eq('id', svc.id)
  : sb.from('services').insert(row);
  const {error} = await q;
- if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error){ toast({title:'Échec', message:error.message, urgent:true}); return; }
  closeModal(); render();
  };
- return modalShell(isEdit?'Edit service':'Add service',
+ return modalShell(isEdit?'Modifier le service':'Ajouter un service',
  `<div class="field"><label>Name *</label><input name="name" value="${escapeHtml(svc?.name||'')}" required /></div>
  <div class="row"><div class="field grow"><label>Duration (min)</label><input name="duration_min" type="number" value="${svc?.duration_min||30}" min="5" max="480" /></div>
  <div class="field grow"><label>Price (optional)</label><input name="price" type="number" step="0.01" value="${svc?.price??''}" /></div></div>
@@ -5559,7 +5559,7 @@ function renderSettings(){
  const tPref = localStorage.getItem(THEME_KEY) || 'system';
  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
  <div class="panel">
- <div class="panel-head"><h3>Subscription</h3></div>
+ <div class="panel-head"><h3>Abonnement</h3></div>
  <div class="panel-body">
  <div style="font-size:13px;color:var(--text-dim);margin-bottom:6px">Current plan</div>
  <div style="font-size:22px;font-weight:700">${PLANS[biz.subscription_plan]?.name||'Trial'} <span style="font-size:13px;color:var(--text-faint);font-weight:500">· ${PLANS[biz.subscription_plan]?.price||0} TND/mo</span></div>
@@ -5593,7 +5593,7 @@ function renderSettings(){
  </div>
 
  <div class="panel">
- <div class="panel-head"><h3> Real-time alerts</h3></div>
+ <div class="panel-head"><h3> Alertes en temps réel</h3></div>
  <div class="panel-body">
  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
  <div>
@@ -5642,7 +5642,7 @@ function renderSettings(){
    <div class="field" style="width:240px"><label>Contact email</label><input id="set-email" value="${escapeHtml(biz.email||'')}" /></div>
  </div>
  <div class="field"><label>Description (shown to patients)</label><textarea id="set-desc" rows="2">${escapeHtml(biz.description||'')}</textarea></div>
- <div class="field"><label>Address</label><input id="set-address" value="${escapeHtml(novaSetting('address',''))}" placeholder="Avenue de la République, Kairouan" /></div>
+ <div class="field"><label>Adresse</label><input id="set-address" value="${escapeHtml(novaSetting('address',''))}" placeholder="Avenue de la République, Kairouan" /></div>
  <button class="btn btn-primary btn-sm" id="save-profile" style="margin-top:6px">Save profile</button>
  </div>
  </div>
@@ -5651,7 +5651,7 @@ function renderSettings(){
  <div class="panel-head"><h3>Working hours</h3></div>
  <div class="panel-body">
  <table style="width:100%;font-size:13px;border-collapse:collapse">
-   <thead><tr style="text-align:left;color:var(--text-dim)"><th style="padding:6px 0">Day</th><th>Open</th><th>From</th><th>To</th></tr></thead>
+   <thead><tr style="text-align:left;color:var(--text-dim)"><th style="padding:6px 0">Day</th><th>Ouvrir</th><th>From</th><th>To</th></tr></thead>
    <tbody id="hours-body">
    ${['mon','tue','wed','thu','fri','sat','sun'].map(d => {
      const dayLabels = {mon:'Lundi',tue:'Mardi',wed:'Mercredi',thu:'Jeudi',fri:'Vendredi',sat:'Samedi',sun:'Dimanche'};
@@ -5688,7 +5688,7 @@ function renderSettings(){
      ${['auto','fr','ar','en'].map(l => `<option value="${l}" ${novaSetting('default_lang','auto')===l?'selected':''}>${{auto:'Auto-detect',fr:'Français',ar:'العربية (darija)',en:'English'}[l]}</option>`).join('')}
    </select>
  </div>
- <div class="field"><label>Custom greeting (first message Nova sends new patients)</label><textarea id="ai-greeting" rows="2" placeholder="Bonjour, je suis Nova, l'assistante du Dr Mehdi. Comment puis-je vous aider ?">${escapeHtml(novaSetting('greeting',''))}</textarea></div>
+ <div class="field"><label>Message d'accueil personnalisé (premier message envoyé aux nouveaux patients)</label><textarea id="ai-greeting" rows="2" placeholder="Bonjour, je suis Nova, l'assistante du Dr Mehdi. Comment puis-je vous aider ?">${escapeHtml(novaSetting('greeting',''))}</textarea></div>
  <button class="btn btn-primary btn-sm" id="save-ai">Save AI settings</button>
  </div>
  </div>
@@ -5786,7 +5786,7 @@ function bindSettings(){
  $$('[data-plan]').forEach(p=>p.onclick = async ()=>{
  const plan = p.dataset.plan;
  const {error} = await sb.from('businesses').update({subscription_plan:plan,subscription_status:'active'}).eq('id', SESSION.business.id);
- if (error){ toast({title:'Failed',message:error.message,urgent:true}); return; }
+ if (error){ toast({title:'Échec',message:error.message,urgent:true}); return; }
  SESSION = await loadSession(); render();
  });
 
@@ -5863,7 +5863,7 @@ function bindSettings(){
  if (aiToggle) aiToggle.onchange = async ()=>{
    const next = aiToggle.checked;
    const { error } = await sb.from('businesses').update({ ai_receptionist_enabled: next }).eq('id', SESSION.business.id);
-   if (error){ toast({title:'Failed', message:error.message, urgent:true}); aiToggle.checked = !next; return; }
+   if (error){ toast({title:'Échec', message:error.message, urgent:true}); aiToggle.checked = !next; return; }
    SESSION.business.ai_receptionist_enabled = next;
    toast({ title: next?'AI ON':'AI paused', message: next?'Nova will reply automatically.':'New messages will queue for manual reply.', type: next?'booking':'info' });
  };
@@ -5886,7 +5886,7 @@ function bindSettings(){
          await sb.from('businesses').update({ thanks_after: cb.checked }).eq('id', SESSION.business.id);
        } catch(_e){}
      }
-     toast({title:'Saved', message:cb.dataset.rem+': '+(cb.checked?'on':'off'), type:'info'});
+     toast({title:'Enregistré', message:cb.dataset.rem+': '+(cb.checked?'on':'off'), type:'info'});
    };
  });
 
@@ -5990,7 +5990,7 @@ async function renderProfile(){
  <div style="color:var(--text-faint);font-size:12px;margin-top:4px">Account created: ${created}</div>
  </div>
  </div>
- <button class="btn btn-danger btn-sm" id="signout-btn">Sign out</button>
+ <button class="btn btn-danger btn-sm" id="signout-btn">Se déconnecter</button>
  </div>
  </div>
 
@@ -6039,7 +6039,7 @@ async function renderDoctorView(){
  </div>
  </aside>
  <main class="main">
- <div class="topbar"><div><h1>Welcome, ${escapeHtml(doc.name)}</h1><div class="sub">${upcoming.length} upcoming appointment${upcoming.length===1?'':'s'}</div></div></div>
+ <div class="topbar"><div><h1>Bienvenue, ${escapeHtml(doc.name)}</h1><div class="sub">${upcoming.length} upcoming appointment${upcoming.length===1?'':'s'}</div></div></div>
  ${SESSION.business.type !== 'laboratoire' ? `<button class="btn btn-primary btn-lg" id="dash-doc-scan" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-size:15px;padding:16px;margin-bottom:18px"><span style="font-size:20px">▦</span> Scan patient QR to start visit</button>` : ''}
  <div id="ct-overlay-host"></div>
  <div class="dash-2col">
@@ -6230,19 +6230,19 @@ async function openAskNova(){
  const overlay = document.createElement('div');
  overlay.className = 'an-overlay';
  overlay.innerHTML = `
-   <button class="an-min" id="an-min" aria-label="Minimize" title="Minimize - Nova stays alive in the corner">_</button>
-   <button class="an-close" id="an-close" aria-label="Close">x</button>
+   <button class="an-min" id="an-min" aria-label="Réduire" title="Réduire — Nova reste active dans le coin">_</button>
+   <button class="an-close" id="an-close" aria-label="Fermer">x</button>
    <div class="an-header">
      <div class="badge"><span class="dot"></span> Ask Nova</div>
-     <h1 id="an-title">Hey boss. How can I help?</h1>
-     <p id="an-sub">Tap the orb to talk, or flip <b>Active</b> on. Minimize Nova and she keeps listening — the bubble pulses cyan when she hears you.</p>
+     <h1 id="an-title">Bonjour patron, comment puis-je vous aider ?</h1>
+     <p id="an-sub">Touchez le globe pour parler ou activez <b>Actif</b>. Réduisez Nova et elle continue d'écouter — la bulle pulse en cyan quand elle vous entend.</p>
      <div class="an-toggle-row">
-       <span>Active (continuous listening)</span>
+       <span>Actif (écoute continue)</span>
        <div class="an-toggle" id="an-toggle"></div>
        <span id="an-toggle-state" style="font-weight:600;color:#94a3b8">OFF</span>
      </div>
      <div style="display:flex;justify-content:center">
-       <div class="an-lang-row" id="an-lang-row" role="tablist" aria-label="Spoken language">
+       <div class="an-lang-row" id="an-lang-row" role="tablist" aria-label="Langue parlée">
          <button class="an-lang-pill" data-lang="en" role="tab">English</button>
          <button class="an-lang-pill" data-lang="fr" role="tab">Français</button>
          <button class="an-lang-pill" data-lang="ar" role="tab">العربية</button>
@@ -6255,11 +6255,11 @@ async function openAskNova(){
      <div class="an-orb"></div>
      <div class="an-orb-mic">&#x1F3A4;</div>
    </div>
-   <div class="an-status" id="an-status">Tap the orb, or say "Hey Nova"</div>
+   <div class="an-status" id="an-status">Touchez le globe ou dites « Hey Nova »</div>
    <div class="an-prompt" id="an-prompt"></div>
    <div class="an-actions">
-     <button class="an-btn" id="an-talk-now">Talk now</button>
-     <button class="an-btn" id="an-stop">Stop</button>
+     <button class="an-btn" id="an-talk-now">Parler maintenant</button>
+     <button class="an-btn" id="an-stop">Arrêter</button>
    </div>`;
  document.body.appendChild(overlay);
  // Persistent live-state badge — sits above the minimized bubble.
@@ -6627,7 +6627,7 @@ async function openAskNova(){
      } else if (window.__nova.alwaysOn && !window.__nova.isSpeaking){
        setTimeout(() => listenForQuestion(), 300);
      } else {
-       setState(null, 'Tap the orb to talk again', '');
+       setState(null, 'Touchez le globe pour reparler', '');
      }
    };
    window.__nova.lastListenAt = Date.now();
@@ -6953,7 +6953,7 @@ async function openAskNova(){
    isProcessing = false;
    setState(null, 'Stopped', '');
  };
- // "Talk now" — bypass the wake word entirely, listen for a question immediately
+ // "Parler maintenant" — bypass the wake word entirely, listen for a question immediately
  const talkNow = overlay.querySelector('#an-talk-now');
  if (talkNow) talkNow.onclick = () => {
    try { if (wakeRec) wakeRec.abort(); } catch(_e){}
@@ -6972,7 +6972,7 @@ async function openAskNova(){
  };
  document.addEventListener('keydown', escHandler);
 
- setTimeout(() => speak("Hey boss. How can I help?", 'en'), 400);
+ setTimeout(() => speak("Bonjour patron, comment puis-je vous aider ?", 'en'), 400);
 }
 
 async function openDashScanner(){
@@ -6983,7 +6983,7 @@ async function openDashScanner(){
    <div id="dash-qr-msg" style="margin-top:12px;font-size:13px;color:var(--warn);min-height:18px"></div>
    <div class="row" style="justify-content:center;gap:10px;margin-top:14px">
      <button class="btn btn-secondary btn-sm" id="dash-qr-flip">Switch camera</button>
-     <button class="btn btn-secondary btn-sm" onclick="closeDashScanner()">Cancel</button>
+     <button class="btn btn-secondary btn-sm" onclick="closeDashScanner()">Annuler</button>
    </div>
  </div>`;
  openModal(html);
@@ -7141,24 +7141,24 @@ document.addEventListener('click', async (e)=>{
  if (!t) return;
  if (!confirm('Cancel this appointment?')) return;
  const {error} = await sb.from('appointments').update({status:'cancelled'}).eq('id', t.dataset.id);
- if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error){ toast({title:'Échec', message:error.message, urgent:true}); return; }
  closeModal(); render();
 });
 function modalShell(title, body, submit='Save'){
- return `<h3>${title}</h3><form>${body}<div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">${submit}</button></div></form>`;
+ return `<h3>${title}</h3><form>${body}<div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Annuler</button><button class="btn btn-primary btn-sm" type="submit">${submit}</button></div></form>`;
 }
 async function openEditClientModal(clientId){
  const { data: c } = await sb.from('clients').select('*').eq('id', clientId).maybeSingle();
  if (!c) return;
  const html = `<h3>Edit ${escapeHtml(c.name||'client')}</h3>
    <form>
-     <div class="field"><label>Name</label><input name="name" value="${escapeHtml(c.name||'')}" required /></div>
-     <div class="row" style="gap:8px"><div class="field grow"><label>Phone</label><input name="phone" value="${escapeHtml(c.phone||'')}" required /></div>
-       <div class="field" style="width:100px"><label>Age</label><input name="age" type="number" value="${c.age||''}" /></div></div>
-     <div class="field"><label>Email</label><input name="email" type="email" value="${escapeHtml(c.email||'')}" /></div>
+     <div class="field"><label>Nom</label><input name="name" value="${escapeHtml(c.name||'')}" required /></div>
+     <div class="row" style="gap:8px"><div class="field grow"><label>Téléphone</label><input name="phone" value="${escapeHtml(c.phone||'')}" required /></div>
+       <div class="field" style="width:100px"><label>Âge</label><input name="age" type="number" value="${c.age||''}" /></div></div>
+     <div class="field"><label>E-mail</label><input name="email" type="email" value="${escapeHtml(c.email||'')}" /></div>
      <div class="field"><label>Birthday <span style="color:var(--text-faint);font-weight:400">(unlocks AI birthday surprises)</span></label><input name="birthday" type="date" value="${c.birthday||''}" /></div>
      <div class="field"><label>Notes</label><textarea name="notes" rows="2">${escapeHtml(c.notes||'')}</textarea></div>
-     <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit" style="margin-left:8px">Save</button></div>
+     <div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Annuler</button><button class="btn btn-primary btn-sm" type="submit" style="margin-left:8px">Enregistrer</button></div>
    </form>`;
  window.__modalSubmit = async (d) => {
    const upd = {
@@ -7171,7 +7171,7 @@ async function openEditClientModal(clientId){
    };
    const { error } = await sb.from('clients').update(upd).eq('id', clientId);
    if (error) { toast({title:'Save failed', message:error.message, urgent:true}); return; }
-   closeModal(); toast({title:'Saved', type:'info'}); render();
+   closeModal(); toast({title:'Enregistré', type:'info'}); render();
  };
  openModal(html);
 }
@@ -7182,12 +7182,12 @@ function addClientModal(){
  const payload = {business_id: SESSION.business.id, name:d.name, phone:d.phone, email:d.email||null};
  if (d.birthday) payload.birthday = d.birthday;
  const {error} = await sb.from('clients').insert(payload);
- if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error){ toast({title:'Échec', message:error.message, urgent:true}); return; }
  closeModal(); render();
  };
- return modalShell('Add client',
- `<div class="field"><label>Name</label><input name="name" required /></div>
- <div class="field"><label>Phone</label><input name="phone" placeholder="+212…" required /></div>
+ return modalShell('Ajouter un client',
+ `<div class="field"><label>Nom</label><input name="name" required /></div>
+ <div class="field"><label>Téléphone</label><input name="phone" placeholder="+212…" required /></div>
  <div class="field"><label>Email (optional)</label><input name="email" type="email" /></div>
  <div class="field"><label>Birthday (optional — used for AI birthday surprises)</label><input name="birthday" type="date" /></div>`);
 }
@@ -7195,15 +7195,15 @@ function addDoctorModal(){
  window.__modalSubmit = async (d)=>{
  if (!d.name){alert('Name required');return;}
  const {error} = await sb.from('users').insert({business_id: SESSION.business.id, name:d.name, role:d.role||'doctor', specialty:d.specialty||null, phone:d.phone||null, email:d.email||null});
- if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error){ toast({title:'Échec', message:error.message, urgent:true}); return; }
  closeModal(); render();
  };
- return modalShell('Add team member',
- `<div class="field"><label>Name</label><input name="name" required /></div>
- <div class="field"><label>Role</label><select name="role"><option value="doctor">Doctor</option><option value="staff">Staff</option></select></div>
- <div class="field"><label>Specialty</label><input name="specialty" /></div>
- <div class="field"><label>Phone</label><input name="phone" /></div>
- <div class="field"><label>Email</label><input name="email" type="email" /></div>`);
+ return modalShell('Ajouter un membre',
+ `<div class="field"><label>Nom</label><input name="name" required /></div>
+ <div class="field"><label>Rôle</label><select name="role"><option value="doctor">Doctor</option><option value="staff">Staff</option></select></div>
+ <div class="field"><label>Spécialité</label><input name="specialty" /></div>
+ <div class="field"><label>Téléphone</label><input name="phone" /></div>
+ <div class="field"><label>E-mail</label><input name="email" type="email" /></div>`);
 }
 async function addAppointmentModal(){
  const [cls, docs, svcs] = await Promise.all([
@@ -7220,19 +7220,19 @@ async function addAppointmentModal(){
  const doctorId = d.doctor_id || soloDoctorId;
  if (!d.client_id||!doctorId||!d.date||!d.time){alert('Fill all fields');return;}
  const {data:apt, error} = await sb.from('appointments').insert({business_id:SESSION.business.id, client_id:d.client_id, doctor_id:doctorId, service_id:d.service_id||null, date:d.date, time:d.time, status:'confirmed', source:'manual'}).select().single();
- if (error){ toast({title:'Failed', message:error.message, urgent:true}); return; }
+ if (error){ toast({title:'Échec', message:error.message, urgent:true}); return; }
  closeModal(); render();
  };
  /* Trick: addAppointmentModal is async, but openModal expects sync html. We'll just openModal here. */
  const doctorField = (isSoloDoctor && soloDoctorId)
    ? `<input type="hidden" name="doctor_id" value="${soloDoctorId}" />`
-   : `<div class="field"><label>Doctor</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}</select></div>`;
- const html = modalShell('New appointment',
+   : `<div class="field"><label>Médecin</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}</select></div>`;
+ const html = modalShell('Nouveau rendez-vous',
  `<div class="field"><label>Client</label><select name="client_id" required>${(cls.data||[]).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select></div>
  ${doctorField}
  <div class="field"><label>Service</label><select name="service_id">${(svcs.data||[]).map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}</select></div>
  <div class="row"><div class="field grow"><label>Date</label><input name="date" type="date" value="${isoDate(1)}" required /></div>
- <div class="field grow"><label>Time</label><input name="time" type="time" value="10:00" required /></div></div>`);
+ <div class="field grow"><label>Heure</label><input name="time" type="time" value="10:00" required /></div></div>`);
  openModal(html);
 }
 
