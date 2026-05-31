@@ -1073,6 +1073,7 @@ async function render(){
  }
  if (route==='/' || route===''){ $('#app').innerHTML = renderLanding(); return bindLanding(); }
  if (route.startsWith('/auth')){ $('#app').innerHTML = renderAuth(); return bindAuth(); }
+ if (route.startsWith('/client')){ $('#app').innerHTML = renderClientPortal(); return bindClientPortal(); }
 
  /* Below routes need auth */
  if (!SESSION){ navigate('#/auth'); return; }
@@ -1623,6 +1624,7 @@ function renderLanding(){
  <a href="#install">Mobile app</a>
  </nav>
  <div class="lp-nav-cta">
+ <a href="#/client" class="lp-btn lp-btn-outline" title="See your appointments by phone number">My appointments</a>
  <a href="#/auth" class="lp-btn lp-btn-outline">Log in</a>
  <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary">Sign up</a>
  </div>
@@ -2269,6 +2271,180 @@ function bindAuth(){
  });
 }
 
+/* ---------- 9b. CLIENT PORTAL (anonymous, phone-only access) ---------- */
+let CLIENT_PORTAL_STATE = { phone:null, name:null, data:null };
+
+function renderClientPortal(){
+ const s = CLIENT_PORTAL_STATE;
+ if (!s.data){
+   return `<div class="auth-wrap"><div class="auth-card" style="max-width:460px">
+     <div class="logo" style="justify-content:center;margin-bottom:14px"><div class="logo-mark">N</div> Nova AI · Client portal</div>
+     <h2 style="text-align:center;margin:0 0 6px;font-size:20px">Your appointments</h2>
+     <p style="text-align:center;color:var(--text-dim);font-size:13.5px;margin:0 0 18px;line-height:1.5">
+       Enter the phone number you used to book. You'll see every appointment ever made with that number — across every Nova AI business — and you can cancel or reschedule any of them.
+     </p>
+     <form id="cp-form">
+       <div class="field">
+         <label for="cp-phone">WhatsApp / mobile number</label>
+         <input id="cp-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="+212600000000" />
+         <div class="sub" style="font-size:.8em;margin-top:6px;color:var(--text-faint)">International format, starting with <b>+</b>.</div>
+       </div>
+       <button class="btn btn-primary btn-block" type="submit" id="cp-submit">
+         <span id="cp-btn-label">See my appointments →</span>
+         <span class="loading hidden" id="cp-spin"></span>
+       </button>
+       <div id="cp-status" style="display:none;text-align:center;margin-top:12px;padding:10px;border-radius:6px;font-size:13.5px"></div>
+     </form>
+     <div class="auth-foot" style="margin-top:18px;text-align:center;font-size:12.5px;color:var(--text-dim);line-height:1.6">
+       <div>Business owner? <a href="#/auth">Sign in here</a></div>
+       <div style="margin-top:6px"><a href="#/">← Back to home</a></div>
+     </div>
+   </div></div>`;
+ }
+
+ const { name, phone, businesses, appointments } = s.data;
+ const bizMap = Object.fromEntries((businesses||[]).map(b=>[b.id, b]));
+ const today = new Date().toISOString().slice(0,10);
+ const upcoming = appointments.filter(a => (a.date > today || (a.date === today && a.status !== 'completed')) && a.status !== 'cancelled');
+ const past = appointments.filter(a => !(a.date > today || (a.date === today && a.status !== 'completed')) || a.status === 'cancelled');
+
+ const renderAppt = (a, isUpcoming) => {
+   const b = bizMap[a.business_id] || { name:'—', type:'' };
+   const cur = b.currency || 'TND';
+   const dateStr = new Date(a.date+'T00:00:00').toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+   const statusColor = a.status==='cancelled' ? '#ef4444' : (a.status==='completed' ? '#94a3b8' : '#22c55e');
+   return `<div class="cp-appt" data-id="${a.id}" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
+     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+       <div style="flex:1;min-width:0">
+         <div style="font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">${escapeHtml(b.name)} <span style="opacity:.7">· ${escapeHtml(b.type||'')}</span></div>
+         <div style="font-size:17px;font-weight:700">${escapeHtml(a.service_name||'Appointment')}</div>
+         <div style="font-size:13.5px;color:var(--text-dim);margin-top:4px">${dateStr} · ${escapeHtml((a.time||'').slice(0,5))}${a.doctor_name?` · ${escapeHtml(a.doctor_name)}`:''}${a.service_price?` · ${a.service_price} ${cur}`:''}</div>
+       </div>
+       <span style="padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:600;background:${statusColor}22;color:${statusColor};text-transform:uppercase;letter-spacing:.4px">${escapeHtml(a.status||'')}</span>
+     </div>
+     ${isUpcoming ? `
+     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+       <button class="btn btn-ghost btn-sm cp-reschedule" data-id="${a.id}">↻ Reschedule</button>
+       <button class="btn btn-ghost btn-sm cp-cancel" data-id="${a.id}" style="color:#ef4444;border-color:rgba(239,68,68,.3)">✕ Cancel</button>
+     </div>
+     <div class="cp-resched-form hidden" data-id="${a.id}" style="margin-top:12px;padding:12px;background:rgba(99,102,241,.06);border-radius:10px">
+       <div class="row" style="gap:8px;flex-wrap:wrap">
+         <input type="date" class="cp-new-date" min="${today}" value="${a.date}" style="flex:1;min-width:140px" />
+         <input type="time" class="cp-new-time" value="${(a.time||'').slice(0,5)}" style="flex:1;min-width:120px" />
+         <button class="btn btn-primary btn-sm cp-resched-go" data-id="${a.id}">Save</button>
+         <button class="btn btn-ghost btn-sm cp-resched-cancel" data-id="${a.id}">×</button>
+       </div>
+     </div>` : ''}
+   </div>`;
+ };
+
+ return `<div style="max-width:760px;margin:0 auto;padding:32px 18px 60px">
+   <div class="logo" style="margin-bottom:18px"><div class="logo-mark">N</div> Nova AI</div>
+   <div style="background:linear-gradient(135deg,#6366f1 0%,#22d3ee 100%);color:white;padding:24px;border-radius:18px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+     <div>
+       <div style="font-size:12.5px;letter-spacing:.5px;opacity:.9;text-transform:uppercase">Signed in as</div>
+       <div style="font-size:22px;font-weight:700;margin-top:2px">${escapeHtml(name || phone)}</div>
+       <div style="font-size:13px;opacity:.9;margin-top:2px">${escapeHtml(phone)}</div>
+     </div>
+     <button class="btn" id="cp-logout" style="background:rgba(255,255,255,.18);color:white;border:1px solid rgba(255,255,255,.3)">Sign out</button>
+   </div>
+   <div style="display:flex;gap:18px;margin-bottom:18px;flex-wrap:wrap">
+     <div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px"><div style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px">Upcoming</div><div style="font-size:26px;font-weight:700;margin-top:2px">${upcoming.length}</div></div>
+     <div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px"><div style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px">History</div><div style="font-size:26px;font-weight:700;margin-top:2px">${past.length}</div></div>
+     <div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px"><div style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px">Businesses</div><div style="font-size:26px;font-weight:700;margin-top:2px">${(businesses||[]).length}</div></div>
+   </div>
+   <h3 style="margin:24px 0 12px;font-size:16px;letter-spacing:-.2px">Upcoming</h3>
+   ${upcoming.length === 0 ? `<div style="background:var(--card);border:1px dashed var(--border);border-radius:14px;padding:24px;text-align:center;color:var(--text-dim)">No upcoming appointments. Reach out on WhatsApp to book a new one.</div>` : upcoming.map(a=>renderAppt(a,true)).join('')}
+   <h3 style="margin:28px 0 12px;font-size:16px;letter-spacing:-.2px">History</h3>
+   ${past.length === 0 ? `<div style="background:var(--card);border:1px dashed var(--border);border-radius:14px;padding:24px;text-align:center;color:var(--text-dim)">No past appointments yet.</div>` : past.slice(0,30).map(a=>renderAppt(a,false)).join('')}
+   <div style="margin-top:30px;text-align:center;font-size:12.5px;color:var(--text-faint)"><a href="#/">← Back to home</a></div>
+ </div>`;
+}
+
+async function clientPortalFetch(action, extra){
+ const body = { action, phone: CLIENT_PORTAL_STATE.phone, ...extra };
+ const res = await fetch(CFG.url + '/functions/v1/client-portal', {
+   method: 'POST',
+   headers: { 'Content-Type': 'application/json', 'apikey': CFG.key, 'Authorization': 'Bearer ' + CFG.key },
+   body: JSON.stringify(body),
+ });
+ const json = await res.json().catch(()=>({error:'Bad response'}));
+ if (!res.ok || json.error) throw new Error(json.error || ('HTTP '+res.status));
+ return json;
+}
+
+function bindClientPortal(){
+ const s = CLIENT_PORTAL_STATE;
+
+ if (!s.data){
+   const form = $('#cp-form');
+   if (!form) return;
+   form.onsubmit = async (e)=>{
+     e.preventDefault();
+     const raw = ($('#cp-phone').value||'').trim();
+     const phone = raw.replace(/[\s()-]/g,'').replace(/^00/,'+');
+     const status = $('#cp-status');
+     const spin = $('#cp-spin');
+     const label = $('#cp-btn-label');
+     const submit = $('#cp-submit');
+     if (!phone.startsWith('+') || phone.length < 8){
+       status.style.display='block'; status.style.background='rgba(239,68,68,0.1)'; status.style.color='#ef4444';
+       status.textContent = 'Enter your number in international format, starting with +.';
+       return;
+     }
+     submit.disabled = true; spin.classList.remove('hidden'); label.textContent='Looking up…';
+     try {
+       CLIENT_PORTAL_STATE.phone = phone;
+       const data = await clientPortalFetch('list', {});
+       CLIENT_PORTAL_STATE.data = data;
+       CLIENT_PORTAL_STATE.name = data.name;
+       render();
+     } catch (err){
+       submit.disabled=false; spin.classList.add('hidden'); label.textContent='See my appointments →';
+       status.style.display='block'; status.style.background='rgba(239,68,68,0.1)'; status.style.color='#ef4444';
+       status.textContent = 'Could not load: ' + err.message;
+     }
+   };
+   return;
+ }
+
+ $('#cp-logout').onclick = ()=>{ CLIENT_PORTAL_STATE = { phone:null, name:null, data:null }; render(); };
+
+ $$('.cp-reschedule').forEach(b => b.onclick = () => {
+   const id = b.dataset.id;
+   document.querySelector('.cp-resched-form[data-id="'+id+'"]').classList.remove('hidden');
+ });
+ $$('.cp-resched-cancel').forEach(b => b.onclick = () => {
+   const id = b.dataset.id;
+   document.querySelector('.cp-resched-form[data-id="'+id+'"]').classList.add('hidden');
+ });
+ $$('.cp-resched-go').forEach(b => b.onclick = async () => {
+   const id = b.dataset.id;
+   const form = document.querySelector('.cp-resched-form[data-id="'+id+'"]');
+   const newDate = form.querySelector('.cp-new-date').value;
+   const newTime = form.querySelector('.cp-new-time').value;
+   if (!newDate || !newTime){ toast({title:'Pick a date and time', urgent:true}); return; }
+   b.disabled = true; b.textContent='Saving…';
+   try {
+     await clientPortalFetch('reschedule', { appointment_id: id, date: newDate, time: newTime });
+     toast({title:'Rescheduled', message:'Your appointment is now on ' + newDate + ' at ' + newTime, type:'booking'});
+     const data = await clientPortalFetch('list', {});
+     CLIENT_PORTAL_STATE.data = data; render();
+   } catch(err){ toast({title:'Could not reschedule', message:err.message, urgent:true}); b.disabled=false; b.textContent='Save'; }
+ });
+ $$('.cp-cancel').forEach(b => b.onclick = async () => {
+   if (!confirm('Cancel this appointment? You can always book a new one on WhatsApp.')) return;
+   const id = b.dataset.id;
+   b.disabled = true; b.textContent='Cancelling…';
+   try {
+     await clientPortalFetch('cancel', { appointment_id: id });
+     toast({title:'Appointment cancelled', type:'info'});
+     const data = await clientPortalFetch('list', {});
+     CLIENT_PORTAL_STATE.data = data; render();
+   } catch(err){ toast({title:'Could not cancel', message:err.message, urgent:true}); b.disabled=false; b.textContent='✕ Cancel'; }
+ });
+}
+
 /* ---------- 10. CREATE BUSINESS (after first sign-in) ---------- */
 function renderCreateBusiness(){
  return `<div class="wizard-wrap"><div class="wizard">
@@ -2290,18 +2466,8 @@ function renderCreateBusiness(){
 
  <div class="field">
  <label>WhatsApp phone (international format) *</label>
- <div class="row" style="gap:6px">
- <input id="cb-phone" name="phone" placeholder="+212600000000" required style="flex:1" />
- <button type="button" class="btn btn-ghost btn-sm" id="send-code-btn">Send code</button>
- </div>
- <div id="otp-row" class="hidden" style="margin-top:10px">
- <div class="row" style="gap:6px">
- <input id="cb-otp" maxlength="6" placeholder="6-digit code" style="flex:1;text-align:center;letter-spacing:.4em;font-family:'JetBrains Mono',monospace" />
- <button type="button" class="btn btn-primary btn-sm" id="verify-code-btn">Verify</button>
- </div>
- <div style="font-size:11.5px;color:var(--text-faint);margin-top:6px">Code is sent via WhatsApp to the number above. Expires in 10 min.</div>
- </div>
- <div id="phone-status" style="font-size:12px;margin-top:6px;color:var(--text-faint)">Verify your number before creating the business.</div>
+ <input id="cb-phone" name="phone" placeholder="+212600000000" required />
+ <div id="phone-status" style="font-size:12px;margin-top:6px;color:var(--text-faint)">This is the number clients will reach you on. Enter it in international format starting with <b>+</b>.</div>
  </div>
 
  <div class="field"><label>Short description</label><textarea name="description" rows="2" placeholder="e.g. General medicine clinic open 9-18, multi-doctor team"></textarea></div>
@@ -2319,11 +2485,11 @@ function renderCreateBusiness(){
 }
 function bindCreateBusiness(){
  let chosenPlan='starter';
- let phoneVerified=false;
- let bizIdPending=null; // we create a row first so the OTP function has a business_id; OR we can call OTP without business and create after.
 
  setTimeout(()=>{
  $$('#plans .plan').forEach(p=>p.onclick=()=>{chosenPlan=p.dataset.plan;$$('#plans .plan').forEach(x=>x.classList.remove('selected'));p.classList.add('selected');});
+ // Phone-only: no OTP, submit button enabled by default
+ const submit = $('#cb-submit'); if (submit) submit.disabled = false;
  },0);
 
  const setStatus = (msg, color)=>{
@@ -2331,79 +2497,49 @@ function bindCreateBusiness(){
  if (el){ el.textContent = msg; el.style.color = color || 'var(--text-faint)'; }
  };
 
- $('#send-code-btn').onclick = async ()=>{
- const phone = $('#cb-phone').value.trim();
- if (!phone || !phone.startsWith('+')) { setStatus('Enter phone in international format starting with +', 'var(--danger)'); return; }
- $('#send-code-btn').disabled = true; $('#send-code-btn').textContent = 'Sending...';
- try {
- // Need a business row to attach OTP to (the verify function references business_id).
- // Create a draft business row if not exists yet.
- if (!bizIdPending){
- const {data:existing} = await sb.from('businesses').select('id').eq('owner_user_id', SESSION.user.id).maybeSingle();
- if (existing){ bizIdPending = existing.id; }
- else {
- const {data:draft, error} = await sb.from('businesses').insert({
- name: ($('input[name=name]').value||'Pending'),
- type: ($('select[name=type]').value||'clinic'),
- phone: phone, email: SESSION.user.email,
- owner_user_id: SESSION.user.id,
- subscription_status: 'trialing', subscription_plan: 'starter',
- whatsapp_verified: false, onboarding_complete: false, ai_receptionist_enabled: true
- }).select().single();
- if (error){ setStatus('Could not save phone: '+error.message, 'var(--danger)'); return; }
- bizIdPending = draft.id;
- }
- } else {
- // Update phone on existing draft
- await sb.from('businesses').update({phone}).eq('id', bizIdPending);
- }
- const {error} = await sb.functions.invoke('send-whatsapp-otp', {body:{phone, business_id: bizIdPending}});
- if (error) throw error;
- $('#otp-row').classList.remove('hidden');
- setStatus('Code sent — check WhatsApp on '+phone, 'var(--accent)');
- } catch (err){
- setStatus('Could not send code: '+err.message, 'var(--danger)');
- } finally {
- $('#send-code-btn').disabled = false; $('#send-code-btn').textContent = 'Resend';
- }
- };
-
- $('#verify-code-btn').onclick = async ()=>{
- const code = $('#cb-otp').value.trim();
- if (code.length<4) { setStatus('Enter the 6-digit code', 'var(--danger)'); return; }
- $('#verify-code-btn').disabled = true; $('#verify-code-btn').textContent = 'Verifying...';
- const {error} = await sb.functions.invoke('verify-whatsapp-otp', {body:{code, business_id: bizIdPending}});
- $('#verify-code-btn').disabled = false; $('#verify-code-btn').textContent = 'Verify';
- if (error){ setStatus('Wrong code: '+error.message, 'var(--danger)'); return; }
- phoneVerified = true;
- setStatus('Phone verified', 'var(--accent)');
- $('#cb-phone').readOnly = true;
- $('#send-code-btn').classList.add('hidden');
- $('#otp-row').classList.add('hidden');
- $('#cb-submit').disabled = false;
- };
-
  $('#cb-form').onsubmit = async (e)=>{
  e.preventDefault();
- if (!phoneVerified){ setStatus('Verify your WhatsApp number first', 'var(--danger)'); return; }
  const fd = Object.fromEntries(new FormData(e.target).entries());
- // Update the draft business with final values + flip onboarding_complete
+ const phone = (fd.phone||'').trim();
+ if (!phone.startsWith('+') || phone.length < 8){
+ setStatus('Enter phone in international format starting with + (e.g. +212600000000)', 'var(--danger)');
+ return;
+ }
+ // Check if owner already has a draft / business row, else create one
+ let bizId = null;
+ const {data:existing} = await sb.from('businesses').select('id').eq('owner_user_id', SESSION.user.id).maybeSingle();
+ if (existing){ bizId = existing.id; }
+ else {
+ const {data:created, error:cErr} = await sb.from('businesses').insert({
+ name: fd.name, type: fd.type, phone, email: SESSION.user.email,
+ owner_user_id: SESSION.user.id,
+ description: fd.description||null,
+ subscription_plan: chosenPlan,
+ subscription_status: PLANS[chosenPlan].price===0 ? 'active' : 'trialing',
+ whatsapp_verified: true, whatsapp_verified_at: new Date().toISOString(),
+ onboarding_complete: true, ai_receptionist_enabled: true
+ }).select().single();
+ if (cErr){ toast({title:'Could not create business', message:cErr.message, urgent:true}); return; }
+ bizId = created.id;
+ }
+ if (existing){
  const {error} = await sb.from('businesses').update({
- name: fd.name, type: fd.type, phone: fd.phone,
+ name: fd.name, type: fd.type, phone,
  description: fd.description||null,
  subscription_plan: chosenPlan,
  subscription_status: PLANS[chosenPlan].price===0 ? 'active' : 'trialing',
  whatsapp_verified: true, whatsapp_verified_at: new Date().toISOString(),
  onboarding_complete: true
- }).eq('id', bizIdPending);
+ }).eq('id', bizId);
  if (error){ toast({title:'Could not save', message:error.message, urgent:true}); return; }
+ }
 
  const {data:hasMember} = await sb.from('users').select('id').eq('auth_uid', SESSION.user.id).maybeSingle();
  if (!hasMember){
  const userName = SESSION.user.user_metadata?.full_name || SESSION.user.email.split('@')[0];
  await sb.from('users').insert({
- business_id: bizIdPending, auth_uid: SESSION.user.id,
- name: userName, role:'owner', email: SESSION.user.email, phone: fd.phone
+ business_id: bizId, auth_uid: SESSION.user.id,
+ name: userName, role:'owner', email: SESSION.user.email, phone
  });
  }
  SESSION = await loadSession();
@@ -2419,13 +2555,10 @@ function renderOnboarding(){
  const dot = n=>step>n?'done':(step===n?'active':'');
  let body='';
  if (step===1){
- body = `<h2>Step 1 · Verify WhatsApp</h2>
- <p class="lede">We'll call <strong>${escapeHtml(biz.phone)}</strong> via WhatsApp Business API and send a 6-digit code.</p>
- <button class="btn btn-primary btn-block" id="send-otp">Send code</button>
- <div id="otp-row" class="hidden">
- <div class="verify-row"><input id="otp" maxlength="6" placeholder="••••••" autocomplete="off" /></div>
- <button class="btn btn-primary btn-block" id="verify-btn">Verify code</button>
- </div>`;
+ body = `<h2>Step 1 · Confirm WhatsApp number</h2>
+ <p class="lede">Clients will reach you on <strong>${escapeHtml(biz.phone||'—')}</strong>. Confirm to continue.</p>
+ <button class="btn btn-primary btn-block" id="confirm-phone">Confirm number →</button>
+ <div style="font-size:11.5px;color:var(--text-faint);margin-top:10px;text-align:center">You can change this any time in Settings.</div>`;
  } else if (step===2){
  body = `<h2>Step 2 · Connect Google Calendar</h2>
  <p class="lede">Bookings will sync to this calendar. Cancellations will remove the event.</p>
@@ -2451,24 +2584,19 @@ function renderOnboarding(){
  </div></div>`;
 }
 function bindOnboarding(){
- if ($('#send-otp')){
- $('#send-otp').onclick = async ()=>{
- $('#send-otp').textContent='Sending…'; $('#send-otp').disabled=true;
- try{
- const {error} = await sb.functions.invoke('send-whatsapp-otp', {body:{phone: SESSION.business.phone, business_id: SESSION.business.id}});
- if (error) throw error;
- $('#otp-row').classList.remove('hidden');
- toast({title:'Code sent', message:'Check your WhatsApp on '+SESSION.business.phone, type:'info'});
- } catch(err){
- toast({title:'Could not send code', message:err.message+' (Edge Function send-whatsapp-otp not deployed?)', urgent:true});
- } finally { $('#send-otp').textContent='Send code'; $('#send-otp').disabled=false; }
- };
- $('#verify-btn') && ($('#verify-btn').onclick = async ()=>{
- const code = $('#otp').value.trim();
- const {error} = await sb.functions.invoke('verify-whatsapp-otp', {body:{code, business_id: SESSION.business.id}});
- if (error){ toast({title:'Wrong code', message:error.message, urgent:true}); return; }
+ if ($('#confirm-phone')){
+ $('#confirm-phone').onclick = async ()=>{
+ $('#confirm-phone').textContent='Saving…'; $('#confirm-phone').disabled=true;
+ const {error} = await sb.from('businesses').update({
+ whatsapp_verified: true, whatsapp_verified_at: new Date().toISOString()
+ }).eq('id', SESSION.business.id);
+ if (error){
+ toast({title:'Could not save', message:error.message, urgent:true});
+ $('#confirm-phone').textContent='Confirm number →'; $('#confirm-phone').disabled=false;
+ return;
+ }
  SESSION = await loadSession(); render();
- });
+ };
  }
  if ($('#g-cal')){
  $('#g-cal').onclick = async ()=>{
@@ -4501,7 +4629,11 @@ async function renderClients(){
  </tr>`;
  }).join('');
 
- return `<div class="panel"><div class="panel-head"><h3>Patients (${cls.length})</h3><button class="btn btn-primary btn-sm" id="add-cli">+ New client</button></div>
+ return `<div class="panel"><div class="panel-head"><h3>Patients (${cls.length})</h3>
+ <div class="row" style="gap:8px">
+ <button class="btn btn-ghost btn-sm" id="broadcast-all" title="Send a WhatsApp message to every client">📢 Message all</button>
+ <button class="btn btn-primary btn-sm" id="add-cli">+ New client</button>
+ </div></div>
  <div class="panel-body">${search}</div>
  <div class="panel-body no-pad">${cls.length===0?`<div class="empty"><div class="ic">◉</div>No patients yet</div>`:`
  <table class="data"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Birthday</th><th>Visits</th><th>Last visit</th><th>Spent</th><th>Msgs</th><th>Lang</th><th></th></tr></thead>
@@ -4510,6 +4642,8 @@ async function renderClients(){
 
 async function bindClients(){
  $('#add-cli').onclick = ()=>openModal(addClientModal());
+ const broadcastBtn = $('#broadcast-all');
+ if (broadcastBtn) broadcastBtn.onclick = ()=>openBroadcastModal();
  // Inline "+ add birthday" buttons — quick birthday-only edit
  document.querySelectorAll('[data-cli-bd]').forEach(b => b.onclick = async () => {
    const id = b.dataset.cliBd;
@@ -7215,6 +7349,84 @@ async function openEditClientModal(clientId){
    closeModal(); toast({title:'Saved', type:'info'}); render();
  };
  openModal(html);
+}
+
+async function openBroadcastModal(){
+ const bizId = SESSION.business.id;
+ // Count clients with a phone number
+ const { count: phoneCount } = await sb.from('clients')
+   .select('id', { count:'exact', head:true })
+   .eq('business_id', bizId)
+   .not('phone','is',null);
+
+ const html = `<h3>📢 Message all clients</h3>
+   <p style="color:var(--text-dim);font-size:13.5px;margin:0 0 14px;line-height:1.55">
+     Send a single WhatsApp message to <b>${phoneCount||0} client${(phoneCount||0)===1?'':'s'}</b> of <b>${escapeHtml(SESSION.business.name)}</b>.
+     The message goes out from your connected WhatsApp number (${escapeHtml(SESSION.business.phone||'—')}).
+     Use <code>{name}</code> in the text and we'll fill in each client's first name.
+   </p>
+   <form>
+     <div class="field">
+       <label>Message</label>
+       <textarea name="message" rows="5" maxlength="4000" required placeholder="Hi {name}! A quick reminder that our clinic will be closed this Friday for the holiday. We're back Saturday at 9 AM. — ${escapeHtml(SESSION.business.name||'Nova')}"></textarea>
+       <div class="sub" id="bc-counter" style="font-size:.8em;margin-top:4px;color:var(--text-faint)">0 / 4000 characters</div>
+     </div>
+     <div id="bc-result" style="display:none;margin:10px 0;padding:10px 12px;border-radius:8px;font-size:13.5px"></div>
+     <div class="row mt-2" style="justify-content:space-between;align-items:center">
+       <div style="font-size:12px;color:var(--text-faint)">Goes out instantly · no scheduling.</div>
+       <div class="row" style="gap:8px">
+         <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary btn-sm" type="submit" id="bc-send">Send to ${phoneCount||0} →</button>
+       </div>
+     </div>
+   </form>`;
+ openModal(html);
+
+ // Live char counter
+ setTimeout(()=>{
+   const ta = document.querySelector('#modal-root textarea[name="message"]');
+   const counter = document.getElementById('bc-counter');
+   if (ta && counter) ta.oninput = () => { counter.textContent = ta.value.length + ' / 4000 characters'; };
+ }, 50);
+
+ window.__modalSubmit = async (d) => {
+   const message = (d.message||'').trim();
+   const result = document.getElementById('bc-result');
+   const sendBtn = document.getElementById('bc-send');
+   if (!message){ alert('Type a message first.'); return; }
+   if (!confirm('Send this message to ' + (phoneCount||0) + ' client' + ((phoneCount||0)===1?'':'s') + ' now?')) return;
+
+   sendBtn.disabled = true; sendBtn.textContent = 'Sending…';
+   result.style.display = 'block';
+   result.style.background = 'rgba(99,102,241,0.10)';
+   result.style.color = 'var(--text)';
+   result.textContent = 'Dispatching messages on WhatsApp…';
+
+   try {
+     const { data, error } = await sb.functions.invoke('broadcast', {
+       body: { business_id: bizId, message, confirm: true },
+     });
+     if (error) throw error;
+     const { sent = 0, failed = 0, recipient_count = 0 } = data || {};
+     if (failed === 0) {
+       result.style.background = 'rgba(34,197,94,0.12)';
+       result.style.color = '#22c55e';
+       result.textContent = `✓ Sent to ${sent} client${sent===1?'':'s'}.`;
+       toast({ title:'Broadcast sent', message:`Reached ${sent} client${sent===1?'':'s'}`, type:'booking' });
+     } else {
+       result.style.background = 'rgba(234,179,8,0.12)';
+       result.style.color = '#eab308';
+       result.textContent = `Sent to ${sent} client${sent===1?'':'s'}. ${failed} failed.`;
+       toast({ title:'Broadcast partially sent', message:`${sent}/${recipient_count} delivered`, urgent:true });
+     }
+     setTimeout(closeModal, 1800);
+   } catch (err) {
+     result.style.background = 'rgba(239,68,68,0.12)';
+     result.style.color = '#ef4444';
+     result.textContent = 'Failed: ' + (err.message || err);
+     sendBtn.disabled = false; sendBtn.textContent = 'Try again';
+   }
+ };
 }
 
 function addClientModal(){
