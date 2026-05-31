@@ -2298,12 +2298,21 @@ function renderAuth(){
 
  <div class="auth-foot" style="margin-top:18px;text-align:center;font-size:12.5px;color:var(--text-dim);line-height:1.6">
  <div>${isSignup?'Already using Nova?':'New to Nova?'} <a href="${isSignup?'#/auth':'#/auth?mode=signup'}">${isSignup?'Sign in instead':'Create your account'}</a></div>
- <div style="margin-top:6px"><a href="#/">← Back to home</a></div>
+ <a href="#/" class="btn btn-ghost btn-block" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border:1px solid var(--border);border-radius:10px;text-decoration:none;font-size:13.5px;font-weight:600">← Back to home</a>
  </div>
  </div></div>`;
 }
 function bindAuth(){
+ /* Record whether the user came from the Sign-in or the Create-account flow.
+    The gate below uses this to refuse first-time logins from the Sign-in tab. */
+ const params = new URLSearchParams((window.location.hash.split('?')[1]||''));
+ const intent = params.get('mode') === 'signup' ? 'signup' : 'signin';
+ localStorage.setItem('nova_auth_intent', intent);
+
  $('#google-btn').onclick = async ()=>{
+ /* Re-record intent right before kicking off OAuth (mode may have changed) */
+ const m = new URLSearchParams((window.location.hash.split('?')[1]||'')).get('mode') === 'signup' ? 'signup' : 'signin';
+ localStorage.setItem('nova_auth_intent', m);
  const {error} = await sb.auth.signInWithOAuth({
  provider:'google',
  options:{
@@ -2394,7 +2403,39 @@ function bindAuth(){
  }, 50);
  };
  sb.auth.onAuthStateChange(async (_event, session)=>{
- if (session && !SESSION){ SESSION = await loadSession(); render(); }
+ if (!session || SESSION) return;
+ /* SIGN-IN GATE: if the user came from the Sign-in flow, refuse them unless an
+    account already exists for this auth uid. New users must go through Create
+    account explicitly. */
+ const intent = localStorage.getItem('nova_auth_intent');
+ if (intent === 'signin') {
+   const uid = session.user.id;
+   const [{data: biz}, {data: usr}] = await Promise.all([
+     sb.from('businesses').select('id').eq('owner_user_id', uid).maybeSingle(),
+     sb.from('users').select('id').eq('auth_uid', uid).maybeSingle(),
+   ]);
+   if (!biz && !usr) {
+     await sb.auth.signOut();
+     localStorage.removeItem('nova_auth_intent');
+     const email = session.user.email || 'that email';
+     const status = $('#auth-status');
+     if (status) {
+       status.style.display = 'block';
+       status.style.background = 'rgba(239,68,68,.10)';
+       status.style.color = '#ef4444';
+       status.style.textAlign = 'left';
+       status.innerHTML = `<div style="font-weight:600;margin-bottom:4px">No Nova AI account found</div>
+         <div style="font-size:13px;line-height:1.55;color:var(--text)">No business is registered with <b>${escapeHtml(email)}</b>. <a href="#/auth?mode=signup" style="color:#22c55e;font-weight:600">Create your account →</a></div>`;
+     } else {
+       toast({title:'No account found', message:'No Nova AI account is registered with that email. Create one first.', urgent:true});
+       navigate('#/auth?mode=signup');
+     }
+     return;
+   }
+ }
+ localStorage.removeItem('nova_auth_intent');
+ SESSION = await loadSession();
+ render();
  });
 }
 
@@ -2424,7 +2465,7 @@ function renderClientPortal(){
      </form>
      <div class="auth-foot" style="margin-top:18px;text-align:center;font-size:12.5px;color:var(--text-dim);line-height:1.6">
        <div>Business owner? <a href="#/auth">Sign in here</a></div>
-       <div style="margin-top:6px"><a href="#/">← Back to home</a></div>
+       <a href="#/" class="btn btn-ghost btn-block" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border:1px solid var(--border);border-radius:10px;text-decoration:none;font-size:13.5px;font-weight:600">← Back to home</a>
      </div>
    </div></div>`;
  }
@@ -2555,7 +2596,7 @@ function renderClientPortal(){
      ? `<div style="background:var(--card);border:1px dashed var(--border);border-radius:16px;padding:42px 24px;text-align:center"><div style="font-size:42px;margin-bottom:10px;opacity:.6">${empty.ic}</div><div style="font-size:16px;font-weight:700;margin-bottom:6px">${empty.t}</div><div style="font-size:13.5px;color:var(--text-dim);max-width:340px;margin:0 auto;line-height:1.5">${empty.d}</div></div>`
      : filtered.map(renderAppt).join('')}
 
-   <div style="margin-top:30px;text-align:center;font-size:12.5px;color:var(--text-faint)"><a href="#/">← Back to home</a></div>
+   <div style="margin-top:30px;text-align:center"><a href="#/" class="btn btn-ghost" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border:1px solid var(--border);border-radius:10px;text-decoration:none;font-size:13.5px;font-weight:600;color:var(--text-dim)">← Back to home</a></div>
  </div>`;
 }
 
