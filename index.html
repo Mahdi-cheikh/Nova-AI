@@ -2362,15 +2362,19 @@ function renderClientPortal(){
 }
 
 async function clientPortalFetch(action, extra){
- const body = { action, phone: CLIENT_PORTAL_STATE.phone, ...extra };
- const res = await fetch(CFG.url + '/functions/v1/client-portal', {
-   method: 'POST',
-   headers: { 'Content-Type': 'application/json', 'apikey': CFG.key, 'Authorization': 'Bearer ' + CFG.key },
-   body: JSON.stringify(body),
- });
- const json = await res.json().catch(()=>({error:'Bad response'}));
- if (!res.ok || json.error) throw new Error(json.error || ('HTTP '+res.status));
- return json;
+ // Use Postgres RPCs (SECURITY DEFINER) — avoids the edge-function CORS surface
+ // and reuses the existing supabase-js session/anon-key.
+ const phone = CLIENT_PORTAL_STATE.phone;
+ let rpc, args;
+ if (action === 'list') { rpc = 'client_portal_list'; args = { p_phone: phone }; }
+ else if (action === 'cancel') { rpc = 'client_portal_cancel'; args = { p_phone: phone, p_appointment_id: extra.appointment_id }; }
+ else if (action === 'reschedule') { rpc = 'client_portal_reschedule'; args = { p_phone: phone, p_appointment_id: extra.appointment_id, p_date: extra.date, p_time: extra.time }; }
+ else throw new Error('Unknown action: ' + action);
+
+ const { data, error } = await sb.rpc(rpc, args);
+ if (error) throw new Error(error.message || 'RPC failed');
+ if (data && data.error) throw new Error(data.error);
+ return data;
 }
 
 function bindClientPortal(){
