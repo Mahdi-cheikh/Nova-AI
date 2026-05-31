@@ -1602,6 +1602,96 @@ function renderLanding(){
  .lp-orb, .lp-particle, .lp-feature, .lp-step, .lp-num-opt, .lp-who, .lp-mockup,
  .lp-btn-primary, .lp-hero h1 .lp-grad-text, .lp-brand .lp-logo-mark { animation: none !important }
  }
+
+ /* ============================================================ */
+ /* LANDING THEME OVERRIDES — explicit data-theme beats OS preference. */
+ /* Dark mode = deep slate + emerald/amber accents (replaces the indigo blue palette). */
+ /* Light mode = warm beige + the same emerald/amber accents. */
+ /* ============================================================ */
+
+ /* DARK THEME — emerald + amber on deep slate */
+ html[data-theme="dark"] .lp { background:#0b0d12; color:#f3f4f6; }
+ html[data-theme="dark"] .lp-nav { background:rgba(11,13,18,.85); border-color:rgba(255,255,255,.06); }
+ html[data-theme="dark"] .lp-nav-links a { color:#cbd5e1; }
+ html[data-theme="dark"] .lp-nav-links a:hover { color:#10b981; }
+ html[data-theme="dark"] .lp-card, html[data-theme="dark"] .lp-feature, html[data-theme="dark"] .lp-mockup, html[data-theme="dark"] .lp-step, html[data-theme="dark"] .lp-stat, html[data-theme="dark"] .lp-notif { background:#13171f; border-color:rgba(16,185,129,.18); }
+ html[data-theme="dark"] .lp-btn-primary { background:linear-gradient(135deg,#10b981,#f59e0b); box-shadow:0 4px 18px rgba(16,185,129,.35); color:white; }
+ html[data-theme="dark"] .lp-btn-primary:hover { box-shadow:0 6px 24px rgba(16,185,129,.55); }
+ html[data-theme="dark"] .lp-btn-outline { color:#f3f4f6; border-color:rgba(255,255,255,.14); background:transparent; }
+ html[data-theme="dark"] .lp-btn-outline:hover { border-color:#10b981; color:#10b981; }
+ html[data-theme="dark"] .lp-btn-ghost { color:#cbd5e1; }
+ html[data-theme="dark"] .lp-grad-text { background:linear-gradient(135deg,#10b981,#f59e0b); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+ html[data-theme="dark"] .lp-hero h1 { color:#f9fafb; }
+ html[data-theme="dark"] .lp-hero p, html[data-theme="dark"] .lp-feature p { color:#cbd5e1; }
+ html[data-theme="dark"] .lp-section-h h2 { color:#f3f4f6; }
+ html[data-theme="dark"] .lp-section-h p { color:#94a3b8; }
+ html[data-theme="dark"] .lp-feat-ic.purple { background:#10b981 }
+ html[data-theme="dark"] .lp-feat-ic.blue { background:#14b8a6 }
+ html[data-theme="dark"] .lp-feat-ic.green { background:#22c55e }
+ html[data-theme="dark"] .lp-feat-ic.orange { background:#f59e0b }
+ html[data-theme="dark"] .lp-feat-ic.pink { background:#fb923c }
+ html[data-theme="dark"] .lp-install-inner { background:linear-gradient(135deg,#065f46 0%,#10b981 50%,#f59e0b 100%); box-shadow:0 20px 50px -10px rgba(16,185,129,.4); }
+ html[data-theme="dark"] .lp-install-cta { color:#065f46; }
+ html[data-theme="dark"] .lp-footer { border-color:rgba(255,255,255,.06); color:#94a3b8; }
+ html[data-theme="dark"] .lp-footer b { color:#10b981; }
+ html[data-theme="dark"] .lp-badge { background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.25); }
+ html[data-theme="dark"] .lp-trust-text { color:#f3f4f6; }
+ html[data-theme="dark"] .lp-orb { opacity:.55; }
+ html[data-theme="dark"] .lp-orb.lp-orb-1 { background:radial-gradient(circle,#10b981 0%,transparent 65%); }
+ html[data-theme="dark"] .lp-orb.lp-orb-2 { background:radial-gradient(circle,#f59e0b 0%,transparent 65%); }
+ html[data-theme="dark"] .lp-orb.lp-orb-3 { background:radial-gradient(circle,#14b8a6 0%,transparent 65%); }
+ html[data-theme="dark"] .lp-founder-card { background:linear-gradient(135deg,#0f1f1a 0%,#1a1610 100%); border-color:rgba(16,185,129,.28); box-shadow:0 24px 60px -22px rgba(16,185,129,.3); }
+ html[data-theme="dark"] .lp-founder-card::before { background:radial-gradient(circle,rgba(16,185,129,.22) 0%,transparent 70%); }
+ html[data-theme="dark"] .lp-founder-card::after { background:radial-gradient(circle,rgba(245,158,11,.20) 0%,transparent 70%); }
+ html[data-theme="dark"] .lp-founder-photo { background:linear-gradient(160deg,#10b981,#f59e0b); }
+ html[data-theme="dark"] .lp-founder-kicker { color:#10b981; }
+ html[data-theme="dark"] .lp-founder-accent { background:linear-gradient(90deg,#10b981,#f59e0b); }
+ html[data-theme="dark"] .lp-founder-title { color:#f8fafc; }
+ html[data-theme="dark"] .lp-founder-body p { color:#cbd5e1; }
+ html[data-theme="dark"] .lp-founder-body p b { color:#f1f5f9; }
+
+ /* LIGHT THEME — emerald + amber on warm beige */
+ html[data-theme="light"] .lp { background:#faf3e7; color:#2a2018; }
+ html[data-theme="light"] .lp-nav { background:rgba(250,243,231,.88); border-color:rgba(42,32,24,.10); }
+ html[data-theme="light"] .lp-nav-links a { color:#5c4633; }
+ html[data-theme="light"] .lp-nav-links a:hover { color:#059669; }
+ html[data-theme="light"] .lp-card, html[data-theme="light"] .lp-feature, html[data-theme="light"] .lp-mockup, html[data-theme="light"] .lp-step, html[data-theme="light"] .lp-stat, html[data-theme="light"] .lp-notif { background:#fefaf0; border-color:rgba(42,32,24,.08); }
+ html[data-theme="light"] .lp-btn-primary { background:linear-gradient(135deg,#059669,#d97706); box-shadow:0 4px 18px rgba(5,150,105,.30); color:white; }
+ html[data-theme="light"] .lp-btn-primary:hover { box-shadow:0 6px 24px rgba(5,150,105,.45); }
+ html[data-theme="light"] .lp-btn-outline { color:#2a2018; border-color:rgba(42,32,24,.18); background:transparent; }
+ html[data-theme="light"] .lp-btn-outline:hover { border-color:#059669; color:#059669; }
+ html[data-theme="light"] .lp-btn-ghost { color:#5c4633; }
+ html[data-theme="light"] .lp-grad-text { background:linear-gradient(135deg,#059669,#d97706); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+ html[data-theme="light"] .lp-hero h1 { color:#2a2018; }
+ html[data-theme="light"] .lp-hero p, html[data-theme="light"] .lp-feature p { color:#5c4633; }
+ html[data-theme="light"] .lp-section-h h2 { color:#2a2018; }
+ html[data-theme="light"] .lp-section-h p { color:#5c4633; }
+ html[data-theme="light"] .lp-feat-ic.purple { background:#059669 }
+ html[data-theme="light"] .lp-feat-ic.blue { background:#14b8a6 }
+ html[data-theme="light"] .lp-feat-ic.orange { background:#d97706 }
+ html[data-theme="light"] .lp-install-inner { background:linear-gradient(135deg,#047857 0%,#059669 50%,#d97706 100%); box-shadow:0 20px 50px -10px rgba(5,150,105,.40); }
+ html[data-theme="light"] .lp-install-cta { color:#047857; }
+ html[data-theme="light"] .lp-footer { border-color:rgba(42,32,24,.08); color:#5c4633; }
+ html[data-theme="light"] .lp-footer b { color:#059669; }
+ html[data-theme="light"] .lp-badge { background:rgba(5,150,105,.10); color:#047857; border:1px solid rgba(5,150,105,.20); }
+ html[data-theme="light"] .lp-trust-text { color:#2a2018; }
+ html[data-theme="light"] .lp-brand-tag { color:#857258; }
+ html[data-theme="light"] .lp-orb { opacity:.35; }
+ html[data-theme="light"] .lp-orb.lp-orb-1 { background:radial-gradient(circle,#10b981 0%,transparent 65%); }
+ html[data-theme="light"] .lp-orb.lp-orb-2 { background:radial-gradient(circle,#f59e0b 0%,transparent 65%); }
+ html[data-theme="light"] .lp-orb.lp-orb-3 { background:radial-gradient(circle,#34d399 0%,transparent 65%); }
+ html[data-theme="light"] .lp-founder-card { background:linear-gradient(135deg,#fef7e6 0%,#f0fdf4 100%); border-color:rgba(5,150,105,.18); box-shadow:0 24px 60px -22px rgba(5,150,105,.25); }
+ html[data-theme="light"] .lp-founder-card::before { background:radial-gradient(circle,rgba(5,150,105,.18) 0%,transparent 70%); }
+ html[data-theme="light"] .lp-founder-card::after { background:radial-gradient(circle,rgba(217,119,6,.16) 0%,transparent 70%); }
+ html[data-theme="light"] .lp-founder-photo { background:linear-gradient(160deg,#059669,#d97706); }
+ html[data-theme="light"] .lp-founder-kicker { color:#059669; }
+ html[data-theme="light"] .lp-founder-accent { background:linear-gradient(90deg,#059669,#d97706); }
+ html[data-theme="light"] .lp-founder-title { color:#2a2018; }
+ html[data-theme="light"] .lp-founder-body p { color:#5c4633; }
+ html[data-theme="light"] .lp-founder-body p b { color:#2a2018; }
+ html[data-theme="light"] .lp-particle { background:rgba(5,150,105,.5); }
+
+ .lp-btn-icon { line-height:1; }
  </style>
 
  <div class="lp">
@@ -1631,6 +1721,7 @@ function renderLanding(){
  <a href="#install">Mobile app</a>
  </nav>
  <div class="lp-nav-cta">
+ <button type="button" id="lp-theme-toggle" class="lp-btn lp-btn-outline lp-btn-icon" aria-label="Toggle dark / light mode" title="Toggle theme" style="padding:8px 12px;min-width:38px;font-size:17px">☾</button>
  <a href="#/client" class="lp-btn lp-btn-outline lp-btn-client" title="See your appointments by phone number">My appointments</a>
  <a href="#/auth" class="lp-btn lp-btn-outline">Log in</a>
  <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary">Sign up</a>
@@ -1928,6 +2019,22 @@ function renderLanding(){
 }
 
 function bindLanding(){
+ /* Theme toggle on the landing navbar — uses the existing setThemePref system. */
+ const tt = $('#lp-theme-toggle');
+ if (tt) {
+   const updateIcon = () => {
+     const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+     tt.textContent = cur === 'dark' ? '☀' : '☾';
+     tt.title = cur === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+   };
+   updateIcon();
+   tt.onclick = () => {
+     const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+     setThemePref(cur === 'dark' ? 'light' : 'dark');
+     updateIcon();
+   };
+ }
+
  /* ANTI-GRAVITY: spawn 18 small particles that float upward through the page */
  const orbs = document.querySelector('.lp-orbs');
  if (orbs && !document.querySelector('.lp-particle')) {
