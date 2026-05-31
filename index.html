@@ -2713,7 +2713,7 @@ function bindClientPortal(){
 }
 
 /* ---------- 9c. ADMIN DASHBOARD (platform-admin only) ---------- */
-let ADMIN_STATE = { filter:{ type:'', search:'', status:'' }, businesses:[], snapshot:null, notifs:[], unread:0 };
+let ADMIN_STATE = { tab:'businesses', filter:{ type:'', search:'', status:'' }, businesses:[], snapshot:null, notifs:[], unread:0, emails:[], emailFilter:'' };
 let ADMIN_NOTIF_POLL = null;
 
 async function adminLoadNotifs(onlyUnread = false){
@@ -2756,16 +2756,22 @@ const BTP_TYPES = [
 const PLAN_PRICE = { starter:0, pro:29, business:79 };
 
 async function adminReload(){
-  const [snap, list, notifCount] = await Promise.all([
+  const calls = [
     sb.rpc('admin_revenue_snapshot'),
     sb.rpc('admin_list_businesses', { p_type: ADMIN_STATE.filter.type||null, p_search: ADMIN_STATE.filter.search||null, p_status: ADMIN_STATE.filter.status||null, p_limit: 500 }),
     sb.rpc('admin_unread_notification_count'),
-  ]);
+  ];
+  if (ADMIN_STATE.tab === 'emails') {
+    calls.push(sb.rpc('admin_list_outbox', { p_limit: 200 }));
+  }
+  const results = await Promise.all(calls);
+  const [snap, list, notifCount, emails] = results;
   if (snap.error) throw new Error(snap.error.message);
   if (list.error) throw new Error(list.error.message);
   ADMIN_STATE.snapshot   = snap.data || null;
   ADMIN_STATE.businesses = list.data || [];
   ADMIN_STATE.unread     = notifCount.data || 0;
+  if (emails && !emails.error) ADMIN_STATE.emails = emails.data || [];
 }
 
 async function renderAdminDashboard(){
@@ -2845,6 +2851,13 @@ async function renderAdminDashboard(){
       <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;font-weight:600">Suspended</div><div style="font-size:20px;font-weight:800;margin-top:2px;color:#ef4444">${fmt(s.suspended||0)}</div></div>
     </div>
 
+    <!-- Tab switcher: Businesses / Emails -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:6px;display:flex;gap:4px;margin-bottom:18px">
+      <button class="adm-tab" data-tab="businesses" style="flex:1;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;background:${ADMIN_STATE.tab==='businesses'?'linear-gradient(135deg,#6366f1,#22d3ee)':'transparent'};color:${ADMIN_STATE.tab==='businesses'?'white':'var(--text-dim)'};font-weight:${ADMIN_STATE.tab==='businesses'?'700':'500'};font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s">🏢 Businesses <span style="font-size:11px;opacity:.85">${list.length}</span></button>
+      <button class="adm-tab" data-tab="emails"     style="flex:1;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;background:${ADMIN_STATE.tab==='emails'?'linear-gradient(135deg,#6366f1,#22d3ee)':'transparent'};color:${ADMIN_STATE.tab==='emails'?'white':'var(--text-dim)'};font-weight:${ADMIN_STATE.tab==='emails'?'700':'500'};font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s">✉️ Emails ${ADMIN_STATE.tab==='emails' && ADMIN_STATE.emails.length?`<span style="font-size:11px;opacity:.85">${ADMIN_STATE.emails.length}</span>`:''}</button>
+    </div>
+
+    ${ADMIN_STATE.tab === 'emails' ? renderAdminEmailsTab() : `
     <!-- Filter bar -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
@@ -2882,10 +2895,84 @@ async function renderAdminDashboard(){
           <tbody>${rows}</tbody>
         </table>
       </div>`}
-    </div>
+    </div>`}
 
     <div style="margin-top:18px;font-size:12px;color:var(--text-faint);text-align:center">Admin view · No access to clients, appointments, or business revenue.</div>
   </div>`;
+}
+
+function renderAdminEmailsTab(){
+  const emails = (ADMIN_STATE.emails || []).filter(e => !ADMIN_STATE.emailFilter || e.status === ADMIN_STATE.emailFilter);
+  const counts = (ADMIN_STATE.emails || []).reduce((a,e)=>{ a[e.status]=(a[e.status]||0)+1; return a; }, {});
+  const statusBadge = (s) => {
+    const map = {
+      pending: ['#f59e0b','Pending'],
+      sent:    ['#22c55e','Sent'],
+      failed:  ['#ef4444','Failed'],
+    };
+    const [c,l] = map[s] || ['#64748b', s||'—'];
+    return `<span class="pill" style="background:${c}22;color:${c};font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">${escapeHtml(l)}</span>`;
+  };
+  const typeBadge = (t) => {
+    const map = {
+      welcome:      ['#6366f1','Welcome'],
+      contract:     ['#a78bfa','Contract'],
+      receipt:      ['#22c55e','Receipt'],
+      verification: ['#0ea5e9','Test'],
+    };
+    const [c,l] = map[t] || ['#64748b', t||'—'];
+    return `<span style="background:${c}22;color:${c};font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;text-transform:capitalize">${escapeHtml(l)}</span>`;
+  };
+  const tag = (k, label, count, color) => `<button class="adm-email-filter" data-status="${k}" style="padding:6px 12px;border-radius:999px;border:1px solid ${ADMIN_STATE.emailFilter===k?color:'var(--border)'};background:${ADMIN_STATE.emailFilter===k?color+'22':'transparent'};color:${ADMIN_STATE.emailFilter===k?color:'var(--text-dim)'};font-size:13px;font-weight:600;cursor:pointer">${label}${count!==undefined?` <span style="opacity:.8">${count}</span>`:''}</button>`;
+  const total = (ADMIN_STATE.emails || []).length;
+  const fmtTime = (iso) => {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(undefined, { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  };
+  const rows = emails.map(e => `
+    <tr data-id="${e.id}" style="border-top:1px solid var(--border)">
+      <td style="padding:10px 12px"><b>${escapeHtml(e.business_name||'—')}</b><div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">${escapeHtml(e.to_email||'')}</div></td>
+      <td style="padding:10px 12px;font-size:13px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.subject||'')}</td>
+      <td style="padding:10px 12px">${typeBadge(e.email_type)}</td>
+      <td style="padding:10px 12px">${statusBadge(e.status)}${e.attempts>1?` <span style="font-size:10.5px;color:var(--text-dim);margin-left:4px">×${e.attempts}</span>`:''}</td>
+      <td style="padding:10px 12px;font-size:12px;color:#ef4444;max-width:240px">${e.last_error?`<span title="${escapeHtml(e.last_error)}">${escapeHtml(e.last_error.length>50?e.last_error.slice(0,50)+'…':e.last_error)}</span>`:'—'}</td>
+      <td style="padding:10px 12px;font-size:12px;color:var(--text-dim);white-space:nowrap">${fmtTime(e.sent_at || e.scheduled_for || e.created_at)}</td>
+      <td style="padding:10px 12px;text-align:right;white-space:nowrap">
+        ${e.status !== 'sent' ? `<button class="btn btn-ghost btn-sm adm-email-retry" data-id="${e.id}" title="Retry / send now" style="font-size:12px;padding:5px 9px">↻ Retry</button>` : ''}
+      </td>
+    </tr>`).join('');
+
+  return `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${tag('', 'All', total, '#6366f1')}
+        ${tag('pending', 'Pending', counts.pending || 0, '#f59e0b')}
+        ${tag('sent', 'Sent', counts.sent || 0, '#22c55e')}
+        ${tag('failed', 'Failed', counts.failed || 0, '#ef4444')}
+      </div>
+      <button class="btn btn-primary btn-sm" id="adm-email-flush" style="font-size:13px;padding:8px 14px">⚡ Send pending now</button>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0;font-size:15.5px">Email queue (${emails.length})</h3>
+        <div style="font-size:12px;color:var(--text-dim)">Cron flushes every minute · max 5 attempts with backoff</div>
+      </div>
+      ${emails.length === 0 ? `<div style="padding:40px 24px;text-align:center;color:var(--text-dim)">No emails in this filter yet.</div>` : `
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+          <thead><tr style="background:rgba(99,102,241,.06)">
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Recipient</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Subject</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Type</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Status</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Last error</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Time</th>
+            <th style="text-align:right;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`}
+    </div>`;
 }
 
 function bindAdminDashboard(){
@@ -2971,6 +3058,56 @@ function bindAdminDashboard(){
       if (!r.error) { ADMIN_STATE.unread = r.data || 0; updateBellBadge(); }
     } catch {}
   }, 30000);
+
+  // Tab switcher (Businesses / Emails)
+  $$('.adm-tab').forEach(b => b.onclick = async () => {
+    ADMIN_STATE.tab = b.dataset.tab;
+    render();
+  });
+
+  // Email-tab bindings (only present when emails tab is rendered)
+  $$('.adm-email-filter').forEach(b => b.onclick = () => {
+    ADMIN_STATE.emailFilter = b.dataset.status || '';
+    render();
+  });
+  $$('.adm-email-retry').forEach(b => b.onclick = async () => {
+    const id = b.dataset.id;
+    b.disabled = true; b.textContent = 'Retrying…';
+    try {
+      const r = await sb.rpc('admin_retry_email', { p_id: id });
+      if (r.error || (r.data && r.data.error)) throw new Error((r.error?.message) || r.data.error);
+      // Trigger immediate send so the admin doesn't have to wait for the cron
+      try {
+        await fetch(CFG.url + '/functions/v1/send-pending-emails', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', 'apikey': CFG.key, 'Authorization': 'Bearer ' + CFG.key },
+          body: JSON.stringify({ id }),
+        });
+      } catch {}
+      toast({ title:'Retry queued', message:'Sending now…', type:'info' });
+      setTimeout(render, 1200);
+    } catch(err) {
+      toast({ title:'Retry failed', message: err.message, urgent:true });
+      b.disabled = false; b.textContent = '↻ Retry';
+    }
+  });
+  const flushBtn = $('#adm-email-flush');
+  if (flushBtn) flushBtn.onclick = async () => {
+    flushBtn.disabled = true; flushBtn.textContent = 'Sending…';
+    try {
+      const r = await fetch(CFG.url + '/functions/v1/send-pending-emails', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'apikey': CFG.key, 'Authorization': 'Bearer ' + CFG.key },
+        body: '{}',
+      });
+      const j = await r.json().catch(()=>({}));
+      toast({ title:'Queue flushed', message:`${j.sent||0} sent · ${j.failed||0} failed (${j.processed||0} processed)`, type:'info' });
+      setTimeout(render, 800);
+    } catch(err) {
+      toast({ title:'Flush failed', message: err.message, urgent:true });
+      flushBtn.disabled = false; flushBtn.textContent = '⚡ Send pending now';
+    }
+  };
 
   // Type filter pills
   $$('.adm-type-pill').forEach(b => b.onclick = async () => {
