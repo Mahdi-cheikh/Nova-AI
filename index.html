@@ -1056,9 +1056,23 @@ async function render(){
  }
  }
 
+ /* Platform-admin detection — runs once per session. If the signed-in user is
+    on the platform_admins whitelist, force them into the admin dashboard. */
+ if (SESSION && SESSION.user && SESSION.is_admin === undefined){
+   try {
+     const { data: isAdm } = await sb.rpc('is_platform_admin');
+     SESSION.is_admin = !!isAdm;
+   } catch { SESSION.is_admin = false; }
+ }
+ if (SESSION && SESSION.is_admin && !route.startsWith('/admin') && !route.startsWith('/auth') && route !== '/') {
+   navigate('#/admin'); return;
+ }
+
  /* If a signed-in user lands on the public landing or /auth pages, send them onward. */
  if (SESSION && (route==='/' || route===''|| route.startsWith('/auth'))){
- if (SESSION.business){
+ if (SESSION.is_admin){
+ navigate('#/admin');
+ } else if (SESSION.business){
  navigate(SESSION.business.onboarding_complete ? '#/dashboard' : '#/onboard');
  } else {
  navigate('#/create-business');
@@ -1067,13 +1081,18 @@ async function render(){
  }
 
  /* MOBILE: signed-in users on small screens get bumped to the dedicated PWA. */
- if (SESSION && SESSION.business && window.matchMedia('(max-width: 760px)').matches && !route.startsWith('/auth') && !location.search.includes('forceWeb=1')){
+ if (SESSION && SESSION.business && !SESSION.is_admin && window.matchMedia('(max-width: 760px)').matches && !route.startsWith('/auth') && !location.search.includes('forceWeb=1')){
    location.href = '/pwa/';
    return;
  }
  if (route==='/' || route===''){ $('#app').innerHTML = renderLanding(); return bindLanding(); }
  if (route.startsWith('/auth')){ $('#app').innerHTML = renderAuth(); return bindAuth(); }
  if (route.startsWith('/client')){ $('#app').innerHTML = renderClientPortal(); return bindClientPortal(); }
+ if (route.startsWith('/admin')){
+   if (!SESSION) { navigate('#/auth'); return; }
+   if (!SESSION.is_admin) { toast({title:'Not allowed', message:'You are not a platform admin.', urgent:true}); navigate('#/'); return; }
+   $('#app').innerHTML = await renderAdminDashboard(); return bindAdminDashboard();
+ }
 
  /* Below routes need auth */
  if (!SESSION){ navigate('#/auth'); return; }
@@ -2691,6 +2710,234 @@ function bindClientPortal(){
      CLIENT_PORTAL_STATE.data = data; render();
    } catch(err){ toast({title:'Could not cancel', message:err.message, urgent:true}); b.disabled=false; b.textContent='✕ Cancel'; }
  });
+}
+
+/* ---------- 9c. ADMIN DASHBOARD (platform-admin only) ---------- */
+let ADMIN_STATE = { filter:{ type:'', search:'', status:'' }, businesses:[], snapshot:null };
+
+const BTP_TYPES = [
+  { value:'',            label:'All types' },
+  { value:'clinic',      label:'Clinic' },
+  { value:'laboratoire', label:'Lab' },
+  { value:'doctor',      label:'Solo doctor' },
+  { value:'salon',       label:'Salon / Spa' },
+  { value:'garage',      label:'Garage' },
+  { value:'company',     label:'Service / Other' },
+];
+const PLAN_PRICE = { starter:0, pro:29, business:79 };
+
+async function adminReload(){
+  const [snap, list] = await Promise.all([
+    sb.rpc('admin_revenue_snapshot'),
+    sb.rpc('admin_list_businesses', { p_type: ADMIN_STATE.filter.type||null, p_search: ADMIN_STATE.filter.search||null, p_status: ADMIN_STATE.filter.status||null, p_limit: 500 }),
+  ]);
+  if (snap.error) throw new Error(snap.error.message);
+  if (list.error) throw new Error(list.error.message);
+  ADMIN_STATE.snapshot   = snap.data || null;
+  ADMIN_STATE.businesses = list.data || [];
+}
+
+async function renderAdminDashboard(){
+  try { await adminReload(); }
+  catch (err) {
+    return `<div class="wizard-wrap"><div class="wizard"><h2>Admin error</h2><p>${escapeHtml(err.message||'unknown')}</p><a class="btn btn-ghost" href="#/">← Home</a></div></div>`;
+  }
+  const s = ADMIN_STATE.snapshot || {};
+  const list = ADMIN_STATE.businesses;
+  const fmt = (n)=> typeof n === 'number' ? n.toLocaleString('fr-TN') : (n||0);
+
+  const statusBadge = (b) => {
+    if (b.deleted_at) return `<span class="pill" style="background:rgba(239,68,68,.12);color:#ef4444;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">Archived</span>`;
+    const map = {
+      active: ['#22c55e','Active'],
+      trialing: ['#a78bfa','Trial'],
+      suspended: ['#ef4444','Suspended'],
+      canceled: ['#94a3b8','Canceled'],
+    };
+    const [c,l] = map[b.subscription_status] || ['#64748b', b.subscription_status||'—'];
+    return `<span class="pill" style="background:${c}22;color:${c};font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">${escapeHtml(l)}</span>`;
+  };
+  const planBadge = (p) => {
+    const map = { starter:'#94a3b8', pro:'#6366f1', business:'#f59e0b' };
+    const c = map[p] || '#64748b';
+    return `<span style="background:${c}22;color:${c};font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:6px;text-transform:capitalize">${escapeHtml(p||'starter')}</span>`;
+  };
+
+  const rows = list.map(b => `
+    <tr data-id="${b.id}" style="border-top:1px solid var(--border)">
+      <td style="padding:10px 12px"><b>${escapeHtml(b.name||'—')}</b><div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">${escapeHtml(b.type||'—')}</div></td>
+      <td style="padding:10px 12px;font-size:13px">${escapeHtml(b.owner_email||b.email||'—')}<div style="font-size:11.5px;color:var(--text-dim);font-family:'JetBrains Mono',Consolas,monospace;margin-top:2px">${escapeHtml(b.phone||'—')}</div></td>
+      <td style="padding:10px 12px">${planBadge(b.subscription_plan)}</td>
+      <td style="padding:10px 12px">${statusBadge(b)}</td>
+      <td style="padding:10px 12px;font-weight:700;color:#f59e0b">${b.monthly_price_tnd>0?(b.monthly_price_tnd+' TND'):'—'}</td>
+      <td style="padding:10px 12px;font-size:12.5px;color:var(--text-dim);white-space:nowrap">${new Date(b.created_at).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td style="padding:10px 12px;text-align:right;white-space:nowrap">
+        <button class="btn btn-ghost btn-sm adm-edit"      data-id="${b.id}" title="Change plan / status" style="font-size:12px;padding:5px 9px">✎</button>
+        <button class="btn btn-ghost btn-sm adm-msg"       data-id="${b.id}" title="Send message"        style="font-size:12px;padding:5px 9px">✉</button>
+        <button class="btn btn-ghost btn-sm adm-archive"   data-id="${b.id}" title="Archive"             style="font-size:12px;padding:5px 9px;color:#ef4444">🗑</button>
+      </td>
+    </tr>`).join('');
+
+  const typePill = (t) => `<button class="adm-type-pill" data-type="${t.value}" style="padding:6px 12px;border-radius:999px;border:1px solid ${ADMIN_STATE.filter.type===t.value?'#6366f1':'var(--border)'};background:${ADMIN_STATE.filter.type===t.value?'rgba(99,102,241,.15)':'transparent'};color:${ADMIN_STATE.filter.type===t.value?'#6366f1':'var(--text-dim)'};font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">${escapeHtml(t.label)}</button>`;
+
+  return `<div style="max-width:1180px;margin:0 auto;padding:24px 18px 60px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:10px">
+      <div class="logo" style="margin:0"><div class="logo-mark">N</div> Nova AI · Admin</div>
+      <button class="btn btn-ghost btn-sm" id="adm-signout">Sign out</button>
+    </div>
+
+    <!-- KPI hero -->
+    <div style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#f59e0b 100%);color:white;padding:24px;border-radius:20px;margin-bottom:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;box-shadow:0 20px 50px -15px rgba(99,102,241,.45)">
+      <div><div style="font-size:12px;letter-spacing:.5px;opacity:.85;text-transform:uppercase;font-weight:600">MRR</div><div style="font-size:32px;font-weight:800;margin-top:4px">${fmt(s.mrr_tnd||0)} <span style="font-size:14px;opacity:.85">TND/mo</span></div></div>
+      <div><div style="font-size:12px;letter-spacing:.5px;opacity:.85;text-transform:uppercase;font-weight:600">Paying</div><div style="font-size:32px;font-weight:800;margin-top:4px">${fmt(s.paying||0)} <span style="font-size:14px;opacity:.85">customers</span></div></div>
+      <div><div style="font-size:12px;letter-spacing:.5px;opacity:.85;text-transform:uppercase;font-weight:600">Total</div><div style="font-size:32px;font-weight:800;margin-top:4px">${fmt(s.total_businesses||0)} <span style="font-size:14px;opacity:.85">businesses</span></div></div>
+      <div><div style="font-size:12px;letter-spacing:.5px;opacity:.85;text-transform:uppercase;font-weight:600">New this month</div><div style="font-size:32px;font-weight:800;margin-top:4px">${fmt(s.new_this_month||0)}</div></div>
+    </div>
+
+    <!-- Mini KPIs by status -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:22px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;font-weight:600">Active</div><div style="font-size:20px;font-weight:800;margin-top:2px;color:#22c55e">${fmt(s.paying||0)}</div></div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;font-weight:600">Trial</div><div style="font-size:20px;font-weight:800;margin-top:2px;color:#a78bfa">${fmt(s.trialing||0)}</div></div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;font-weight:600">Suspended</div><div style="font-size:20px;font-weight:800;margin-top:2px;color:#ef4444">${fmt(s.suspended||0)}</div></div>
+    </div>
+
+    <!-- Filter bar -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        ${BTP_TYPES.map(typePill).join('')}
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <input id="adm-search" placeholder=" Search by business name, owner email, phone…" value="${escapeHtml(ADMIN_STATE.filter.search)}" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:13.5px" />
+        <select id="adm-status" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:13.5px">
+          <option value="">All statuses</option>
+          <option value="active"${ADMIN_STATE.filter.status==='active'?' selected':''}>Active</option>
+          <option value="trialing"${ADMIN_STATE.filter.status==='trialing'?' selected':''}>Trialing</option>
+          <option value="suspended"${ADMIN_STATE.filter.status==='suspended'?' selected':''}>Suspended</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Businesses table -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0;font-size:15.5px">Businesses (${list.length})</h3>
+        <div style="font-size:12px;color:var(--text-dim)">Showing up to 500 results</div>
+      </div>
+      ${list.length===0 ? `<div style="padding:40px 24px;text-align:center;color:var(--text-dim)">No businesses match your filters.</div>` : `
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+          <thead><tr style="background:rgba(99,102,241,.06)">
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Business</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Owner</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Plan</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Status</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">MRR</th>
+            <th style="text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Signed up</th>
+            <th style="text-align:right;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);font-weight:700">Actions</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`}
+    </div>
+
+    <div style="margin-top:18px;font-size:12px;color:var(--text-faint);text-align:center">Admin view · No access to clients, appointments, or business revenue.</div>
+  </div>`;
+}
+
+function bindAdminDashboard(){
+  $('#adm-signout').onclick = async ()=>{ await sb.auth.signOut(); SESSION = null; navigate('#/'); };
+
+  // Type filter pills
+  $$('.adm-type-pill').forEach(b => b.onclick = async () => {
+    ADMIN_STATE.filter.type = b.dataset.type;
+    render();
+  });
+
+  // Status select
+  const st = $('#adm-status');
+  if (st) st.onchange = () => { ADMIN_STATE.filter.status = st.value; render(); };
+
+  // Search (debounced)
+  const search = $('#adm-search');
+  if (search) {
+    let to;
+    search.oninput = () => {
+      clearTimeout(to);
+      to = setTimeout(() => { ADMIN_STATE.filter.search = search.value.trim(); render(); }, 280);
+    };
+  }
+
+  // Per-row actions
+  $$('.adm-edit').forEach(b => b.onclick = () => openAdminEditModal(b.dataset.id));
+  $$('.adm-msg').forEach(b => b.onclick = () => openAdminMessageModal(b.dataset.id));
+  $$('.adm-archive').forEach(b => b.onclick = () => openAdminArchive(b.dataset.id));
+}
+
+function openAdminEditModal(bizId){
+  const b = ADMIN_STATE.businesses.find(x => x.id === bizId);
+  if (!b) return;
+  const html = `<h3>Manage ${escapeHtml(b.name||'business')}</h3>
+    <p class="sub" style="margin:0 0 14px;font-size:13px;color:var(--text-dim)">Owner: ${escapeHtml(b.owner_email||b.email||'—')} · ${escapeHtml(b.phone||'')}</p>
+    <form>
+      <div class="row" style="gap:12px;flex-wrap:wrap">
+        <div class="field grow"><label>Plan</label>
+          <select name="plan" required>
+            <option value="starter"${b.subscription_plan==='starter'?' selected':''}>Starter · 0 TND/mo</option>
+            <option value="pro"${b.subscription_plan==='pro'?' selected':''}>Pro · 29 TND/mo</option>
+            <option value="business"${b.subscription_plan==='business'?' selected':''}>Business · 79 TND/mo</option>
+          </select>
+        </div>
+        <div class="field grow"><label>Status</label>
+          <select name="status" required>
+            <option value="active"${b.subscription_status==='active'?' selected':''}>Active</option>
+            <option value="trialing"${b.subscription_status==='trialing'?' selected':''}>Trialing</option>
+            <option value="suspended"${b.subscription_status==='suspended'?' selected':''}>Suspended</option>
+            <option value="canceled"${b.subscription_status==='canceled'?' selected':''}>Canceled</option>
+          </select>
+        </div>
+      </div>
+      <div class="row mt-2" style="justify-content:flex-end;gap:8px">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" type="submit">Save</button>
+      </div>
+    </form>`;
+  openModal(html);
+  window.__modalSubmit = async (d) => {
+    const r = await sb.rpc('admin_update_business', { p_business_id: bizId, p_plan: d.plan, p_status: d.status });
+    if (r.error || (r.data && r.data.error)) { toast({title:'Update failed', message:(r.error?.message)||r.data.error, urgent:true}); return; }
+    closeModal(); toast({title:'Updated', type:'info'}); render();
+  };
+}
+
+function openAdminMessageModal(bizId){
+  const b = ADMIN_STATE.businesses.find(x => x.id === bizId);
+  if (!b) return;
+  const html = `<h3>✉ Message ${escapeHtml(b.name||'business')}</h3>
+    <p class="sub" style="margin:0 0 14px;font-size:13px;color:var(--text-dim)">Owner: ${escapeHtml(b.owner_email||b.email||'—')}. They'll see this notification next time they open their dashboard.</p>
+    <form>
+      <div class="field"><label>Subject (optional)</label><input name="subject" placeholder="e.g. Plan renewal reminder" /></div>
+      <div class="field"><label>Message *</label><textarea name="body" rows="5" required placeholder="Bonjour, votre essai expire dans 3 jours…"></textarea></div>
+      <div class="row mt-2" style="justify-content:flex-end;gap:8px">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" type="submit">Send</button>
+      </div>
+    </form>`;
+  openModal(html);
+  window.__modalSubmit = async (d) => {
+    if (!(d.body||'').trim()) return;
+    const r = await sb.rpc('admin_send_platform_message', { p_business_id: bizId, p_subject: d.subject||null, p_body: d.body });
+    if (r.error || (r.data && r.data.error)) { toast({title:'Send failed', message:(r.error?.message)||r.data.error, urgent:true}); return; }
+    closeModal(); toast({title:'Message sent', type:'booking'});
+  };
+}
+
+async function openAdminArchive(bizId){
+  const b = ADMIN_STATE.businesses.find(x => x.id === bizId);
+  if (!b) return;
+  if (!confirm('Archive ' + (b.name||'this business') + '? It will be hidden from listings but data is kept.')) return;
+  const r = await sb.rpc('admin_archive_business', { p_business_id: bizId });
+  if (r.error || (r.data && r.data.error)) { toast({title:'Archive failed', message:(r.error?.message)||r.data.error, urgent:true}); return; }
+  toast({title:'Archived', type:'info'}); render();
 }
 
 /* ---------- 10. CREATE BUSINESS (after first sign-in) ---------- */
