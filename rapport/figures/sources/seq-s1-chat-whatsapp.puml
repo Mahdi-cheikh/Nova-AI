@@ -1,0 +1,44 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 12
+skinparam ParticipantBackgroundColor #E0E7FF
+skinparam ParticipantBorderColor #6366f1
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorBorderColor #6366f1
+skinparam ArrowColor #475569
+
+actor "Patient" as P
+participant "Meta WhatsApp" as Meta
+participant "whatsapp-webhook\n(Edge Function)" as WH
+participant "classify-message\n(Edge Function)" as CM
+participant "Claude Haiku\n(LLM)" as Claude
+database "Postgres + RLS" as DB
+
+P -> Meta : envoie message libre\n(arabe / fr / en)
+Meta -> WH : POST webhook (signature, payload)
+WH -> WH : verifie signature Meta
+WH -> DB : INSERT messages (client_id, content, direction='in')
+WH -> CM : invoke({ message, business_id })
+CM -> DB : SELECT services, working_hours du business
+DB --> CM : contexte
+CM -> Claude : prompt systeme + message utilisateur
+Claude --> CM : JSON { intent, language, entities }
+
+alt intent = book_appointment
+    CM -> DB : SELECT availability(service, date)
+    DB --> CM : creneaux libres
+    CM -> Meta : sendInteractiveButtons(creneaux)
+    Meta --> P : message avec boutons creneaux
+    P -> Meta : clique sur un creneau
+    Meta -> WH : POST webhook (button reply)
+    WH -> DB : INSERT appointments (client, service, scheduled_at)
+    WH -> Meta : sendTextMessage("RDV confirme!")
+    Meta --> P : confirmation
+else intent = FAQ
+    CM -> Claude : genere reponse FAQ
+    Claude --> CM : texte reponse
+    CM -> Meta : sendTextMessage(reponse)
+    Meta --> P : reponse FAQ
+end
+
+@enduml

@@ -1,73 +1,21 @@
-% ===========================================================================
-% Architecture globale de Nova AI
-% ===========================================================================
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}[
-  font=\footnotesize,
-  every node/.style={align=center},
-  layer/.style    ={rectangle, rounded corners=2pt, draw=black!75,
-                    minimum height=12mm, font=\bfseries\footnotesize,
-                    inner sep=4pt},
-  ext/.style      ={layer, fill=blue!10, minimum width=28mm},
-  edge1/.style    ={layer, fill=violet!15, minimum width=32mm},
-  bus/.style      ={layer, fill=cyan!12, minimum width=80mm, minimum height=14mm,
-                    font=\bfseries\small},
-  func/.style     ={rectangle, rounded corners=2pt, draw=black!60, fill=white,
-                    minimum width=28mm, minimum height=8mm, font=\scriptsize},
-  store/.style    ={cylinder, draw=black!75, fill=orange!12,
-                    aspect=0.25, shape border rotate=90, minimum width=22mm,
-                    minimum height=14mm, font=\scriptsize\bfseries},
-  client/.style   ={layer, fill=green!12, minimum width=28mm},
-  ext-ai/.style   ={layer, fill=yellow!20, minimum width=28mm},
-  conn/.style     ={->, thick, >=Stealth, draw=black!70},
-  conn-d/.style   ={<->, thick, >=Stealth, draw=black!70, dashed},
-]
-
-% Top row — external clients
-\node[client] (wa)   {WhatsApp\\(patient)};
-\node[client, right=12mm of wa] (web) {Tableau de bord\\Vercel (médecin)};
-\node[client, right=12mm of web] (pwa) {PWA Patient\\(mobile)};
-
-% Middle layer — Edge Functions on Supabase
-\node[bus, below=18mm of web] (gateway) {Couche API — Supabase Edge Functions (Deno)};
-
-\node[func, below=4mm of gateway, xshift=-44mm] (webhook)  {whatsapp-webhook};
-\node[func, right=2mm of webhook]                (classify) {classify-message};
-\node[func, right=2mm of classify]               (asknova)  {ask-nova};
-\node[func, right=2mm of asknova]                (others)   {send-reminders\\\& autres jobs};
-
-% AI providers (right side)
-\node[ext-ai, right=24mm of gateway] (claude) {Anthropic Claude\\(Haiku + Sonnet)};
-
-% Database + Storage (bottom)
-\node[store, below=22mm of webhook]  (pg)   {Postgres\\Supabase};
-\node[store, right=10mm of pg]       (rls)  {Row-Level\\Security};
-\node[store, right=10mm of rls]      (auth) {Supabase\\Auth};
-\node[store, right=10mm of auth]     (str)  {Storage\\(images, PDF)};
-
-% Connections — clients to gateway
-\draw[conn] (wa.south)  -- ++(0,-3mm) |- (webhook.north);
-\draw[conn] (web.south) -- (gateway.north);
-\draw[conn] (pwa.south) -- ++(0,-3mm) |- (others.north);
-
-% Edge functions to DB
-\draw[conn] (webhook.south)  |- ($(pg.east)+(0mm, 4mm)$)  -- (pg.east);
-\draw[conn] (classify.south) -- (pg.north);
-\draw[conn] (asknova.south)  -- (rls.north);
-\draw[conn] (others.south)   -- (auth.north);
-
-% Edge to Claude
-\draw[conn-d] (classify.east) to[bend left=15] (claude.west);
-\draw[conn-d] (asknova.east)  to[bend left=5]  (claude.west);
-
-% Caption inside picture (subtle background notes)
-\begin{scope}[on background layer]
-  \node[draw=black!15, fill=black!4, rounded corners, fit=(webhook)(others), inner sep=4mm] {};
-  \node[draw=black!15, fill=black!4, rounded corners, fit=(pg)(str), inner sep=3mm] {};
-\end{scope}
-
-\end{tikzpicture}
-\caption{Architecture globale de \nova{} : trois clients (WhatsApp, tableau de bord web, PWA patient) communiquent avec une couche d'\textit{Edge Functions} hébergée sur Supabase, qui à son tour parle à Postgres (avec RLS multi-locataire), au stockage Supabase et aux APIs Anthropic Claude.}
+% =======================================================================
+% Architecture globale Nova AI -- vue verticale en 3 couches
+% =======================================================================
+% Source : figures/sources/nova-archi.mmd (Mermaid)
+% Image generee verticale (portrait), taille reduite pour partager la
+% page avec le texte descriptif.
+% =======================================================================
+\begin{figure}[!htbp]\centering
+\IfFileExists{figures/nova-archi.png}{%
+  \includegraphics[width=.72\textwidth,height=1.0\textheight,keepaspectratio]{figures/nova-archi.png}%
+}{%
+  \fbox{\parbox[c][8cm][c]{0.42\textwidth}{\centering\itshape\small
+    [Architecture globale (vue verticale) -- a generer depuis\\
+    \texttt{figures/sources/nova-archi.mmd} via\\
+    \url{https://mermaid.live} puis sauvegarder en\\
+    \texttt{figures/nova-archi.png}]
+  }}%
+}
+\caption{Architecture globale de \nova{} : trois couches empilées verticalement -- frontends, backend Supabase, services externes.}
 \label{fig:nova-archi}
 \end{figure}

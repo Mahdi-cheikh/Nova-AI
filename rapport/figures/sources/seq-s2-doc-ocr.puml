@@ -1,0 +1,33 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 12
+skinparam ParticipantBackgroundColor #E0E7FF
+skinparam ParticipantBorderColor #6366f1
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorBorderColor #6366f1
+skinparam ArrowColor #475569
+
+actor "Patient" as P
+participant "Meta WhatsApp" as Meta
+participant "whatsapp-webhook" as WH
+participant "ocr-document\n(Edge Function)" as OCR
+participant "Supabase Storage" as ST
+participant "Claude Sonnet\n(Vision)" as Claude
+database "Postgres + RLS" as DB
+
+P -> Meta : envoie photo (ordonnance)
+Meta -> WH : POST webhook (media_id)
+WH -> DB : INSERT messages (media_url)
+WH -> OCR : invoke({ media_id, client_id })
+OCR -> Meta : GET /media/{media_id}
+Meta --> OCR : bytes image
+OCR -> ST : upload(bucket='docs', path=client/yyyy-mm/X.jpg)
+ST --> OCR : storage_path
+OCR -> Claude : prompt vision + image base64
+Claude --> OCR : JSON { medicaments, posologie, dates }
+OCR -> DB : INSERT documents(client_id,\nstorage_path, ocr_result)
+DB --> OCR : doc_id
+OCR -> Meta : sendTextMessage("Document recu, traite")
+Meta --> P : confirmation
+
+@enduml

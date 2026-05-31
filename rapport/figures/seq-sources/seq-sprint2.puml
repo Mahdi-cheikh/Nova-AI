@@ -1,0 +1,50 @@
+@startuml seq-sprint2
+title Sprint 2 — Tableau de bord propriétaire et PWA patient
+
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam sequence {
+  ArrowColor #7C3AED
+  LifeLineBorderColor #8B5CF6
+  ParticipantBorderColor #7C3AED
+  ParticipantBackgroundColor #F3E8FF
+  ActorBorderColor #7C3AED
+  ActorBackgroundColor #DDD6FE
+}
+
+actor Propriétaire as Owner
+actor Patient
+participant "Dashboard SPA\n(/)" as DASH
+participant "Supabase Auth\n(magic link)" as AUTH
+database "Postgres + RLS" as DB
+participant "PWA patient\n(/pwa/)" as PWA
+participant "WhatsApp" as WA
+
+== Onboarding du propriétaire ==
+Owner -> DASH : Ouvrir l'URL
+DASH -> AUTH : signInWithOtp(email)
+AUTH -> Owner : Email avec lien magique
+Owner -> AUTH : Cliquer le lien
+AUTH -> DASH : Session JWT
+DASH -> DB : SELECT * (RLS = owner_user_id)
+DB --> DASH : business + appointments + clients
+DASH -> Owner : Vue d'ensemble (KPIs, calendrier)
+
+== Onboarding du patient (PWA) ==
+Patient -> PWA : Ouvrir /pwa/
+PWA -> WA : Demander OTP via /send-whatsapp-otp
+WA -> Patient : Code à 6 chiffres
+Patient -> PWA : Saisir le code
+PWA -> DB : RPC pwa_claim_phone(code)
+DB -> DB : trigger lie clients ↔ patient_users
+DB --> PWA : role=patient, identité fusionnée
+PWA -> DB : SELECT mes rendez-vous
+DB --> PWA : Liste des RDV à venir
+
+== Mise à jour temps réel ==
+Patient -> WA : Réserver via WhatsApp
+WA -> DB : (via webhook + classify-message)
+DB -> DASH : Realtime push (postgres_changes)
+DASH -> Owner : Toast + son + nouvelle ligne calendrier
+
+@enduml

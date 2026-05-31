@@ -1,151 +1,153 @@
 \section*{Bilan du travail accompli}
-Ce projet de fin d'etudes a produit \nova : un receptionniste WhatsApp
-multilingue 24/7 pour les petites et moyennes entreprises tunisiennes,
-livre comme une plateforme Software-as-a-Service multi-locataire. Nous
-sommes partis d'une observation faite dans un veritable laboratoire de
-Tunis --- une proprietaire saturee par des messages WhatsApp repetitifs
---- et avons abouti a une plateforme deployee qui automatise la couche
-de conversation des cliniques, laboratoires, garages, salons et
-professionnels independants.
+\addcontentsline{toc}{section}{Bilan du travail accompli}
 
-A travers quatre sprints iteratifs, nous avons concu et implemente :
-une colonne vertebrale Postgres multi-locataire sur Supabase avec des
-politiques Row-Level Security strictes ; une integration WhatsApp
-Business Cloud API avec un pipeline d'ingestion de messages
-deduplique ; un cerveau IA combinant Anthropic Claude Haiku
-(classification d'intention) et Claude Sonnet (OCR de prescriptions
-manuscrites) executant une machine d'etats de prise de rendez-vous
-multi-tour en trois langues : arabe dialectal tunisien, francais et
-anglais ; un tableau de bord proprietaire avec dix-sept entrees de
-barre laterale distinctes ; une application web progressive
-patient-facing avec onboarding par OTP telephone ; et huit
-fonctionnalites metier pilotees par IA qui transforment les donnees
-capturees en intelligence operationnelle.
+Ce projet de fin d'études a produit \nova{} : une plateforme
+\emph{Software-as-a-Service} multi-locataire qui automatise la
+relation client des petites et moyennes entreprises tunisiennes
+via WhatsApp, et qui s'étend à une application web progressive
+installable côté patient. J'ai mené ce travail selon une
+méthodologie Agile Scrum disciplinée, en quatre itérations~: un
+sprint préparatoire d'analyse suivi de trois sprints de
+réalisation (\textbf{Sprint~1} -- Fondations, \textbf{Sprint~2} --
+Surfaces opérationnelles, \textbf{Sprint~3} -- Couche
+d'intelligence).
 
-Toute la pile est hebergee sur une combinaison de Supabase et de
-Vercel, avec un cout d'infrastructure par locataire qui reste sous
-trois USD par mois au regime de croisiere --- confortablement en
-dessous du plafond cible qui rend rentable un abonnement mensuel a
-50 dinars.
-
-\section*{Lecons methodologiques}
-Travailler en Scrum avec une equipe d'une seule personne a impose un
-melange inhabituel de roles. Nous avons joue Product Owner, Scrum
-Master et Equipe simultanement --- ce qui parait dysfonctionnel en
-theorie mais a fonctionne etonnamment bien en pratique parce que le
-cycle planifier-construire-revoir-retrospecter etait externalise par
-de vrais utilisateurs : la proprietaire de laboratoire amie de la
-famille et le proprietaire de clinique qui ont teste chaque iteration.
-
-Deux intuitions methodologiques meritent d'etre soulignees.
-Premierement, la cadence de sprint de deux a trois semaines etait la
-bonne. Une cadence plus courte aurait produit trop de fonctionnalites
-a moitie finies ; une plus longue aurait rendu les retrospectives
-moins utiles. Deuxiemement, ecrire un fichier de migration SQL separe
-par feature pack --- plutot que de modifier le schema de base ---
-a rendu les rollbacks triviaux durant les tests et a rendu le
-deploiement en production de nouvelles fonctionnalites une simple
-operation de copier-coller SQL dans Supabase Studio.
-
-\section*{Lecons techniques}
-Plusieurs decisions techniques ont paye, et l'une s'est revelee une
-erreur partielle.
-
-Ce qui a fonctionne : (a) JavaScript ES Modules vanille pour le
-tableau de bord --- environ 15\% de volume de code en plus mais
-elimination d'une etape de build entiere ; (b) fonctions Edge
-Supabase sur Deno --- demarrages a froid sous 100~ms, distribution
-globale transparente, le meme TypeScript que le tableau de bord
-utilise sur le client ; (c) prompts systeme JSON strict pour Claude
---- demander au modele de repondre uniquement avec un objet JSON,
-avec le schema specifie en ligne, reduit drastiquement la charge de
-post-traitement et rend la sortie du cerveau IA suffisamment
-deterministe pour etre inseree directement en base de donnees ; (d)
-Postgres Row-Level Security comme frontiere multi-locataire --- nous
-avons eu deux quasi-bugs dans le tableau de bord ou un filtre
-\texttt{business\_id} manquait dans une requete ; dans les deux cas,
-RLS a silencieusement attrape l'erreur en retournant zero ligne.
-
-Ce qui s'est revele une erreur partielle : stocker les medicaments et
-allergies structures comme JSONB libre. La fonctionnalite de securite
-des medicaments fonctionne, mais la forme JSONB signifie que nous ne
-pouvons pas facilement repondre a la question \emph{\og combien de mes
-patients sont sous metformine ? \fg{}} sans un scan a l'execution. Un
-travail futur devrait normaliser ces colonnes en une vraie table
-\texttt{client\_medications} avec une cle etrangere vers un catalogue
-de medicaments.
-
-\section*{Limites du systeme actuel}
-\nova{} est dans un etat ou il peut etre deploye pour une vraie
-clinique demain, mais plusieurs limites doivent etre honnetement
-reconnues :
+Au terme de cette démarche, j'ai conçu et implémenté~:
 \begin{itemize}
-  \item Les avatars vocaux ne sont pas actifs : le pipeline est en
-        place mais conserve derriere un drapeau de fonctionnalite en
-        attendant un abonnement ElevenLabs paye.
-  \item La decouverte de patients inter-entreprises est un placeholder.
-  \item Pas d'integration de paiement en production : une integration
-        Konnect a ete prototypee mais retiree quand l'environnement de
-        test s'est revele instable.
-  \item Hebergement mono-region : Supabase est a Francfort ; ping moyen
-        depuis Tunis 38~ms.
-  \item La verification green-tick Meta WhatsApp Business n'a pas ete
-        poursuivie.
-  \item La fonctionnalite d'apprentissage des durees necessite plusieurs
-        semaines de taps \emph{Termine} avant que ses suggestions
-        deviennent fiables.
+  \item une colonne vertébrale Postgres multi-locataire sur
+        Supabase, sécurisée par des politiques Row-Level Security
+        strictes~;
+  \item une intégration WhatsApp Business Cloud API avec un
+        pipeline d'ingestion de messages dédupliqué~;
+  \item un cerveau IA combinant Anthropic Claude Haiku
+        (classification d'intention) et Claude Sonnet (OCR de
+        documents manuscrits), exécutant une machine d'états de
+        prise de rendez-vous multi-tours en arabe dialectal,
+        français et anglais~;
+  \item un tableau de bord administrateur fonctionnel avec
+        calendrier, gestion des rendez-vous, des clients et des
+        services~;
+  \item une application web progressive patient avec onboarding
+        par OTP téléphone et mode hors ligne~;
+  \item une couche d'intelligence proactive (remplissage
+        automatique de créneaux, vouchers d'anniversaire,
+        apprentissage des durées, observation patient, avatars
+        vocaux).
+\end{itemize}
+
+Toute la pile est hébergée sur Supabase et Vercel, avec un coût
+d'infrastructure par locataire qui reste inférieur à trois USD
+par mois en régime de croisière, confortablement en dessous du
+plafond cible qui rend rentable un abonnement mensuel à 50~dinars.
+
+\section*{Leçons méthodologiques et techniques}
+\addcontentsline{toc}{section}{Leçons méthodologiques et techniques}
+
+Travailler en Scrum avec une équipe d'une seule personne m'a
+imposé un mélange inhabituel de rôles. J'ai joué Product Owner,
+Scrum Master et équipe simultanément. Deux intuitions
+méthodologiques méritent d'être soulignées. D'abord, la cadence
+de sprint de deux à trois semaines était la bonne~: une cadence
+plus courte aurait produit trop de fonctionnalités à moitié
+finies, une plus longue aurait rendu les rétrospectives moins
+utiles. Ensuite, écrire un fichier de migration SQL séparé par
+fonctionnalité, plutôt que de modifier le schéma de base, a rendu
+les \emph{rollbacks} triviaux durant les tests.
+
+Sur le plan technique, plusieurs décisions ont payé~: JavaScript
+ES~Modules vanille pour le tableau de bord (élimination d'une
+étape de \emph{build} entière), fonctions Edge Supabase sur Deno
+(\emph{cold-starts} sous 100~ms), prompts système JSON strict
+pour Claude (sortie prévisible insérable directement en base) et
+Postgres Row-Level Security comme frontière multi-locataire.
+
+\section*{Limites du système actuel}
+\addcontentsline{toc}{section}{Limites du système actuel}
+
+\nova{} est dans un état où il peut être déployé pour une vraie
+clinique demain, mais plusieurs limites doivent être honnêtement
+reconnues~:
+\begin{itemize}
+  \item Les avatars vocaux ne sont pas actifs en production~: le
+        pipeline est en place mais conservé derrière un drapeau
+        de fonctionnalité en attendant un abonnement ElevenLabs
+        payé.
+  \item Aucune intégration de paiement en production~: une
+        intégration Konnect a été prototypée mais retirée quand
+        l'environnement de tests s'est révélé instable.
+  \item Hébergement mono-région~: Supabase est à Francfort, le
+        ping moyen depuis Tunis est d'environ 38~ms.
+  \item La vérification \emph{green-tick} Meta WhatsApp Business
+        n'a pas encore été obtenue.
 \end{itemize}
 
 \section*{Perspectives}
-Le projet ouvre une longue liste de directions d'evolution. Les plus
-strategiquement interessantes sont :
+\addcontentsline{toc}{section}{Perspectives}
 
-\begin{enumerate}
-  \item Activer les avatars vocaux dans les rappels, messages
-        d'anniversaire, et confirmations une fois un abonnement
-        ElevenLabs Creator provisionne.
-  \item Ajouter une couche de paiement (Konnect ou Stripe Tunisie)
-        pour que les patients puissent payer des acomptes ou des
-        consultations completes directement dans WhatsApp.
-  \item Entrainer un petit classifieur dialectal tunisien pour router
-        60--70\% des intentions les plus simples vers un modele
-        embarque gratuit, reservant Claude pour les intentions de
-        plus haute complexite.
-  \item Tableau de bord multi-localisation pour les proprietaires
-        gerant plusieurs branches.
-  \item Poursuivre la verification green-tick WhatsApp pour
-        debloquer la messagerie templatee proactive.
-  \item Etendre le receptionniste IA aux appels vocaux via Twilio
-        Voice + un pipeline de transcription temps reel.
-  \item Construire une marketplace ou les patients peuvent chercher a
-        travers toutes les entreprises participantes par service,
-        localisation et disponibilite.
-\end{enumerate}
+Plusieurs directions d'évolution sont envisagées pour la suite,
+regroupées en trois catégories~: améliorations techniques,
+améliorations fonctionnelles et expansion commerciale.
 
-\section*{Reflexion personnelle}
-Ce projet a ete, plus que tout, un exercice de reflexion produit
-deguise en exercice d'ingenierie. Les composants techniques sont des
-briques bien connues --- Postgres, fonctions Edge, une API de LLM,
-WhatsApp --- mais la valeur de \nova{} vient de la maniere specifique
-dont elles sont assemblees pour s'adapter a la realite quotidienne
-d'une proprietaire de laboratoire tunisien qui repond a WhatsApp a
-neuf heures du soir pendant que ses enfants font leurs devoirs.
+\subsection*{Améliorations techniques}
+\begin{itemize}
+  \item \textbf{Activation des avatars vocaux} une fois un
+        abonnement ElevenLabs provisionné, pour servir rappels,
+        confirmations et vouchers avec la voix clonée de
+        l'administrateur.
+  \item \textbf{Classifieur dialectal embarqué.} Entraîner un
+        petit modèle dialectal tunisien capable de router 60 à
+        70\,\% des intentions les plus simples vers un modèle
+        gratuit, en réservant Claude pour les cas complexes.
+  \item \textbf{Multi-région.} Migration vers une instance
+        Supabase plus proche pour ramener le \emph{ping} depuis
+        Tunis sous 20~ms.
+  \item \textbf{Vérification \emph{green-tick} WhatsApp} pour
+        débloquer la messagerie templatée proactive.
+  \item \textbf{Normalisation des données médicales.} Remplacer le
+        stockage JSONB libre des médicaments par une vraie table
+        \texttt{client\_medications} avec clé étrangère vers un
+        catalogue.
+\end{itemize}
 
-Les parties les plus difficiles du travail n'ont pas ete celles que
-nous attendions. Ecrire la Row-Level Security multi-locataire a ete
-un exercice d'une journee. Adapter les prompts Claude pour gerer le
-chaos typographique du darija --- le melange fluide de caracteres
-arabes et latins au sein du meme mot --- a pris des semaines
-d'iteration. Concevoir un tableau de bord qu'un proprietaire peut
-apprendre en quinze minutes, sans aucune formation, a pris plus de
-temps que de concevoir le cerveau IA. Et convaincre de vraies
-entreprises de tester le prototype sur de vrais clients a ete, de
-loin, la contribution la plus a fort levier du projet : chaque
-hypothese que nous avions formulee dans l'IDE a ete testee contre des
-patients qui ecrivent en trois langues dans une seule phrase et
-attendent une reponse utile en quelques secondes.
+\subsection*{Améliorations fonctionnelles}
+\begin{itemize}
+  \item \textbf{Couche de paiement intégrée} (Konnect ou Stripe
+        Tunisie) pour permettre aux patients de régler dans
+        WhatsApp sans quitter le canal.
+  \item \textbf{Téléconsultation vidéo} via WebRTC depuis la PWA,
+        avec envoi automatique de l'ordonnance et facturation à
+        la fin.
+  \item \textbf{Tableau de bord multi-localisation} pour les
+        administrateurs gérant plusieurs branches.
+  \item \textbf{Réceptionniste vocal téléphonique} via Twilio
+        Voice et un pipeline de transcription temps réel.
+  \item \textbf{Marketplace de découverte patient} où les patients
+        peuvent rechercher à travers toutes les entreprises
+        participantes par service, localisation et disponibilité.
+\end{itemize}
 
-La methodologie, les prompts, et les decisions d'interface utilisateur
-ont tous evolue en reponse a ce contact avec le monde reel. Le resultat
-est une petite plateforme aujourd'hui ; les fondations posees dans ce
-travail la rendent prete a grandir avec les entreprises qu'elle sert.
+\subsection*{Expansion commerciale}
+\begin{itemize}
+  \item \textbf{Stratégie de communication locale.} Lancement
+        public sur les réseaux sociaux et démarchage des premiers
+        clients pilotes dans le tissu PME de Kairouan.
+  \item \textbf{Onboarding self-service.} Réduire le temps
+        d'inscription d'une entreprise à moins de dix minutes en
+        s'appuyant sur les valeurs par défaut sectorielles.
+  \item \textbf{Programme de pilote rémunéré.} Offrir trois mois
+        gratuits aux cinq premières structures pilotes en échange
+        d'études de cas chiffrées.
+  \item \textbf{Expansion régionale Maghreb.} Adapter \nova{} aux
+        marchés algérien et marocain dès la validation du modèle
+        économique en Tunisie.
+\end{itemize}
+
+\section*{Mot de la fin}
+\addcontentsline{toc}{section}{Mot de la fin}
+
+Au-delà du commercial, ce qui me rend le plus fier dans ce
+projet, c'est l'idée même~: un propriétaire d'entreprise n'a
+plus besoin de payer un salaire mensuel pour un secrétaire qui
+répond aux messages WhatsApp. \nova{} s'en charge 24~h/24 pour
+le prix d'un repas. Pour une PME tunisienne qui se bat sur ses
+marges, c'est une différence réelle, mesurable, défendable.

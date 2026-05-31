@@ -1,0 +1,136 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 12
+skinparam classFontStyle bold
+
+skinparam class {
+    BackgroundColor #E0E7FF
+    BorderColor #6366f1
+    BorderThickness 1.2
+}
+
+class Voucher {
+    + id : UUID
+    + business_id : UUID
+    + client_id : UUID
+    + code : text
+    + value : decimal
+    + expires_at : timestamp
+    + redeemed_at : timestamp
+    --
+    + generate()
+    + redeem()
+}
+
+class Vehicle {
+    + id : UUID
+    + business_id : UUID
+    + client_id : UUID
+    + vin : text
+    + plate : text
+    + mileage : int
+    + service_log : jsonb
+    --
+    + register()
+    + attachPhoto()
+    + updateMileage()
+}
+
+class QueueEntry {
+    + id : UUID
+    + business_id : UUID
+    + client_id : UUID
+    + position : int
+    + eta_min : int
+    + status : enum
+    + joined_at : timestamp
+    --
+    + join()
+    + advance()
+    + close()
+}
+
+class DemandFillCampaign {
+    + id : UUID
+    + business_id : UUID
+    + slot_date : date
+    + targeted_clients : jsonb
+    + status : enum
+    + approved_by : UUID
+    + sent_at : timestamp
+    --
+    + draft()
+    + approve()
+    + sendBatch()
+}
+
+class ServiceDurationSuggestion {
+    + id : UUID
+    + service_id : UUID
+    + observed_duration_min : int
+    + declared_duration_min : int
+    + sample_size : int
+    + suggested_at : timestamp
+    + applied : bool
+    --
+    + compute()
+    + apply()
+}
+
+class ObservationSession {
+    + id : UUID
+    + appointment_id : UUID
+    + started_at : timestamp
+    + ended_at : timestamp
+    + dominant_posture : text
+    + agitation_score : decimal
+    + events : jsonb
+    --
+    + start()
+    + recordLandmark()
+    + finalize()
+}
+
+class VoiceAvatar {
+    + id : UUID
+    + business_id : UUID
+    + sample_url : text
+    + elevenlabs_voice_id : text
+    + status : enum
+    --
+    + cloneVoice()
+    + synthesize()
+}
+
+class Client {
+    + id : UUID
+    + business_id : UUID
+    + name : text
+    + phone : text
+    + birthday : date
+    + last_visit_at : timestamp
+    --
+}
+
+class Service {
+    + id : UUID
+    + business_id : UUID
+    + name : text
+    + duration_min : int
+}
+
+class Appointment {
+    + id : UUID
+    + business_id : UUID
+    + client_id : UUID
+    + scheduled_at : timestamp
+}
+
+Client "1" -- "*" Voucher
+Client "1" -- "*" Vehicle : <<garage>>
+Client "1" -- "*" QueueEntry : <<labo>>
+Appointment "1" -- "0..1" ObservationSession
+Service "1" -- "*" ServiceDurationSuggestion
+Appointment "*" .. "1" DemandFillCampaign : cible >
+
+@enduml

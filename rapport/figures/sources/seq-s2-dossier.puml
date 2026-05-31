@@ -1,0 +1,31 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 12
+skinparam ParticipantBackgroundColor #E0E7FF
+skinparam ParticipantBorderColor #6366f1
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorBorderColor #6366f1
+skinparam ArrowColor #475569
+
+actor "Admin / Praticien" as U
+participant "Dashboard\n(Clients)" as DASH
+participant "PostgREST" as API
+database "Postgres + RLS" as DB
+
+U -> DASH : saisit 3 lettres du nom
+DASH -> API : GET /clients?name=ilike.*xxx*
+API -> DB : SELECT clients\n(recherche trigramme)
+DB --> API : liste filtree par RLS
+API --> DASH : suggestions
+U -> DASH : selectionne un client
+DASH -> API : GET /client_full_history?id=X
+API -> DB : SELECT clients, appointments,\nmessages, documents (JOIN multi-table)
+DB --> API : dossier complet (RLS appliquee)
+API --> DASH : timeline + RDV + docs
+DASH --> U : affiche fiche client
+
+alt role = Praticien
+    note over API,DB: La RLS croise users.auth_uid\navec appointments.user_id\npour ne montrer QUE les patients\ndu praticien connecte
+end
+
+@enduml

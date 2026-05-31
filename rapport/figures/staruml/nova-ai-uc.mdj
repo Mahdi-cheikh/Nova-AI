@@ -1,0 +1,2357 @@
+{
+  "_type": "Project",
+  "_id": "fb9cfa5a7a5f4753acca16fe",
+  "name": "Nova AI - PFE Mehdi Cheikh",
+  "ownedElements": [
+    {
+      "_type": "UMLModel",
+      "_id": "adca482742004cfbb6a4bca6",
+      "_parent": {
+        "$ref": "fb9cfa5a7a5f4753acca16fe"
+      },
+      "name": "Nova AI - Model",
+      "ownedElements": [
+        {
+          "_type": "UMLActor",
+          "_id": "1061799d15404138919e5744",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Patient / Client"
+        },
+        {
+          "_type": "UMLActor",
+          "_id": "db0ca68908ac4205b4b815eb",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Proprietaire"
+        },
+        {
+          "_type": "UMLActor",
+          "_id": "216fa82a38a84492b159961b",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Praticien"
+        },
+        {
+          "_type": "UMLActor",
+          "_id": "079e179e9667477c9aa10ba3",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Systeme auto"
+        },
+        {
+          "_type": "UMLActor",
+          "_id": "937535445dfc4b3c8a5551dc",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Anthropic Claude"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "5ec0860cc106403cad01d915",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Reserver un rendez-vous"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "8740cd2494314197abd1fb66",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Annuler / Reprogrammer"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "1d79bfa8d3df4b30957b6efd",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Envoyer une ordonnance"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "c9505791540f4e5990e72861",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Demander une info FAQ"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "285bf4c2e05c4874a0bf3a58",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Confirmer un rappel"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "b6ad7ba07b9041edb7dfc13c",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Recevoir voucher anniv."
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "d982157812354941b27e8908",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Rejoindre la file labo"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "330c90d5261e404490926657",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Consulter le calendrier"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "a96429ab5a3747248061c1ac",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Gerer services & equipe"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "f33e2beb30a8433cb6a751d8",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Configurer horaires & IA"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "941cde10336c433fa2478a50",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Scanner QR patient"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "a85d7fe323e145c080f35cc6",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Approuver Demand-Fill"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "b564c1cf61c741e5b64f67a0",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Verifier prescription"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "d4daa72195ee4060894f1b22",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Consulter indicateurs"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "8eeacd79f7f044dba6a9ea12",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Voir agenda du jour"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "ae17529d24fe4a7393ca9c03",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Marquer Arrive/Termine"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "2a9c51a5476f4e8ca38734cb",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Envoyer rappels 24h/1h"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "c4f7e3e20e32458b9db11016",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Detecter creneaux vides"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "c547cac49cee4d5ea4fb7ab8",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Frapper vouchers anniv."
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "e69e7dac4bdd4a24bcd31386",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Recalculer durees moy."
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "fafa7a720f2149578b7e08d8",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Classifier l'intention"
+        },
+        {
+          "_type": "UMLUseCase",
+          "_id": "ea28c85d886e4c6885e0049c",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Lire ordonnance OCR"
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "790055eb83cd4c8ba07545d5",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "822b3268584d4090b85b6837",
+            "_parent": {
+              "$ref": "790055eb83cd4c8ba07545d5"
+            },
+            "reference": {
+              "$ref": "1061799d15404138919e5744"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "bc399455702a4e25ac7498ee",
+            "_parent": {
+              "$ref": "790055eb83cd4c8ba07545d5"
+            },
+            "reference": {
+              "$ref": "5ec0860cc106403cad01d915"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "3d0b024f6c844b2bba887c16",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "8fedc65ae21f48958573089e",
+            "_parent": {
+              "$ref": "3d0b024f6c844b2bba887c16"
+            },
+            "reference": {
+              "$ref": "1061799d15404138919e5744"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "54e928b4b5e7494c83fb7e32",
+            "_parent": {
+              "$ref": "3d0b024f6c844b2bba887c16"
+            },
+            "reference": {
+              "$ref": "8740cd2494314197abd1fb66"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "b6e58714b82f41239745f292",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "107f12cb4f4c4b6bbee939f9",
+            "_parent": {
+              "$ref": "b6e58714b82f41239745f292"
+            },
+            "reference": {
+              "$ref": "1061799d15404138919e5744"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "2e57ba4c44f74b938a0008d5",
+            "_parent": {
+              "$ref": "b6e58714b82f41239745f292"
+            },
+            "reference": {
+              "$ref": "1d79bfa8d3df4b30957b6efd"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "c5c07931b3154707bcde6641",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "5bf247190ee548ee977f7c88",
+            "_parent": {
+              "$ref": "c5c07931b3154707bcde6641"
+            },
+            "reference": {
+              "$ref": "1061799d15404138919e5744"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "849973435ab0466793a8e57b",
+            "_parent": {
+              "$ref": "c5c07931b3154707bcde6641"
+            },
+            "reference": {
+              "$ref": "c9505791540f4e5990e72861"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "511b3b8369ef40fa92e915d7",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "097a5a3d6f23462f85684dbf",
+            "_parent": {
+              "$ref": "511b3b8369ef40fa92e915d7"
+            },
+            "reference": {
+              "$ref": "1061799d15404138919e5744"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "c1c5b978b07840e8a93f825e",
+            "_parent": {
+              "$ref": "511b3b8369ef40fa92e915d7"
+            },
+            "reference": {
+              "$ref": "285bf4c2e05c4874a0bf3a58"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "1069ef00b1f945508bd654a5",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "2d0b934855d240debd83bffc",
+            "_parent": {
+              "$ref": "1069ef00b1f945508bd654a5"
+            },
+            "reference": {
+              "$ref": "1061799d15404138919e5744"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "36a16395c24f4bb48ba2fb1c",
+            "_parent": {
+              "$ref": "1069ef00b1f945508bd654a5"
+            },
+            "reference": {
+              "$ref": "b6ad7ba07b9041edb7dfc13c"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "b39724082bc74ce3918db599",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "98579fcbb6c94cfd993d363a",
+            "_parent": {
+              "$ref": "b39724082bc74ce3918db599"
+            },
+            "reference": {
+              "$ref": "1061799d15404138919e5744"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "dfd2942a4b3a44eea06e3b00",
+            "_parent": {
+              "$ref": "b39724082bc74ce3918db599"
+            },
+            "reference": {
+              "$ref": "d982157812354941b27e8908"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "c222067dd52c4cb5a9888f03",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "56873b78556d47019f83966b",
+            "_parent": {
+              "$ref": "c222067dd52c4cb5a9888f03"
+            },
+            "reference": {
+              "$ref": "db0ca68908ac4205b4b815eb"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "8fccf64e46bb4126b3cc6017",
+            "_parent": {
+              "$ref": "c222067dd52c4cb5a9888f03"
+            },
+            "reference": {
+              "$ref": "330c90d5261e404490926657"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "16ffa578f1cd48ad99c0e7a3",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "a45d6b70ea0249e2b76241bd",
+            "_parent": {
+              "$ref": "16ffa578f1cd48ad99c0e7a3"
+            },
+            "reference": {
+              "$ref": "db0ca68908ac4205b4b815eb"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "6c43d8168de241549544cfa0",
+            "_parent": {
+              "$ref": "16ffa578f1cd48ad99c0e7a3"
+            },
+            "reference": {
+              "$ref": "a96429ab5a3747248061c1ac"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "5f845ede72ac463591071571",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "b3f95281c062453882a73d31",
+            "_parent": {
+              "$ref": "5f845ede72ac463591071571"
+            },
+            "reference": {
+              "$ref": "db0ca68908ac4205b4b815eb"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "427f63c9189d40748d61fac5",
+            "_parent": {
+              "$ref": "5f845ede72ac463591071571"
+            },
+            "reference": {
+              "$ref": "f33e2beb30a8433cb6a751d8"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "e06bb0ce965047fbb3af40a7",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "375308030dd944b280d88b4f",
+            "_parent": {
+              "$ref": "e06bb0ce965047fbb3af40a7"
+            },
+            "reference": {
+              "$ref": "db0ca68908ac4205b4b815eb"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "c993c9827664416f9bc78759",
+            "_parent": {
+              "$ref": "e06bb0ce965047fbb3af40a7"
+            },
+            "reference": {
+              "$ref": "941cde10336c433fa2478a50"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "371b882c937043d0979b14cb",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "59118ae81f4e4497b2fe8538",
+            "_parent": {
+              "$ref": "371b882c937043d0979b14cb"
+            },
+            "reference": {
+              "$ref": "db0ca68908ac4205b4b815eb"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "e27d1419e90d43aab4460b20",
+            "_parent": {
+              "$ref": "371b882c937043d0979b14cb"
+            },
+            "reference": {
+              "$ref": "a85d7fe323e145c080f35cc6"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "754c94bfea7c40ef854ee7f9",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "85e63691224d44f0b544544e",
+            "_parent": {
+              "$ref": "754c94bfea7c40ef854ee7f9"
+            },
+            "reference": {
+              "$ref": "db0ca68908ac4205b4b815eb"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "17a40b9298fc4317a695ed2e",
+            "_parent": {
+              "$ref": "754c94bfea7c40ef854ee7f9"
+            },
+            "reference": {
+              "$ref": "b564c1cf61c741e5b64f67a0"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "fae4f37e0d8d4241bdfe2aa7",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "c8fe1378acc84b65945f4ae8",
+            "_parent": {
+              "$ref": "fae4f37e0d8d4241bdfe2aa7"
+            },
+            "reference": {
+              "$ref": "db0ca68908ac4205b4b815eb"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "495bb6d8e2f94cce9872ea16",
+            "_parent": {
+              "$ref": "fae4f37e0d8d4241bdfe2aa7"
+            },
+            "reference": {
+              "$ref": "d4daa72195ee4060894f1b22"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "1dba2a1ff20f448cb526a18e",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "97ad154fd3a24ad0977d1cf5",
+            "_parent": {
+              "$ref": "1dba2a1ff20f448cb526a18e"
+            },
+            "reference": {
+              "$ref": "216fa82a38a84492b159961b"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "bd98267b2b674e97a06e1ca9",
+            "_parent": {
+              "$ref": "1dba2a1ff20f448cb526a18e"
+            },
+            "reference": {
+              "$ref": "8eeacd79f7f044dba6a9ea12"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "9ff6328acbf446559375175e",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "a19ad4a0996946b1a0dab301",
+            "_parent": {
+              "$ref": "9ff6328acbf446559375175e"
+            },
+            "reference": {
+              "$ref": "216fa82a38a84492b159961b"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "1461ea71215144dc93789685",
+            "_parent": {
+              "$ref": "9ff6328acbf446559375175e"
+            },
+            "reference": {
+              "$ref": "ae17529d24fe4a7393ca9c03"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "0b380994201a4af582ce80c8",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "a188f6e2201848f088a07146",
+            "_parent": {
+              "$ref": "0b380994201a4af582ce80c8"
+            },
+            "reference": {
+              "$ref": "216fa82a38a84492b159961b"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "f371591a78524b8fae84319f",
+            "_parent": {
+              "$ref": "0b380994201a4af582ce80c8"
+            },
+            "reference": {
+              "$ref": "941cde10336c433fa2478a50"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "2a2f0c072a8f40868b501feb",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "ccf53453dfda4f6696f07c16",
+            "_parent": {
+              "$ref": "2a2f0c072a8f40868b501feb"
+            },
+            "reference": {
+              "$ref": "079e179e9667477c9aa10ba3"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "d89c353d13274128baa3000c",
+            "_parent": {
+              "$ref": "2a2f0c072a8f40868b501feb"
+            },
+            "reference": {
+              "$ref": "2a9c51a5476f4e8ca38734cb"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "ca85ca9d36b44f31a928181f",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "ead4fe0122ed47aa8f203263",
+            "_parent": {
+              "$ref": "ca85ca9d36b44f31a928181f"
+            },
+            "reference": {
+              "$ref": "079e179e9667477c9aa10ba3"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "eb9835654c5e4b00bda9f18a",
+            "_parent": {
+              "$ref": "ca85ca9d36b44f31a928181f"
+            },
+            "reference": {
+              "$ref": "c4f7e3e20e32458b9db11016"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "f47ee645166b4ae8a1290ca8",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "bc473ba1598e4c0889c8386c",
+            "_parent": {
+              "$ref": "f47ee645166b4ae8a1290ca8"
+            },
+            "reference": {
+              "$ref": "079e179e9667477c9aa10ba3"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "7d1244852daf4e82a4a16d26",
+            "_parent": {
+              "$ref": "f47ee645166b4ae8a1290ca8"
+            },
+            "reference": {
+              "$ref": "c547cac49cee4d5ea4fb7ab8"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "432f4856722142a2b3b78c15",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "719f1abf1a824d99b3f27358",
+            "_parent": {
+              "$ref": "432f4856722142a2b3b78c15"
+            },
+            "reference": {
+              "$ref": "079e179e9667477c9aa10ba3"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "a4626f1bb1ef4b57ab2b6385",
+            "_parent": {
+              "$ref": "432f4856722142a2b3b78c15"
+            },
+            "reference": {
+              "$ref": "e69e7dac4bdd4a24bcd31386"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "8f688fcad9574ea2853cc2af",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "2411de81963b46eeb93df8b0",
+            "_parent": {
+              "$ref": "8f688fcad9574ea2853cc2af"
+            },
+            "reference": {
+              "$ref": "937535445dfc4b3c8a5551dc"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "d09216edbd8a4a62a7e48c46",
+            "_parent": {
+              "$ref": "8f688fcad9574ea2853cc2af"
+            },
+            "reference": {
+              "$ref": "fafa7a720f2149578b7e08d8"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "e128b5822e2c43be8fec6d42",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "2cc4f99329aa4b6d87e9a47b",
+            "_parent": {
+              "$ref": "e128b5822e2c43be8fec6d42"
+            },
+            "reference": {
+              "$ref": "937535445dfc4b3c8a5551dc"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "71a619b52262464aafb3649b",
+            "_parent": {
+              "$ref": "e128b5822e2c43be8fec6d42"
+            },
+            "reference": {
+              "$ref": "ea28c85d886e4c6885e0049c"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "7de8f2e3bad64b71b4a8b458",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "cbc47b0cf9ce4615b924afab",
+            "_parent": {
+              "$ref": "7de8f2e3bad64b71b4a8b458"
+            },
+            "reference": {
+              "$ref": "5ec0860cc106403cad01d915"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "829c3a65eab0410484ddbc75",
+            "_parent": {
+              "$ref": "7de8f2e3bad64b71b4a8b458"
+            },
+            "reference": {
+              "$ref": "fafa7a720f2149578b7e08d8"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "1919c28846714b83a4e981d6",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "dac00f6ef4e64bf2a98f74ff",
+            "_parent": {
+              "$ref": "1919c28846714b83a4e981d6"
+            },
+            "reference": {
+              "$ref": "c9505791540f4e5990e72861"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "821349458d5d4eb8b7a60181",
+            "_parent": {
+              "$ref": "1919c28846714b83a4e981d6"
+            },
+            "reference": {
+              "$ref": "fafa7a720f2149578b7e08d8"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "1d467ddd578246ad92419f5c",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "75e6c8b554564d4bba0a9660",
+            "_parent": {
+              "$ref": "1d467ddd578246ad92419f5c"
+            },
+            "reference": {
+              "$ref": "8740cd2494314197abd1fb66"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "2ddf0e2083f24cd1bd0f66d2",
+            "_parent": {
+              "$ref": "1d467ddd578246ad92419f5c"
+            },
+            "reference": {
+              "$ref": "fafa7a720f2149578b7e08d8"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "68012b5d3046483195befe28",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "3d263dfc811c49b69c2e1c44",
+            "_parent": {
+              "$ref": "68012b5d3046483195befe28"
+            },
+            "reference": {
+              "$ref": "b564c1cf61c741e5b64f67a0"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "bd5a5dd2ecdb4455862f3ab7",
+            "_parent": {
+              "$ref": "68012b5d3046483195befe28"
+            },
+            "reference": {
+              "$ref": "fafa7a720f2149578b7e08d8"
+            }
+          }
+        },
+        {
+          "_type": "UMLAssociation",
+          "_id": "26e9583e3d704f91a6746b94",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "end1": {
+            "_type": "UMLAssociationEnd",
+            "_id": "4c53df4e557b4442ac8feeea",
+            "_parent": {
+              "$ref": "26e9583e3d704f91a6746b94"
+            },
+            "reference": {
+              "$ref": "1d79bfa8d3df4b30957b6efd"
+            }
+          },
+          "end2": {
+            "_type": "UMLAssociationEnd",
+            "_id": "c557401112774b968d6ef4ef",
+            "_parent": {
+              "$ref": "26e9583e3d704f91a6746b94"
+            },
+            "reference": {
+              "$ref": "ea28c85d886e4c6885e0049c"
+            }
+          }
+        },
+        {
+          "_type": "UMLUseCaseDiagram",
+          "_id": "64325c75ac394444ad0d49d0",
+          "_parent": {
+            "$ref": "adca482742004cfbb6a4bca6"
+          },
+          "name": "Cas d'utilisation - Nova AI",
+          "ownedViews": [
+            {
+              "_type": "UMLActorView",
+              "_id": "8b01e18e2c3546eebc11fd2e",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "1061799d15404138919e5744"
+              },
+              "left": 80,
+              "top": 200,
+              "width": 50,
+              "height": 80,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "c5be723da8b14681b4111a2e",
+                "_parent": {
+                  "$ref": "8b01e18e2c3546eebc11fd2e"
+                },
+                "model": {
+                  "$ref": "1061799d15404138919e5744"
+                },
+                "visible": true,
+                "left": 50,
+                "top": 285,
+                "width": 110,
+                "height": 13,
+                "text": "Patient / Client"
+              }
+            },
+            {
+              "_type": "UMLActorView",
+              "_id": "26cb2fdb3fca4548891e86e7",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "db0ca68908ac4205b4b815eb"
+              },
+              "left": 80,
+              "top": 380,
+              "width": 50,
+              "height": 80,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "8ddb49ec87fc455eb4ab0507",
+                "_parent": {
+                  "$ref": "26cb2fdb3fca4548891e86e7"
+                },
+                "model": {
+                  "$ref": "db0ca68908ac4205b4b815eb"
+                },
+                "visible": true,
+                "left": 50,
+                "top": 465,
+                "width": 110,
+                "height": 13,
+                "text": "Proprietaire"
+              }
+            },
+            {
+              "_type": "UMLActorView",
+              "_id": "5859f0bffb8f46878e59d74f",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "216fa82a38a84492b159961b"
+              },
+              "left": 80,
+              "top": 560,
+              "width": 50,
+              "height": 80,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "ccde4a4b42844e2e885442b4",
+                "_parent": {
+                  "$ref": "5859f0bffb8f46878e59d74f"
+                },
+                "model": {
+                  "$ref": "216fa82a38a84492b159961b"
+                },
+                "visible": true,
+                "left": 50,
+                "top": 645,
+                "width": 110,
+                "height": 13,
+                "text": "Praticien"
+              }
+            },
+            {
+              "_type": "UMLActorView",
+              "_id": "6f161da99f8f40f5a9083f29",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "079e179e9667477c9aa10ba3"
+              },
+              "left": 900,
+              "top": 380,
+              "width": 50,
+              "height": 80,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "684a5b8ce4984dd4b9d57bbd",
+                "_parent": {
+                  "$ref": "6f161da99f8f40f5a9083f29"
+                },
+                "model": {
+                  "$ref": "079e179e9667477c9aa10ba3"
+                },
+                "visible": true,
+                "left": 870,
+                "top": 465,
+                "width": 110,
+                "height": 13,
+                "text": "Systeme auto"
+              }
+            },
+            {
+              "_type": "UMLActorView",
+              "_id": "1a60e8a412864f879aade278",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "937535445dfc4b3c8a5551dc"
+              },
+              "left": 900,
+              "top": 560,
+              "width": 50,
+              "height": 80,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "9b6de881150c461e87964489",
+                "_parent": {
+                  "$ref": "1a60e8a412864f879aade278"
+                },
+                "model": {
+                  "$ref": "937535445dfc4b3c8a5551dc"
+                },
+                "visible": true,
+                "left": 870,
+                "top": 645,
+                "width": 110,
+                "height": 13,
+                "text": "Anthropic Claude"
+              }
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "673239385b3048cf85130563",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "5ec0860cc106403cad01d915"
+              },
+              "left": 280,
+              "top": 100,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "afce5e5bf2804a5a8c9b9aa7",
+                "_parent": {
+                  "$ref": "673239385b3048cf85130563"
+                },
+                "model": {
+                  "$ref": "5ec0860cc106403cad01d915"
+                },
+                "visible": true,
+                "left": 285,
+                "top": 105,
+                "width": 130,
+                "height": 40,
+                "text": "Reserver un rendez-vous"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "148a24ae208141bf9689f540",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "8740cd2494314197abd1fb66"
+              },
+              "left": 280,
+              "top": 175,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "7c1f8551dae94540a6024ca0",
+                "_parent": {
+                  "$ref": "148a24ae208141bf9689f540"
+                },
+                "model": {
+                  "$ref": "8740cd2494314197abd1fb66"
+                },
+                "visible": true,
+                "left": 285,
+                "top": 180,
+                "width": 130,
+                "height": 40,
+                "text": "Annuler / Reprogrammer"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "ed35079584f146ed8c23efd9",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "1d79bfa8d3df4b30957b6efd"
+              },
+              "left": 280,
+              "top": 250,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "677c56447ce04ff6b4d5f138",
+                "_parent": {
+                  "$ref": "ed35079584f146ed8c23efd9"
+                },
+                "model": {
+                  "$ref": "1d79bfa8d3df4b30957b6efd"
+                },
+                "visible": true,
+                "left": 285,
+                "top": 255,
+                "width": 130,
+                "height": 40,
+                "text": "Envoyer une ordonnance"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "8a899f63b8db40729202f394",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "c9505791540f4e5990e72861"
+              },
+              "left": 280,
+              "top": 325,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "e3adf6e44e50496fa3734823",
+                "_parent": {
+                  "$ref": "8a899f63b8db40729202f394"
+                },
+                "model": {
+                  "$ref": "c9505791540f4e5990e72861"
+                },
+                "visible": true,
+                "left": 285,
+                "top": 330,
+                "width": 130,
+                "height": 40,
+                "text": "Demander une info FAQ"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "dc9b574fb87e46b88e8441f6",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "285bf4c2e05c4874a0bf3a58"
+              },
+              "left": 280,
+              "top": 400,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "78b7adc4e0924bf19fbf9b5d",
+                "_parent": {
+                  "$ref": "dc9b574fb87e46b88e8441f6"
+                },
+                "model": {
+                  "$ref": "285bf4c2e05c4874a0bf3a58"
+                },
+                "visible": true,
+                "left": 285,
+                "top": 405,
+                "width": 130,
+                "height": 40,
+                "text": "Confirmer un rappel"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "5becb75fa2c34f4295656ffd",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "b6ad7ba07b9041edb7dfc13c"
+              },
+              "left": 280,
+              "top": 475,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "3a6d43bf90654eaaa45d4f39",
+                "_parent": {
+                  "$ref": "5becb75fa2c34f4295656ffd"
+                },
+                "model": {
+                  "$ref": "b6ad7ba07b9041edb7dfc13c"
+                },
+                "visible": true,
+                "left": 285,
+                "top": 480,
+                "width": 130,
+                "height": 40,
+                "text": "Recevoir voucher anniv."
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "55bec129675444efac33b9ec",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "d982157812354941b27e8908"
+              },
+              "left": 280,
+              "top": 550,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "076f5d483a5e45be978cefe3",
+                "_parent": {
+                  "$ref": "55bec129675444efac33b9ec"
+                },
+                "model": {
+                  "$ref": "d982157812354941b27e8908"
+                },
+                "visible": true,
+                "left": 285,
+                "top": 555,
+                "width": 130,
+                "height": 40,
+                "text": "Rejoindre la file labo"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "3e8903c57d6f48c997095f3c",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "330c90d5261e404490926657"
+              },
+              "left": 500,
+              "top": 100,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "678e3dbac69b492cb94d79be",
+                "_parent": {
+                  "$ref": "3e8903c57d6f48c997095f3c"
+                },
+                "model": {
+                  "$ref": "330c90d5261e404490926657"
+                },
+                "visible": true,
+                "left": 505,
+                "top": 105,
+                "width": 130,
+                "height": 40,
+                "text": "Consulter le calendrier"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "8a30b82a7aaf4dc7b9c3a14d",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "a96429ab5a3747248061c1ac"
+              },
+              "left": 500,
+              "top": 175,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "3d5fe367abb44cee8d641ba1",
+                "_parent": {
+                  "$ref": "8a30b82a7aaf4dc7b9c3a14d"
+                },
+                "model": {
+                  "$ref": "a96429ab5a3747248061c1ac"
+                },
+                "visible": true,
+                "left": 505,
+                "top": 180,
+                "width": 130,
+                "height": 40,
+                "text": "Gerer services & equipe"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "43e9524b29b64e719453ecf1",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "f33e2beb30a8433cb6a751d8"
+              },
+              "left": 500,
+              "top": 250,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "1952af1a085449fcbb958e6f",
+                "_parent": {
+                  "$ref": "43e9524b29b64e719453ecf1"
+                },
+                "model": {
+                  "$ref": "f33e2beb30a8433cb6a751d8"
+                },
+                "visible": true,
+                "left": 505,
+                "top": 255,
+                "width": 130,
+                "height": 40,
+                "text": "Configurer horaires & IA"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "92bd2f2e9e9a4ca5b209dd91",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "941cde10336c433fa2478a50"
+              },
+              "left": 500,
+              "top": 325,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "9e28c62df03b457692fcb97c",
+                "_parent": {
+                  "$ref": "92bd2f2e9e9a4ca5b209dd91"
+                },
+                "model": {
+                  "$ref": "941cde10336c433fa2478a50"
+                },
+                "visible": true,
+                "left": 505,
+                "top": 330,
+                "width": 130,
+                "height": 40,
+                "text": "Scanner QR patient"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "b39e329156e340b497fc7a7a",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "a85d7fe323e145c080f35cc6"
+              },
+              "left": 500,
+              "top": 400,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "fb2265692fc54be38a96aa51",
+                "_parent": {
+                  "$ref": "b39e329156e340b497fc7a7a"
+                },
+                "model": {
+                  "$ref": "a85d7fe323e145c080f35cc6"
+                },
+                "visible": true,
+                "left": 505,
+                "top": 405,
+                "width": 130,
+                "height": 40,
+                "text": "Approuver Demand-Fill"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "094f0b99792647fdb0461beb",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "b564c1cf61c741e5b64f67a0"
+              },
+              "left": 500,
+              "top": 475,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "113659ce6ea94b61b5e347b5",
+                "_parent": {
+                  "$ref": "094f0b99792647fdb0461beb"
+                },
+                "model": {
+                  "$ref": "b564c1cf61c741e5b64f67a0"
+                },
+                "visible": true,
+                "left": 505,
+                "top": 480,
+                "width": 130,
+                "height": 40,
+                "text": "Verifier prescription"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "24a6683b521d43dbb4aefa19",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "d4daa72195ee4060894f1b22"
+              },
+              "left": 500,
+              "top": 550,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "de864ae9aa7844d7a8305ee0",
+                "_parent": {
+                  "$ref": "24a6683b521d43dbb4aefa19"
+                },
+                "model": {
+                  "$ref": "d4daa72195ee4060894f1b22"
+                },
+                "visible": true,
+                "left": 505,
+                "top": 555,
+                "width": 130,
+                "height": 40,
+                "text": "Consulter indicateurs"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "b061164b5d794e9f8b5347b7",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "8eeacd79f7f044dba6a9ea12"
+              },
+              "left": 720,
+              "top": 470,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "93c82cdbc59a47069ba4177d",
+                "_parent": {
+                  "$ref": "b061164b5d794e9f8b5347b7"
+                },
+                "model": {
+                  "$ref": "8eeacd79f7f044dba6a9ea12"
+                },
+                "visible": true,
+                "left": 725,
+                "top": 475,
+                "width": 130,
+                "height": 40,
+                "text": "Voir agenda du jour"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "4e67038410ba4eeb8b36b65e",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "ae17529d24fe4a7393ca9c03"
+              },
+              "left": 720,
+              "top": 545,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "cd8828dace5b44cc95af103b",
+                "_parent": {
+                  "$ref": "4e67038410ba4eeb8b36b65e"
+                },
+                "model": {
+                  "$ref": "ae17529d24fe4a7393ca9c03"
+                },
+                "visible": true,
+                "left": 725,
+                "top": 550,
+                "width": 130,
+                "height": 40,
+                "text": "Marquer Arrive/Termine"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "8147d62806894c239efe46ec",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "2a9c51a5476f4e8ca38734cb"
+              },
+              "left": 720,
+              "top": 100,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "3c05665839ce468386fcdf72",
+                "_parent": {
+                  "$ref": "8147d62806894c239efe46ec"
+                },
+                "model": {
+                  "$ref": "2a9c51a5476f4e8ca38734cb"
+                },
+                "visible": true,
+                "left": 725,
+                "top": 105,
+                "width": 130,
+                "height": 40,
+                "text": "Envoyer rappels 24h/1h"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "6c64db9e2ebd4572b614a8ac",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "c4f7e3e20e32458b9db11016"
+              },
+              "left": 720,
+              "top": 175,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "a3308accdcaf4bd783d27cbd",
+                "_parent": {
+                  "$ref": "6c64db9e2ebd4572b614a8ac"
+                },
+                "model": {
+                  "$ref": "c4f7e3e20e32458b9db11016"
+                },
+                "visible": true,
+                "left": 725,
+                "top": 180,
+                "width": 130,
+                "height": 40,
+                "text": "Detecter creneaux vides"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "ae9c4efb9d1248a781e5fa43",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "c547cac49cee4d5ea4fb7ab8"
+              },
+              "left": 720,
+              "top": 250,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "9a9f4f59523f4737bcc61da9",
+                "_parent": {
+                  "$ref": "ae9c4efb9d1248a781e5fa43"
+                },
+                "model": {
+                  "$ref": "c547cac49cee4d5ea4fb7ab8"
+                },
+                "visible": true,
+                "left": 725,
+                "top": 255,
+                "width": 130,
+                "height": 40,
+                "text": "Frapper vouchers anniv."
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "a13b512d33434f63967486e9",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "e69e7dac4bdd4a24bcd31386"
+              },
+              "left": 720,
+              "top": 325,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "46f09cd8e0e14d34b137ef8a",
+                "_parent": {
+                  "$ref": "a13b512d33434f63967486e9"
+                },
+                "model": {
+                  "$ref": "e69e7dac4bdd4a24bcd31386"
+                },
+                "visible": true,
+                "left": 725,
+                "top": 330,
+                "width": 130,
+                "height": 40,
+                "text": "Recalculer durees moy."
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "00a96f5099bb41848425cfcf",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "fafa7a720f2149578b7e08d8"
+              },
+              "left": 720,
+              "top": 620,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "ae3f620f364f49acb6b412b9",
+                "_parent": {
+                  "$ref": "00a96f5099bb41848425cfcf"
+                },
+                "model": {
+                  "$ref": "fafa7a720f2149578b7e08d8"
+                },
+                "visible": true,
+                "left": 725,
+                "top": 625,
+                "width": 130,
+                "height": 40,
+                "text": "Classifier l'intention"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLUseCaseView",
+              "_id": "8d3b9452ab004196937c2e3c",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "ea28c85d886e4c6885e0049c"
+              },
+              "left": 280,
+              "top": 625,
+              "width": 140,
+              "height": 50,
+              "nameLabel": {
+                "_type": "LabelView",
+                "_id": "844900b0e6e94101816430a4",
+                "_parent": {
+                  "$ref": "8d3b9452ab004196937c2e3c"
+                },
+                "model": {
+                  "$ref": "ea28c85d886e4c6885e0049c"
+                },
+                "visible": true,
+                "left": 285,
+                "top": 630,
+                "width": 130,
+                "height": 40,
+                "text": "Lire ordonnance OCR"
+              },
+              "showStereotype": false,
+              "showVisibility": false
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "911f33c84080479a8b78d47a",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "790055eb83cd4c8ba07545d5"
+              },
+              "head": {
+                "$ref": "673239385b3048cf85130563"
+              },
+              "tail": {
+                "$ref": "8b01e18e2c3546eebc11fd2e"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "384965df1fbc41fba064a50b",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "3d0b024f6c844b2bba887c16"
+              },
+              "head": {
+                "$ref": "148a24ae208141bf9689f540"
+              },
+              "tail": {
+                "$ref": "8b01e18e2c3546eebc11fd2e"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "ea175ca180c345129c4749cd",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "b6e58714b82f41239745f292"
+              },
+              "head": {
+                "$ref": "ed35079584f146ed8c23efd9"
+              },
+              "tail": {
+                "$ref": "8b01e18e2c3546eebc11fd2e"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "f9ed5c145e4b4d3caad4ab50",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "c5c07931b3154707bcde6641"
+              },
+              "head": {
+                "$ref": "8a899f63b8db40729202f394"
+              },
+              "tail": {
+                "$ref": "8b01e18e2c3546eebc11fd2e"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "0440b5fd37514a7e95031390",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "511b3b8369ef40fa92e915d7"
+              },
+              "head": {
+                "$ref": "dc9b574fb87e46b88e8441f6"
+              },
+              "tail": {
+                "$ref": "8b01e18e2c3546eebc11fd2e"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "a4789e8a730141509d2f0270",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "1069ef00b1f945508bd654a5"
+              },
+              "head": {
+                "$ref": "5becb75fa2c34f4295656ffd"
+              },
+              "tail": {
+                "$ref": "8b01e18e2c3546eebc11fd2e"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "83cdab8b8ba44230b28d6461",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "b39724082bc74ce3918db599"
+              },
+              "head": {
+                "$ref": "55bec129675444efac33b9ec"
+              },
+              "tail": {
+                "$ref": "8b01e18e2c3546eebc11fd2e"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "963c1e7c3b3645d39311bdce",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "c222067dd52c4cb5a9888f03"
+              },
+              "head": {
+                "$ref": "3e8903c57d6f48c997095f3c"
+              },
+              "tail": {
+                "$ref": "26cb2fdb3fca4548891e86e7"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "98bc6bdb95d440dfb996d511",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "16ffa578f1cd48ad99c0e7a3"
+              },
+              "head": {
+                "$ref": "8a30b82a7aaf4dc7b9c3a14d"
+              },
+              "tail": {
+                "$ref": "26cb2fdb3fca4548891e86e7"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "079210d51a7047f2b5c2ebfc",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "5f845ede72ac463591071571"
+              },
+              "head": {
+                "$ref": "43e9524b29b64e719453ecf1"
+              },
+              "tail": {
+                "$ref": "26cb2fdb3fca4548891e86e7"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "1e49946b6dec4ca5843a3e57",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "e06bb0ce965047fbb3af40a7"
+              },
+              "head": {
+                "$ref": "92bd2f2e9e9a4ca5b209dd91"
+              },
+              "tail": {
+                "$ref": "26cb2fdb3fca4548891e86e7"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "4c507f5c3efd45ddb6426544",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "371b882c937043d0979b14cb"
+              },
+              "head": {
+                "$ref": "b39e329156e340b497fc7a7a"
+              },
+              "tail": {
+                "$ref": "26cb2fdb3fca4548891e86e7"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "76d2ac815d7244b391f5fa07",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "754c94bfea7c40ef854ee7f9"
+              },
+              "head": {
+                "$ref": "094f0b99792647fdb0461beb"
+              },
+              "tail": {
+                "$ref": "26cb2fdb3fca4548891e86e7"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "adab94ee2108466294621831",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "fae4f37e0d8d4241bdfe2aa7"
+              },
+              "head": {
+                "$ref": "24a6683b521d43dbb4aefa19"
+              },
+              "tail": {
+                "$ref": "26cb2fdb3fca4548891e86e7"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "f3d97fd8783d4a41b73ed0b1",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "1dba2a1ff20f448cb526a18e"
+              },
+              "head": {
+                "$ref": "b061164b5d794e9f8b5347b7"
+              },
+              "tail": {
+                "$ref": "5859f0bffb8f46878e59d74f"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "974dacaa543549fdbffd8f7d",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "9ff6328acbf446559375175e"
+              },
+              "head": {
+                "$ref": "4e67038410ba4eeb8b36b65e"
+              },
+              "tail": {
+                "$ref": "5859f0bffb8f46878e59d74f"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "7b6214e89d664d81902ed998",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "0b380994201a4af582ce80c8"
+              },
+              "head": {
+                "$ref": "92bd2f2e9e9a4ca5b209dd91"
+              },
+              "tail": {
+                "$ref": "5859f0bffb8f46878e59d74f"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "e63c8075da65407cab478f13",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "2a2f0c072a8f40868b501feb"
+              },
+              "head": {
+                "$ref": "8147d62806894c239efe46ec"
+              },
+              "tail": {
+                "$ref": "6f161da99f8f40f5a9083f29"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "d01d5574687f4beea903e1a8",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "ca85ca9d36b44f31a928181f"
+              },
+              "head": {
+                "$ref": "6c64db9e2ebd4572b614a8ac"
+              },
+              "tail": {
+                "$ref": "6f161da99f8f40f5a9083f29"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "7fe2c3ac06e14a7fa600dc6b",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "f47ee645166b4ae8a1290ca8"
+              },
+              "head": {
+                "$ref": "ae9c4efb9d1248a781e5fa43"
+              },
+              "tail": {
+                "$ref": "6f161da99f8f40f5a9083f29"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "00ea2d7c0ada47d59e07ac3f",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "432f4856722142a2b3b78c15"
+              },
+              "head": {
+                "$ref": "a13b512d33434f63967486e9"
+              },
+              "tail": {
+                "$ref": "6f161da99f8f40f5a9083f29"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "6efc3493ee14409bbbc032f3",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "8f688fcad9574ea2853cc2af"
+              },
+              "head": {
+                "$ref": "00a96f5099bb41848425cfcf"
+              },
+              "tail": {
+                "$ref": "1a60e8a412864f879aade278"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "e7916db6326348d0809e0cf2",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "e128b5822e2c43be8fec6d42"
+              },
+              "head": {
+                "$ref": "8d3b9452ab004196937c2e3c"
+              },
+              "tail": {
+                "$ref": "1a60e8a412864f879aade278"
+              },
+              "lineStyle": 0,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "ce12fe766faf4401838c1c26",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "7de8f2e3bad64b71b4a8b458"
+              },
+              "head": {
+                "$ref": "00a96f5099bb41848425cfcf"
+              },
+              "tail": {
+                "$ref": "673239385b3048cf85130563"
+              },
+              "lineStyle": 1,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "8414407ac8f8403eb0b7e54f",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "1919c28846714b83a4e981d6"
+              },
+              "head": {
+                "$ref": "00a96f5099bb41848425cfcf"
+              },
+              "tail": {
+                "$ref": "8a899f63b8db40729202f394"
+              },
+              "lineStyle": 1,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "e3265c79c94d40ce825b0a6c",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "1d467ddd578246ad92419f5c"
+              },
+              "head": {
+                "$ref": "00a96f5099bb41848425cfcf"
+              },
+              "tail": {
+                "$ref": "148a24ae208141bf9689f540"
+              },
+              "lineStyle": 1,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "25fc929d31144c5d854e53d2",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "68012b5d3046483195befe28"
+              },
+              "head": {
+                "$ref": "00a96f5099bb41848425cfcf"
+              },
+              "tail": {
+                "$ref": "094f0b99792647fdb0461beb"
+              },
+              "lineStyle": 1,
+              "points": "0:0;0:0"
+            },
+            {
+              "_type": "UMLAssociationView",
+              "_id": "672ab063daee44e481603631",
+              "_parent": {
+                "$ref": "64325c75ac394444ad0d49d0"
+              },
+              "model": {
+                "$ref": "26e9583e3d704f91a6746b94"
+              },
+              "head": {
+                "$ref": "8d3b9452ab004196937c2e3c"
+              },
+              "tail": {
+                "$ref": "ed35079584f146ed8c23efd9"
+              },
+              "lineStyle": 1,
+              "points": "0:0;0:0"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

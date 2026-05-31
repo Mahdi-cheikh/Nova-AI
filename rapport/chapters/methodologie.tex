@@ -1,154 +1,168 @@
-\section{Methodologie du projet}
-La gestion de projet est une etape essentielle pour assurer la livraison
-reussie d'une plateforme multi-locataire de receptionniste virtuelle.
-Plusieurs methodologies de gestion de projet sont disponibles pour aider
-les equipes a planifier, executer et adapter leur travail efficacement.
-Parmi celles-ci, la methodologie Scrum est particulierement adaptee aux
-projets qui combinent developpement d'IA conversationnelle, exigences
-metier evolutives, et retours rapides des clients --- caracteristiques
-qui definissent precisement le projet Nova~AI.
+La gestion de projet est une étape essentielle pour assurer la
+livraison réussie d'une plateforme multi-locataire de réceptionniste
+virtuelle. Plusieurs méthodologies sont disponibles pour aider à
+planifier, exécuter et adapter le travail efficacement. Parmi
+celles-ci, la méthodologie Scrum est particulièrement adaptée aux
+projets qui combinent développement d'IA conversationnelle,
+exigences métier évolutives et retours rapides des clients, des
+caractéristiques qui définissent précisément mon projet \nova.
 
-\subsection{La methode Scrum}
-Scrum est aujourd'hui la methode Agile la plus populaire. L'approche Scrum
-suit les principes du manifeste Agile, ce qui implique une participation
-active du client tout au long du projet. Le terme \og scrum \fg{} provient
-du vocabulaire sportif et designe la melee au rugby. Le principe de base
-est que l'equipe avance comme une seule unite et reste prete a reorienter
-le projet a mesure qu'il progresse, a l'image d'une melee ou les joueurs,
-en groupe solidaire, s'adaptent collectivement au mouvement du ballon.
+\subsection{La méthode Scrum}
+Scrum est aujourd'hui la méthode Agile la plus populaire. Elle suit
+les principes du manifeste Agile, ce qui implique une participation
+active du client tout au long du projet. Le terme «~scrum~» provient
+du vocabulaire sportif et désigne la mêlée au rugby : l'équipe
+avance comme une seule unité et reste prête à réorienter le projet
+à mesure qu'il progresse, à l'image d'une mêlée où les joueurs,
+en groupe solidaire, s'adaptent collectivement au mouvement du
+ballon.
 
-La methodologie Scrum repose sur des \emph{sprints}, qui sont des
-intervalles de temps relativement courts, generalement de deux a quatre
-semaines. A la fin de chaque sprint, l'equipe presente ce qu'elle a
-ajoute au produit. La figure \ref{fig:scrum-cycle} resume le cycle de vie
-d'un projet Scrum.
+La méthodologie Scrum repose sur des \emph{sprints}, qui sont des
+intervalles de temps courts, généralement de deux à quatre
+semaines. À la fin de chaque sprint, l'équipe présente ce qu'elle a
+ajouté au produit. La figure~\ref{fig:scrum-cycle} résume le
+processus Scrum sous forme de cycle itératif articulé autour du
+\emph{Product Backlog}, du \emph{Sprint Backlog}, du sprint
+lui-même et de l'incrément livré.
 
-\input{figures/scrum-cycle}
+\begin{figure}[H]\centering
+\includegraphics[width=.78\textwidth,height=1\textheight,keepaspectratio]{figures/scrum-cycle.png}
+\caption{Cycle de vie d'un projet Scrum : du Product Backlog à l'incrément livré.}\label{fig:scrum-cycle}
+\end{figure}
 
-Pour le projet Nova~AI, nous avons structure notre processus Scrum afin
-de prendre en compte trois flux de travail entrelaces : le developpement
-back-end sur Supabase (schema de base de donnees, fonctions Edge,
-souscriptions temps reel), le travail front-end sur le tableau de bord
-multi-locataire et la PWA patient, et l'ingenierie de prompts pour le
-receptionniste IA qui gere les conversations WhatsApp en arabe, francais
-et anglais.
+Concrètement, dans mon cas, j'ai adapté le Scrum à une réalité
+spécifique : un développeur unique avec une encadrante,
+\textbf{Mme Hana Derouiche}, qui joue à la fois le rôle de
+\emph{Product Owner} indirect (en validant le périmètre des
+sprints) et de coach méthodologique (en m'aidant à ne pas trop
+déborder sur les fonctionnalités). Nous avons gardé avec mon
+encadrante un point de suivi hebdomadaire, généralement par mail ou
+par appel, où je présentais ce qui avait été livré dans la semaine
+et ce que je prévoyais de démarrer la semaine suivante. Ces points
+jouaient le rôle de \emph{Sprint Review} informelle.
 
-\subsubsection{Roles Scrum}
+Pour le projet \nova, j'ai structuré le processus Scrum afin de
+prendre en compte trois flux de travail entrelacés : le
+développement back-end sur Supabase (schéma de base de données,
+fonctions Edge, souscriptions temps réel), le travail front-end sur
+le tableau de bord multi-locataire et la PWA patient, et
+l'ingénierie de prompts pour le réceptionniste IA qui gère les
+conversations WhatsApp en arabe, français et anglais.
+
+\subsubsection*{Rôles Scrum}
 \begin{itemize}
-  \item \textbf{L'equipe.} Responsable de transformer les exigences
-        definies par le Product Owner en fonctionnalites utilisables.
-        Dans notre projet, l'equipe est full-stack et combine ingenierie
-        front-end sur le tableau de bord, ingenierie back-end sur Postgres
-        et les fonctions Edge Deno, ingenierie IA pour le classifieur
-        d'intention base sur Claude et le verificateur de securite des
-        prescriptions, ainsi que conception UI/UX pour la page d'accueil
-        au theme \emph{anti-gravite} et l'interface de la PWA.
-  \item \textbf{Le Scrum Master.} Responsable de la comprehension, du
-        respect et de l'organisation de la methodologie Scrum. Il garantit
-        que les iterations de prompts IA, les migrations de schema et les
-        evolutions du tableau de bord progressent harmonieusement et
-        conformement aux principes de Scrum, en levant les obstacles tels
-        que les delais de verification de l'API Meta WhatsApp ou les
-        contraintes de quota d'ElevenLabs.
-  \item \textbf{Le Product Owner.} Represente generalement le client et
-        porte la vision du produit a creer. Pour notre projet, le role de
-        Product Owner agrege les perspectives de trois personae cibles :
-        un proprietaire de clinique tunisien, un responsable de
-        laboratoire d'analyses, et un medecin independant. Leurs points
-        de douleur recurrents (rendez-vous manques, prescriptions
-        manuscrites, prises de rendez-vous hors heures) ont oriente la
-        priorisation du Product Backlog.
+  \item \textbf{L'équipe.} Elle est responsable de transformer les
+        exigences définies par le Product Owner en fonctionnalités
+        utilisables. Dans mon projet, l'équipe se réduit à moi-même
+        et combine ingénierie front-end sur le tableau de bord,
+        ingénierie back-end sur Postgres et les fonctions Edge Deno,
+        ingénierie IA pour le classifieur d'intention basé sur Claude
+        et le vérificateur de sécurité des prescriptions, et
+        conception UI/UX pour la page d'accueil et l'interface de la
+        PWA.
+  \item \textbf{Le Scrum Master.} Il est responsable de la
+        compréhension, du respect et de l'organisation de la
+        méthodologie Scrum. Dans mon cas, ce rôle est assuré par mon
+        encadrante~: elle garantit que les itérations de prompts IA,
+        les migrations de schéma et les évolutions du tableau de
+        bord progressent harmonieusement et conformément aux
+        principes Scrum, en levant les obstacles tels que les
+        délais de vérification de l'API Meta WhatsApp.
+  \item \textbf{Le Product Owner.} Il représente généralement le
+        client et porte la vision du produit à créer. Pour mon
+        projet, le rôle de Product Owner regroupe les perspectives
+        de trois personas cibles que j'ai identifiés sur le
+        terrain~: un propriétaire de clinique tunisien, un
+        responsable de laboratoire d'analyses et un médecin
+        indépendant. Leurs points de douleur récurrents
+        (rendez-vous manqués, prescriptions manuscrites, prises de
+        rendez-vous hors heures) ont orienté la priorisation de mon
+        Product Backlog.
 \end{itemize}
 
-\subsubsection{Evenements Scrum}
+\subsubsection*{Événements Scrum}
 \begin{itemize}
-  \item \textbf{Sprint Planning.} Les taches a accomplir durant le sprint
-        sont determinees par l'ensemble de l'equipe Scrum lors de la
-        reunion de planification. Pour Nova~AI, cette planification couvre
-        a la fois le travail produit (un nouvel onglet du tableau de bord,
-        une migration Postgres, un gestionnaire de reponse a un bouton
-        WhatsApp) et le travail IA (raffinement de la machine d'etats de
-        prise de rendez-vous, extension du prompt de securite des
-        medicaments).
-  \item \textbf{Sprint Review.} Il s'agit de l'evaluation du sprint
-        accompli. Une fois le sprint termine, l'equipe et les parties
-        prenantes se reunissent pour valider ce qui a ete realise. Pour
-        notre projet, cela inclut la demonstration des nouveaux onglets du
-        tableau de bord, l'execution d'un parcours de prise de rendez-vous
-        de bout en bout sur un vrai numero Meta, et la revue des
+  \item \textbf{Sprint Planning.} Les tâches à accomplir durant le
+        sprint sont déterminées en début de sprint. Pour \nova,
+        cette planification couvre à la fois le travail produit
+        (un nouvel onglet du tableau de bord, une migration
+        Postgres, un gestionnaire de réponse à un bouton WhatsApp)
+        et le travail IA (raffinement de la machine d'états de
+        prise de rendez-vous, extension du prompt de sécurité des
+        médicaments).
+  \item \textbf{Sprint Review.} C'est l'évaluation du sprint
+        accompli. Une fois le sprint terminé, je présente à mon
+        encadrante ce qui a été réalisé. Pour mon projet, cela
+        inclut la démonstration des nouveaux onglets du tableau de
+        bord, l'exécution d'un parcours de prise de rendez-vous
+        bout-en-bout sur un vrai numéro Meta et la revue des
         transcriptions de l'IA sur les cas limites.
-  \item \textbf{Sprint Retrospective.} Vise a s'adapter aux changements et
-        a ameliorer continuellement le processus de mise en oeuvre.
-        L'equipe utilise la retrospective pour examiner le sprint termine
-        et determiner ce qui a bien fonctionne et ce qui doit etre
-        ameliore. Cette pratique a ete particulierement precieuse pour
-        affiner la strategie de prompt IA apres avoir observe des
-        mauvaises classifications en conditions reelles, et pour
-        renforcer les politiques de Row-Level Security multi-locataire
-        apres chaque nouvelle fonctionnalite.
-  \item \textbf{Daily Scrum.} Cette reunion quotidienne de quinze minutes
-        est tres importante. Son objet est de suivre la progression
-        quotidienne du sprint. Pour notre projet, le stand-up quotidien
-        couvre l'avancement des composants du tableau de bord, des
-        deploiements de fonctions Edge, des revisions de prompts IA et
-        des tests de migrations Supabase.
+  \item \textbf{Sprint Rétrospective.} Elle vise à s'adapter aux
+        changements et à améliorer continuellement le processus de
+        mise en œuvre. J'utilise la rétrospective pour examiner le
+        sprint terminé et déterminer ce qui a bien fonctionné et ce
+        qui doit être amélioré. Cette pratique m'a été
+        particulièrement précieuse pour affiner la stratégie de
+        prompt IA après avoir observé des mauvaises classifications
+        en conditions réelles, et pour renforcer les politiques de
+        Row-Level Security multi-locataire après chaque nouvelle
+        fonctionnalité.
+  \item \textbf{Daily Scrum.} Cette mini-réunion quotidienne de
+        quinze minutes a pour but de suivre la progression du
+        sprint. Dans mon cas, je l'ai adaptée en un point quotidien
+        que je tiens seul devant mon écran, en relisant ce que j'ai
+        livré la veille et en fixant les trois prochaines tâches.
 \end{itemize}
 
-\subsubsection{Artefacts Scrum}
+\subsubsection*{Artefacts Scrum}
 \begin{itemize}
-  \item \textbf{Le Product Backlog.} Une liste priorisee des exigences
-        initiales du client pour le produit a creer. Le Product Owner est
-        responsable du Product Backlog. Notre Product Backlog couvre les
-        user stories pour la prise de rendez-vous, les rappels, le
-        pipeline de laboratoire, le remplissage de creneaux a la demande,
-        l'apprentissage des durees de consultation, la securite des
-        medicaments, les profils de vehicules, les surprises
-        d'anniversaire, le check-in QR, la file d'attente en temps reel,
-        et l'application web progressive pour les patients.
-  \item \textbf{Le Sprint Backlog.} Le plan detaille pour atteindre
-        l'objectif du sprint, defini lors de la reunion de planification.
-        Pour notre projet, chaque Sprint Backlog contenait un melange de
-        migrations de base de donnees, de taches de fonctions Edge, de
-        travaux d'IHM et d'experiences d'ingenierie de prompts ---
-        typiquement de trois a six user stories dimensionnees pour tenir
-        dans un sprint de deux semaines.
+  \item \textbf{Le Product Backlog.} C'est la liste priorisée des
+        exigences initiales du client pour le produit à créer. Le
+        Product Owner en est responsable. Mon Product Backlog
+        \nova{} couvre les user stories pour la prise de rendez-vous,
+        les rappels, le pipeline de laboratoire, le remplissage de
+        créneaux à la demande, l'apprentissage des durées de
+        consultation, la sécurité des médicaments, les profils de
+        véhicules, les vouchers d'anniversaire, le check-in QR, la
+        file d'attente en temps réel et la PWA patient.
+  \item \textbf{Le Sprint Backlog.} C'est le plan détaillé pour
+        atteindre l'objectif du sprint, défini lors de la réunion de
+        planification. Chaque Sprint Backlog que j'ai construit
+        contenait un mélange de migrations de base de données, de
+        tâches de fonctions Edge, de travaux d'IHM et d'expériences
+        d'ingénierie de prompts, typiquement de trois à six user
+        stories de la bonne taille pour tenir dans un sprint de
+        deux à trois semaines.
 \end{itemize}
 
-\subsection{Justification du choix de la methodologie Agile Scrum}
-La methodologie Agile Scrum est particulierement adaptee au projet
-Nova~AI en raison de sa flexibilite intrinseque et de sa nature
-iterative, qui s'alignent bien avec les exigences evolutives d'une
-plateforme IA multi-locataire desservant des entreprises heterogenes
-(cliniques, laboratoires, salons, garages, medecins independants).
-Comme le systeme inclut des fonctionnalites avancees telles qu'un
-receptionniste IA multi-tour, une messagerie WhatsApp en temps reel,
-une OCR de prescriptions par modele de vision, des durees de
-consultation auto-apprises, du remplissage de creneaux a la demande,
-et une file d'attente en temps reel, Scrum a permis a l'equipe de
-livrer des increments fonctionnels de maniere fiable tout en
-accommodant les priorites changeantes.
+\subsection{Justification du choix de la méthodologie Agile Scrum}
+La méthodologie Agile Scrum est particulièrement adaptée à mon
+projet \nova{} en raison de sa flexibilité intrinsèque et de sa
+nature itérative, qui s'alignent bien avec les exigences évolutives
+d'une plateforme IA multi-locataire servant des entreprises
+hétérogènes (cliniques, laboratoires, salons, garages, médecins
+indépendants). Comme le système inclut des fonctionnalités avancées
+telles qu'un réceptionniste IA multi-tour, une messagerie WhatsApp
+en temps réel, une OCR de prescriptions par modèle de vision, des
+durées de consultation auto-apprises, du remplissage de créneaux à
+la demande et une file d'attente en temps réel, Scrum m'a permis de
+livrer des incréments fonctionnels de manière fiable tout en
+supportant les priorités changeantes.
 
-L'accent mis par la methodologie sur la collaboration trans-fonctionnelle
-a favorise une integration sans heurts entre la logique front-end
-(l'IHM du tableau de bord au theme anti-gravite), les services back-end
-(Postgres Supabase, fonctions Edge, Storage, Realtime) et les composants
-IA (Claude Haiku pour la classification d'intention, Claude Sonnet pour
-l'OCR des images de prescriptions, ElevenLabs en option pour le clonage
-vocal). De plus, son cadre ouvert avec des stand-ups quotidiens et des
-sprint reviews garantit que les parties prenantes restent engagees tout
-au long du processus de developpement.
+L'accent mis par la méthodologie sur la collaboration entre les
+différents flux a favorisé une intégration sans heurts entre la
+logique front-end (l'IHM du tableau de bord), les services back-end
+(Postgres Supabase, fonctions Edge, Storage, Realtime) et les
+composants IA (Claude Haiku pour la classification d'intention,
+Claude Sonnet pour l'OCR des images de prescriptions, ElevenLabs en
+option pour le clonage vocal). De plus, le cadre Scrum, avec ses
+revues régulières, a permis à mon encadrante de rester engagée
+tout au long du processus de développement.
 
-La methodologie a ete particulierement precieuse en cela qu'au fur et a
-mesure que le projet s'est etendu pour englober de nouveaux types
-d'entreprises et de nouvelles capacites --- profils de vehicules pour
-garages, gestion de file d'attente pour laboratoires, verificateur
-d'interactions medicamenteuses --- elle a soutenu une amelioration
-continue basee sur les retours utilisateurs reels et sur l'evolution
-des besoins du marche dans le contexte tunisien.
-
-Cette methode a ete tres benefique pour notre projet, car elle nous a
-permis de mettre en oeuvre efficacement la prise de rendez-vous assistee
-par IA, la gestion temps reel des rendez-vous, et les flux metiers
-intelligents pour les petites et moyennes entreprises tunisiennes, tout
-en restant centre sur les objectifs metier et en adressant les defis
-techniques d'un developpement SaaS multi-locataire.
+Cette méthode a été très bénéfique pour mon projet, car elle m'a
+permis de mettre en œuvre efficacement la prise de rendez-vous
+assistée par IA, la gestion temps réel des rendez-vous et les flux
+métiers intelligents pour les petites et moyennes entreprises
+tunisiennes, tout en restant centré sur les objectifs métier et
+en adressant les défis techniques d'un développement SaaS
+multi-locataire.

@@ -1,0 +1,34 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #64748b
+skinparam ArrowThickness 1.5
+
+skinparam rectangle {
+    BorderThickness 2
+    BackgroundColor<<front>>  #DBEAFE
+    BorderColor<<front>>      #2563EB
+    BackgroundColor<<back>>   #DCFCE7
+    BorderColor<<back>>       #16A34A
+    BackgroundColor<<ext>>    #FED7AA
+    BorderColor<<ext>>        #EA580C
+    BackgroundColor<<user>>   #F1F5F9
+    BorderColor<<user>>       #475569
+    FontStyle bold
+    FontSize 14
+}
+
+rectangle "ADMINISTRATEUR\n+\nPATIENT" as users <<user>>
+
+rectangle "COUCHE PRESENTATION\n(Frontends)\n----\nTableau de bord SPA\nPWA patient mobile\nPage marketing" as front <<front>>
+
+rectangle "COUCHE METIER & DONNEES\n(Backend Supabase)\n----\nPostgREST -- Auth -- Realtime\nEdge Functions (Deno)\nPostgreSQL + Row-Level Security\nStorage S3 + pg_cron" as back <<back>>
+
+rectangle "SERVICES EXTERNES\n(API tierces)\n----\nMeta WhatsApp Cloud API\nAnthropic Claude (LLM)\nOpenAI Whisper (STT)\nElevenLabs (TTS)" as ext <<ext>>
+
+users -down-> front : interagit\nvia navigateur
+front -down-> back  : HTTPS / WebSocket
+back  -down-> ext   : Webhook / API REST
+
+@enduml

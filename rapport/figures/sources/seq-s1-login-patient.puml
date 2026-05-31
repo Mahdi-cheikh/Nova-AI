@@ -1,0 +1,33 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 12
+skinparam ParticipantBackgroundColor #E0E7FF
+skinparam ParticipantBorderColor #6366f1
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorBorderColor #6366f1
+skinparam ArrowColor #475569
+
+actor "Patient" as P
+participant "PWA Nova" as PWA
+participant "send-whatsapp-otp\n(Edge Function)" as SendOtp
+participant "verify-whatsapp-otp\n(Edge Function)" as VerifyOtp
+participant "Meta WhatsApp\nCloud API" as Meta
+database "Postgres + RLS" as DB
+
+P -> PWA : saisit numero de telephone
+PWA -> SendOtp : POST /send-otp { phone }
+SendOtp -> SendOtp : genere code 6 chiffres + hash SHA-256
+SendOtp -> DB : INSERT otp_requests(phone, code_hash, expires_at)
+SendOtp -> Meta : sendTextMessage(phone, "Votre code: 123456")
+Meta --> P : message WhatsApp recu
+P -> PWA : saisit le code recu
+PWA -> VerifyOtp : POST /verify-otp { phone, code }
+VerifyOtp -> DB : SELECT otp_requests (verifie hash, non expire)
+DB --> VerifyOtp : OK
+VerifyOtp -> DB : UPDATE otp_requests SET verified=true
+VerifyOtp -> DB : RPC pwa_claim_phone(phone) -- fusionne historiques
+DB --> VerifyOtp : client_id unifie
+VerifyOtp --> PWA : JWT patient + client_id
+PWA --> P : accueil PWA (RDV, profil, file d'attente)
+
+@enduml

@@ -1,0 +1,99 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 12
+skinparam classFontStyle bold
+
+skinparam class {
+    BackgroundColor #E0E7FF
+    BorderColor #6366f1
+    BorderThickness 1.2
+}
+
+class Client {
+    + id : UUID
+    + business_id : UUID
+    + name : text
+    + phone : text
+    + phone_verified_at : timestamp
+    + pwa_token : text
+    --
+    + verifyOTP()
+    + mergePhone()
+}
+
+class Appointment {
+    + id : UUID
+    + business_id : UUID
+    + client_id : UUID
+    + service_id : UUID
+    + user_id : UUID
+    + scheduled_at : timestamp
+    + status : enum
+    + arrived_at : timestamp
+    + completed_at : timestamp
+    --
+    + create()
+    + markArrived()
+    + markCompleted()
+}
+
+class Notification {
+    + id : UUID
+    + business_id : UUID
+    + user_id : UUID
+    + type : enum
+    + channel : enum
+    + payload : jsonb
+    + status : enum
+    + read_at : timestamp
+    --
+    + push()
+    + markRead()
+}
+
+class Document {
+    + id : UUID
+    + business_id : UUID
+    + client_id : UUID
+    + appointment_id : UUID
+    + media_id : text
+    + storage_path : text
+    + ocr_result : jsonb
+    + ocr_status : enum
+    --
+    + uploadFromWhatsApp()
+    + runOCR()
+    + attachToAppointment()
+}
+
+class OTPRequest {
+    + id : UUID
+    + phone : text
+    + code_hash : text
+    + expires_at : timestamp
+    + verified : bool
+    --
+    + generate()
+    + verify()
+}
+
+class CheckInToken {
+    + id : UUID
+    + appointment_id : UUID
+    + qr_payload : text
+    + valid_from : timestamp
+    + valid_to : timestamp
+    + used : bool
+    --
+    + issue()
+    + consume()
+}
+
+Client "1" -- "*" Appointment
+Client "1" -- "*" Document
+Client "0..1" -- "*" OTPRequest
+Appointment "1" -- "0..1" CheckInToken
+Appointment "0..1" -- "*" Document
+Appointment "1" -- "*" Notification : declenche >
+
+@enduml

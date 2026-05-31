@@ -1,0 +1,103 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 12
+skinparam classFontStyle bold
+
+skinparam class {
+    BackgroundColor #E0E7FF
+    BorderColor #6366f1
+    BorderThickness 1.2
+}
+
+class Business {
+    + id : UUID
+    + name : text
+    + type : enum
+    + owner_user_id : UUID
+    + working_hours : jsonb
+    --
+    + create()
+    + update()
+}
+
+class User {
+    + id : UUID
+    + business_id : UUID
+    + auth_uid : UUID
+    + name : text
+    + email : text
+    + role : enum
+    --
+    + invite()
+    + linkAuth()
+}
+
+class AuthUser <<Supabase>> {
+    + uid : UUID
+    + email : text
+    + confirmed_at : timestamp
+    --
+    + sendMagicLink()
+    + signOut()
+}
+
+class Client {
+    + id : UUID
+    + business_id : UUID
+    + name : text
+    + phone : text
+    + language_pref : enum
+    --
+    + register()
+}
+
+class Service {
+    + id : UUID
+    + business_id : UUID
+    + name : text
+    + duration_min : int
+    + price : decimal
+    --
+    + create()
+}
+
+class Appointment {
+    + id : UUID
+    + business_id : UUID
+    + client_id : UUID
+    + service_id : UUID
+    + scheduled_at : timestamp
+    + status : enum
+    + reminder_sent_24h : bool
+    + reminder_sent_1h : bool
+    --
+    + create()
+    + confirm()
+    + cancel()
+}
+
+class Message {
+    + id : UUID
+    + business_id : UUID
+    + client_id : UUID
+    + direction : enum
+    + content : text
+    + language : enum
+    + intent : text
+    --
+    + persist()
+    + classify()
+}
+
+Business "1" *-- "*" User
+Business "1" *-- "*" Client
+Business "1" *-- "*" Service
+Business "1" *-- "*" Appointment
+Business "1" *-- "*" Message
+
+User "0..1" -- "0..1" AuthUser
+Client "1" -- "*" Appointment
+Service "1" -- "*" Appointment
+Client "1" -- "*" Message
+
+@enduml

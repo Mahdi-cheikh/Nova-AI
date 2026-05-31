@@ -1,233 +1,323 @@
-\chapter{Cadre general du projet}
+\chapter{Présentation du cadre général}
 
 \section{Introduction}
-Avant de presenter les artefacts techniques de Nova~AI, il convient de
-decrire le cadre dans lequel le projet s'inscrit. Ce premier chapitre est
-donc essentiellement contextuel. Nous commencons par presenter l'organisme
-d'accueil dans lequel le projet a pris forme, puis nous elargissons la
-perspective au paysage des PME tunisiennes qui a motive le travail. Une
-analyse critique des modes de communication existants permettra de poser la
-problematique en termes concrets. De la problematique decoulera la solution
-proposee --- la plateforme elle-meme --- et nous cloturons le chapitre par
-la methodologie de gestion de projet (Agile Scrum) adoptee pour la
-realisation iterative.
+Ce premier chapitre pose le cadre général dans lequel s'inscrit mon
+projet de fin d'études \nova. Je commence par présenter l'organisme
+d'accueil, l'ISMAIK, puis j'élargis la perspective au contexte
+tunisien à travers une étude de l'existant. J'en déduis la
+problématique observée sur le terrain et la solution que je propose
+pour y répondre. Je termine par la méthodologie de gestion de
+projet que j'ai adoptée (Agile Scrum) et par la démarche de
+conception que j'ai suivie.
 
-\section{Presentation de l'organisme d'accueil}
+\section{Présentation de l'organisme d'accueil}
 
 \subsection{Bref historique}
-\textit{[Remplacer ce paragraphe par l'historique reel de votre organisme
-d'accueil : date de fondation, marches geographiques desservis, jalons
-notables, mission. Si Nova~AI a ete realise comme un projet entrepreneurial
-personnel plutot qu'au sein d'une entreprise, remplacer cette section par une
-description du marche cible : le paysage des PME tunisiennes, la penetration
-de WhatsApp dans le pays, et le contexte reglementaire pertinent.]}
+L'organisme d'accueil de mon projet est l'\textbf{Institut Supérieur
+d'Informatique et de Mathématiques de Kairouan (ISMAIK)},
+établissement public d'enseignement supérieur sous tutelle du
+Ministère de l'Enseignement Supérieur et de la Recherche
+Scientifique et rattaché à l'\textbf{Université de Kairouan}. Il est
+situé Avenue Assad Iben Fourat à Kairouan (3100), au cœur du
+gouvernorat.
 
-A titre d'exemple a remplacer : \og [Nom de l'entreprise] est une societe
-tunisienne de developpement logiciel fondee en [annee], specialisee dans la
-realisation d'applications web sur mesure pour le secteur de la sante et
-des services. Au cours de la derniere decennie, l'entreprise a livre [N]
-projets a des clients allant de petites cliniques familiales a des reseaux
-de laboratoires de taille moyenne dans la region du Grand Tunis, accumulant
-une expertise sectorielle dans l'economie des services de prise de
-rendez-vous. \fg{}
+L'institut a été créé en \textbf{2003} dans le cadre du plan
+national de développement de l'enseignement supérieur technologique,
+avec pour mission de former des cadres compétents en informatique et
+en mathématiques appliquées au service du tissu économique régional.
+Vingt ans après son ouverture, l'ISMAIK accueille aujourd'hui
+plus de \textbf{1\,500 étudiants} et emploie environ
+\textbf{cinquante enseignants-chercheurs et personnels administratifs}.
 
-\subsection{Activites}
-L'organisme d'accueil se positionne sur quatre principales lignes
-d'activite :
-
-\begin{itemize}
-  \item \textbf{Developpement d'applications web sur mesure} --- des
-        plateformes administratives concues specifiquement pour des
-        cliniques, des etablissements scolaires, des cabinets professionnels
-        ou des organismes publics, generalement construites sur des piles
-        JavaScript modernes (React, Next.js) avec des bases de donnees
-        PostgreSQL ou Supabase.
-  \item \textbf{Developpement d'applications mobiles} --- des applications
-        natives et hybrides pour iOS et Android, avec un accent particulier
-        sur les experiences orientees patient ou client qui completent les
-        plateformes web.
-  \item \textbf{Conseil en integration d'IA} --- l'entreprise accompagne
-        ses clients dans l'identification des taches cognitives repetitives
-        que les modeles de langage modernes peuvent prendre en charge
-        (triage de messages clients, extraction de donnees structurees a
-        partir de documents scannes, redaction de reponses recurrentes).
-  \item \textbf{Maintenance et support} --- accompagnement technique de
-        long terme apres livraison, incluant les evolutions incrementales,
-        la correction de bugs, l'optimisation des performances et les
-        audits de securite.
-\end{itemize}
-
-\subsection{Structure organisationnelle}
-La structure de l'organisme se décline en trois niveaux hiérarchiques. La
-direction générale supervise quatre départements opérationnels (Technique,
-Commercial, Administratif et Ressources Humaines), chacun composé de
-sous-unités spécialisées : pôles de Développement, IA \& Data et DevOps
-pour le département technique~; services Ventes et Marketing pour le
-commercial~; Comptabilité et Cellule Juridique pour l'administratif~;
-Recrutement et Formation pour les RH. Le stagiaire a été rattaché
-fonctionnellement au pôle IA \& Data pendant toute la durée du projet,
-conformément à la nature très IA-centrique du livrable.
-La figure~\ref{fig:organigramme} formalise cette structure.
-
-\input{figures/organigramme}
-
-L'equipe est structuree autour de trois poles. Le premier, \emph{developpement},
-regroupe des ingenieurs full-stack qui interviennent aussi bien sur le
-front-end que sur le back-end. Le second, \emph{conception et produit},
-reunit les designers UI/UX et le chef de projet qui assure l'interface avec
-les clients. Le troisieme, \emph{operations et support}, garantit que les
-projets livres continuent a fonctionner correctement apres deploiement. Le
-projet Nova~AI a mobilise les trois poles, car il a necessite non seulement
-un travail d'ingenierie consequent, mais aussi des decisions produit
-importantes (priorisation des fonctionnalites) et une planification
-operationnelle (deploiement, monitoring, support).
-
-\section{Etude du contexte}
-
-\subsection{Le paysage des PME de service en Tunisie}
-Avant de discuter de ce qui dysfonctionne dans l'organisation existante, il
-est utile de quantifier l'echelle du probleme. Selon les chiffres recents
-de l'Institut National de la Statistique (INS) et de l'Agence Nationale
-pour l'Emploi et le Travail Independant (ANETI), la Tunisie compte
-approximativement 600\,000 entreprises enregistrees, dont plus de 90\%
-classees comme petites ou moyennes entreprises. Les entreprises orientees
-service constituent la plus large categorie unique : le seul secteur de la
-sante regroupe plus de 17\,000 cliniques privees, cabinets medicaux et
-laboratoires d'analyses. Si l'on y ajoute la longue liste des salons de
-coiffure, des ateliers automobiles, des cabinets juridiques et comptables,
-l'univers des PME pertinentes pour Nova~AI depasse 80\,000 locataires
-potentiels.
-
-La penetration de WhatsApp en Tunisie figure parmi les plus elevees du
-Maghreb. Les enquetes recentes situent la possession de smartphones a plus
-de 75\% dans la population urbaine, WhatsApp etant l'application de
-messagerie dominante. Pour la plupart des proprietaires de PME de service,
-WhatsApp n'est pas simplement un canal parmi d'autres : il s'agit du canal
-par lequel transite la majorite des interactions clients.
-
-\subsection{Etude de l'existant}
-Une etude de terrain conduite sur deux semaines (deux cliniques, un
-laboratoire, un atelier de mecanique et un salon de coiffure dans la
-region de Tunis) a confirme l'uniformite du processus de travail. Le
-proprietaire ou un secretaire detient un telephone. Les messages WhatsApp
-arrivent tout au long de la journee. Chaque message est lu, interprete,
-parfois mentalement traduit, puis traite manuellement. Pour une demande
-de rendez-vous, l'assistant feuillette l'agenda papier, cherche un
-creneau disponible, retape le creneau dans WhatsApp, attend la confirmation,
-puis inscrit le nom et le numero du patient dans l'agenda. Le processus
-complet prend entre trente secondes (pour un client regulier) et quatre
-minutes (pour un nouveau client necessitant des explications).
-
-Plusieurs inconvenients de cette organisation sont apparus immediatement
-durant l'etude de terrain :
+L'établissement est organisé autour de deux départements
+pédagogiques : le \textbf{Département d'Informatique} et le
+\textbf{Département de Mathématiques}. La formation est dispensée
+selon le système LMD (Licence -- Mastère -- Doctorat) et couvre
+plusieurs spécialités complémentaires :
 
 \begin{itemize}
-  \item \textbf{Les messages hors heures de travail restent sans reponse.}
-        Un patient qui ecrit a 21h30 attendra typiquement le matin pour
-        obtenir une reponse. Le temps que le secretaire traite le message,
-        le patient peut avoir deja reserve ailleurs.
-  \item \textbf{Les proprietaires sont constamment interrompus.} Chaque
-        question de prise de rendez-vous oblige le proprietaire --- ou le
-        medecin, dans les pratiques solo --- a interrompre la tache en
-        cours. Dans l'une des cliniques observees, le cardiologue a ete
-        interrompu sept fois durant une consultation de trente minutes.
-  \item \textbf{Les enregistrements sont fragmentes.} Les rendez-vous
-        vivent dans l'agenda papier, les informations clients dans les
-        fils WhatsApp, la facturation dans un cahier separe, et les
-        resultats de laboratoire dans un troisieme systeme. Le
-        rapprochement croise necessite des recherches manuelles.
-  \item \textbf{Fragmentation linguistique.} La clientele tunisienne
-        alterne fluidement entre l'arabe dialectal, le francais et
-        l'anglais, souvent au sein d'un meme message. Un secretaire dont
-        la maitrise du francais est hesitante produira des reponses plus
-        lentes et moins polies --- une perte petite mais cumulative de
-        qualite percue du service.
-  \item \textbf{Aucune visibilite analytique.} Le proprietaire n'a aucun
-        moyen simple de repondre a des questions operationnelles
-        elementaires : quel jour de la semaine est le plus charge, quel
-        service genere le plus de revenus, combien de patients n'ont pas
-        consulte depuis six mois, quel est le delai moyen de reponse sur
-        WhatsApp.
-  \item \textbf{Aucun filet de securite.} Si le secretaire oublie de noter
-        un rendez-vous, celui-ci est tout simplement perdu. Aucun
-        historique d'audit n'existe.
+  \item \textbf{Licence en Sciences Informatiques --
+        Informatique et Multimédia} : développement web et mobile,
+        traitement de l'image, multimédia interactif.
+  \item \textbf{Licence en Sciences Informatiques --
+        Systèmes Embarqués (SE)} : programmation système, Internet
+        des Objets (IoT), électronique numérique.
+  \item \textbf{Licence en Réseaux et Télécommunications (RT)} :
+        administration des réseaux, services réseau, sécurité.
+  \item \textbf{Licence en Technologie Numérique du Son et de
+        l'Image (TNSI)} : production audiovisuelle numérique,
+        post-production.
+  \item \textbf{Mastère de Recherche en Sciences des Données} :
+        apprentissage automatique, fouille de données, big data.
+  \item \textbf{Mastère de Recherche en Mathématiques et
+        Applications} : modélisation, statistique, recherche
+        opérationnelle.
+  \item \textbf{Mastère Professionnel en Administration et
+        Sécurité des Systèmes Informatiques et Réseaux} :
+        cybersécurité, audit, gouvernance des SI.
 \end{itemize}
 
-\subsection{Solutions existantes et leurs limites}
-Des produits generiques de prise de rendez-vous existent sur le marche
-international (Calendly, SimplyBook.me, Setmore), et plusieurs initiatives
-regionales ont tente de construire des outils similaires pour le Maghreb
-(Tabib.tn, Doctena, DabaDoc). Toutes presentent un ou plusieurs des
-angles morts suivants : la plupart obligent le client a quitter WhatsApp
-pour un formulaire web ou une application separee --- un point de friction
-qui fait perdre un tiers des reservations potentielles ; aucune ne
-comprend nativement l'arabe dialectal tunisien ; les tarifs sont calibres
-pour des cliniques europeennes ou du Golfe (typiquement 30 a 80 euros par
-mois et par praticien) --- soit cinq a dix fois le maximum que paie une
-PME tunisienne ; peu offrent des extensions sectorielles specifiques ; et
-les capacites d'IA, lorsqu'elles existent, se limitent a des reponses par
-modele.
+L'institut a noué plusieurs partenariats académiques nationaux
+(notamment avec l'ISSAT de Kairouan) et internationaux (avec la
+Faculté des Sciences et Techniques de l'Université de Limoges, en
+France) qui permettent à ses étudiants de bénéficier de doubles
+diplômations et de stages à l'étranger.
 
-L'ecart de marche est donc precis : \emph{une plateforme verticale
-flexible, native WhatsApp, multilingue, pilotee par IA, et tarifee pour le
-marche tunisien}. C'est cet ecart que Nova~AI cherche a combler.
+\begin{figure}[!htbp]\centering
+\includegraphics[width=1.\textwidth,keepaspectratio]{chapters/logo_ISMAI.jpg}
+\caption{Logo de l'ISMAIK.}\label{fig:Logo}
+\end{figure}
 
-\subsection{Problematique}
-Nous pouvons maintenant formuler la problematique en une phrase. \textbf{Les
-petites et moyennes entreprises de service tunisiennes ont besoin d'une
-plateforme de communication et de prise de rendez-vous abordable,
-multilingue et permanente, qui fonctionne a l'interieur de WhatsApp, tout
-en consolidant les rendez-vous, l'historique client, les conversations et
-les analyses operationnelles dans un tableau de bord unique pour le
-proprietaire, avec des extensions sectorielles pour les verticaux qu'elles
-servent reellement.}
+\subsection{Activités}
+L'ISMAIK se positionne, à travers les projets de fin d'études de ses
+étudiants et les conventions de stage qu'il signe avec les
+entreprises de la région, sur quatre principales lignes d'activité :
 
-Resoudre cette problematique impose de repondre a plusieurs sous-questions :
+\begin{itemize}
+  \item \textbf{Développement d'applications web sur mesure} pour
+        des cliniques, des établissements scolaires, des cabinets
+        professionnels et des organismes publics, généralement bâties
+        sur des piles JavaScript modernes (React, Next.js) avec des
+        bases de données PostgreSQL ou Supabase.
+  \item \textbf{Développement d'applications mobiles} natives et
+        hybrides pour iOS et Android, avec un accent particulier sur
+        les expériences orientées patient ou client.
+  \item \textbf{Conseil en intégration d'intelligence artificielle} :
+        identification des tâches cognitives répétitives que les
+        modèles de langage modernes peuvent prendre en charge
+        (triage de messages clients, extraction de données
+        structurées à partir de documents scannés).
+  \item \textbf{Maintenance et support}, accompagnement technique
+        de long terme après livraison incluant évolutions
+        incrémentales, correction de bugs et audits de sécurité.
+\end{itemize}
 
+\subsection{Structure organisationnelle de l'organisme d'accueil}
+La figure~\ref{fig:organigramme} présente l'organigramme de
+l'institut.
+
+\begin{figure}[!htbp]\centering
+\includegraphics[width=.95\textwidth,height=1\textheight,keepaspectratio]{figures/organigramme.png}
+\caption{Organigramme de l'ISMAIK.}\label{fig:organigramme}
+\end{figure}
+
+La Direction de l'institut supervise plusieurs services : la
+Direction des Études, qui regroupe les départements pédagogiques
+d'Informatique et de Mathématiques ; le Service des Stages et des
+Relations Extérieures, qui sert de pont entre les étudiants en fin
+de cycle et le tissu professionnel ; et les Services Administratifs
+(Comptabilité, Ressources Humaines, Affaires Générales) qui assurent
+la gestion courante. Le présent stage a été suivi du côté
+pédagogique par mon encadrante \textbf{Mme Hana Derouiche},
+rattachée au Département d'Informatique, et du côté administratif
+par le Service des Stages.
+
+\section{Contexte et cadre général}
+
+\subsection{Étude de l'existant}
+Avant de discuter de la problématique, il convient de quantifier
+l'échelle du marché cible et d'observer la manière dont les acteurs
+de ce marché travaillent au quotidien. Le tissu économique tunisien
+repose sur des milliers de \textbf{petites et moyennes entreprises
+(PME) de service} : cliniques, cabinets médicaux, laboratoires
+d'analyses, salons de coiffure, garages automobiles, cabinets
+juridiques et professionnels indépendants. Selon l'Institut National
+de la Statistique (INS), la Tunisie compte environ
+\textbf{600\,000 entreprises} enregistrées, dont plus de
+\textbf{90\,\%} sont classées comme PME. Le seul secteur de la santé
+regroupe plus de \textbf{17\,000 cliniques privées, cabinets médicaux
+et laboratoires}, auxquels s'ajoutent les milliers de salons,
+ateliers et cabinets professionnels.
+
+La pénétration de WhatsApp en Tunisie figure parmi les plus élevées
+du Maghreb. Pour la plupart des propriétaires de PME de service,
+WhatsApp n'est pas un canal de communication parmi d'autres : il
+s'agit du \emph{seul} canal par lequel transite la majorité de leurs
+interactions clients. Mon point de départ a été une série
+d'entretiens informels avec des proches qui possèdent leurs propres
+petites entreprises de service à Kairouan. Tous m'ont décrit le même
+processus de travail manuel : agenda papier posé sur le comptoir,
+téléphone qui sonne en continu, lecture-interprétation-réponse de
+chaque message WhatsApp à la main, dispersion des informations
+clients sur plusieurs supports (cahier, conversation WhatsApp,
+carnet de rendez-vous séparé).
+
+Plusieurs produits, \textbf{internationaux comme nationaux}, occupent
+déjà une partie de l'espace de la prise de rendez-vous en ligne.
+Le tableau~\ref{tab:solutions} synthétise les acteurs les plus
+visibles sur ce marché, leurs fonctionnalités principales et leurs
+limites observées.
+
+\begin{table}[H]
+  \centering\small
+  \caption{Comparatif des solutions existantes.}
+  \label{tab:solutions}
+  \renewcommand{\arraystretch}{1.45}
+  \begin{tabular}{|m{2.4cm}|>{\raggedright\arraybackslash}m{5cm}|>{\raggedright\arraybackslash}m{5.5cm}|}
+    \hline\hline
+    \textbf{Solution} & \textbf{Fonctionnalités} & \textbf{Limites} \\
+    \hline
+    \includegraphics[width=2.2cm,height=1cm,keepaspectratio]{figures/logos/calendly.png}
+      & Lien de réservation, intégration agenda, rappels email/SMS, paiement Stripe.
+      & Pas de WhatsApp natif, interface anglo-saxonne, tarif en euros peu adapté. \\
+      \hline
+    \includegraphics[width=2.2cm,height=1cm,keepaspectratio]{figures/logos/simplybookme.png}
+      & Page de réservation, gestion d'équipe, marketing email.
+      & Friction de redirection hors WhatsApp, absence d'arabe dialectal. \\
+      \hline
+    \includegraphics[width=2.2cm,height=1cm,keepaspectratio]{figures/logos/setmore.png}
+      & Calendrier multi-employés, rappels SMS, intégrations Zoom.
+      & Modèle freemium limité, pas d'IA conversationnelle. \\
+      \hline
+    \includegraphics[width=2.2cm,height=1cm,keepaspectratio]{figures/logos/tabibtn.png}
+      & Annuaire de praticiens tunisiens, RDV médical en ligne.
+      & Cantonné au médical, sans IA, portail web séparé de WhatsApp. \\
+      \hline
+    \includegraphics[width=2.2cm,height=1cm,keepaspectratio]{figures/logos/doctena.png}
+      & Plateforme médicale européenne avec présence au Maghreb.
+      & Tarification européenne, pas d'IA dialectale, focus médical. \\
+      \hline
+    \includegraphics[width=2.2cm,height=1cm,keepaspectratio]{figures/logos/dabadoc.png}
+      & Réservation médicale Maghreb, application mobile.
+      & Concentrée sur les médecins, peu d'analytique. \\
+    \hline\hline
+  \end{tabular}
+\end{table}
+
+Trois angles morts récurrents émergent de ce comparatif :
+\emph{la friction de canal} (toutes ces solutions imposent au
+client de quitter WhatsApp), \emph{l'absence de prise en charge
+native de l'arabe dialectal tunisien} et \emph{l'inadéquation
+tarifaire} (30 à 80~EUR/mois/praticien, soit cinq à dix fois le
+budget mensuel raisonnable d'une PME tunisienne). C'est précisément
+cet espace vacant qui justifie le projet \nova.
+
+\subsection{Problématique}
+À partir de l'étude précédente, je formule la problématique en une
+phrase. \textbf{Les petites et moyennes entreprises de service
+tunisiennes ont besoin d'une plateforme de communication et de
+prise de rendez-vous abordable, multilingue et permanente, qui
+fonctionne à l'intérieur de WhatsApp, tout en consolidant les
+rendez-vous, l'historique client, les conversations et les analyses
+opérationnelles dans un tableau de bord unique pour
+l'administrateur, avec des extensions sectorielles pour les
+verticaux qu'elles servent réellement.}
+
+Résoudre cette problématique impose de répondre à plusieurs
+sous-questions :
 \begin{enumerate}
-  \item Comment interpreter de maniere fiable l'intention de prise de
-        rendez-vous en arabe dialectal, francais et anglais, sachant que
-        les clients melangent librement les langues au sein d'un meme
-        message ?
-  \item Comment garantir qu'une entreprise ne voie jamais les donnees
-        d'une autre entreprise, alors meme qu'elles partagent toutes la
-        meme infrastructure backend ?
-  \item Comment gerer des conversations multi-tours --- nom, age,
-        service, date, heure --- sans perdre l'etat lorsqu'un client
-        disparait pendant une heure puis revient ?
-  \item Comment extraire des donnees structurees (noms d'analyses,
-        medicaments, plaques d'immatriculation) depuis des photographies
-        de documents manuscrits que les clients envoient sans formalite ?
-  \item Comment recuperer les creneaux vides du calendrier sans saturer
-        la base clients de messages promotionnels ?
-  \item Comment maintenir la plateforme operationnelle dans un budget
-        compatible avec un objectif d'abonnement de 50 dinars par mois ?
+  \item Comment interpréter de manière fiable l'intention de prise
+        de rendez-vous en arabe dialectal, français et anglais,
+        sachant que les clients mélangent librement les langues au
+        sein d'un même message~?
+  \item Comment garantir qu'une entreprise ne voie jamais les
+        données d'une autre, alors que toutes partagent la même
+        infrastructure backend~?
+  \item Comment gérer des conversations multi-tours sans perdre
+        l'état lorsqu'un client disparaît puis revient~?
+  \item Comment extraire des données structurées depuis des
+        photographies de documents manuscrits~?
+  \item Comment maintenir l'ensemble dans un budget compatible avec
+        un abonnement mensuel de 50~TND par PME~?
 \end{enumerate}
 
-\subsection{Solution proposee}
-Pour repondre a ces sous-questions, nous avons concu et realise \nova,
-une plateforme SaaS multi-locataire composee de sept composants
-interconnectes. La figure \ref{fig:nova-archi} resume l'architecture.
+\subsection{Solution proposée}
+Pour répondre à cette problématique, je propose \nova, une
+plateforme SaaS multi-locataire qui combine quatre briques : un
+canal conversationnel WhatsApp, un cerveau IA pour l'interprétation
+et la prise de décision, une couche de persistance sécurisée par
+locataire, et deux surfaces utilisateurs distinctes (tableau de bord
+administrateur et application web progressive patient).
+L'architecture globale est détaillée au chapitre suivant
+(figure~\ref{fig:nova-archi}, présentée dans la section consacrée
+à l'architecture globale de l'application).
 
-\input{figures/nova-archi}
+\paragraph{Idées directrices.}
+J'ai construit la solution autour de quatre idées directrices. La
+première est de \textbf{rester dans WhatsApp} : le client ne doit
+jamais quitter sa messagerie favorite pour réserver, confirmer,
+annuler ou recevoir un rappel. La seconde est de \textbf{parler la
+langue du client} : le système doit comprendre et répondre en arabe
+dialectal tunisien, en français et en anglais, et tolérer le
+\emph{code-switching} dans un même message. La troisième est de
+\textbf{mettre l'IA au cœur de l'expérience} : elle n'est pas un
+ajout cosmétique mais le moteur central de la conversation, de
+l'extraction d'informations et de la prise de décision
+opérationnelle. La quatrième est de \textbf{verticaliser sans
+complexifier} : les extensions sectorielles (clinique, laboratoire,
+garage, salon) cohabitent dans la même base de code, activables par
+configuration.
 
-Les sept composants sont : (1) le canal conversationnel WhatsApp Business
-Cloud API, enregistre au numero de telephone de chaque locataire ; (2) le
-recepteur de webhook (\texttt{whatsapp-webhook}), une fonction Edge
-Supabase qui dispatche chaque message a la bonne entreprise ; (3) le
-cerveau IA (\texttt{classify-message}), une seconde fonction Edge qui
-encapsule Claude Haiku avec un prompt systeme produisant du JSON
-structure ; (4) la couche de persistance, une base Postgres Supabase
-avec Row-Level Security ; (5) le tableau de bord proprietaire, une
-application monopage servie depuis Vercel ; (6) la PWA patient
-(\texttt{/pwa/}), separee mais connectee au meme backend ; (7) la couche
-de cron \texttt{pg\_cron} qui declenche les rappels, les campagnes de
-remplissage de creneaux et les batchs d'anniversaire.
+\paragraph{Objectifs concrets.}
+Ces idées se traduisent en objectifs mesurables. Je vise une
+réponse pertinente en moins de cinq secondes sur 95\,\% des
+messages WhatsApp entrants, une isolation stricte des données entre
+locataires via Row-Level Security, la couverture d'au moins quatre
+verticaux métier, un coût d'infrastructure par locataire inférieur
+à 5~USD/mois pour rester rentable à 50~TND d'abonnement, et une
+PWA patient installable sur les téléphones bas de gamme et
+fonctionnelle hors ligne.
 
-% =============================================================================
-%  Methodologie du projet --- inchangee, traduite en francais
-% =============================================================================
+\paragraph{Indépendance et durabilité.}
+J'ai conçu \nova{} comme un projet indépendant, sans dépendance à
+un partenaire industriel ni à un financement extérieur. Cette
+indépendance se traduit par trois choix structurants : des
+fournisseurs cloud à tarification \emph{pay-as-you-go} (Supabase,
+Vercel, Anthropic, Meta) qui évitent tout engagement contractuel
+long~; un dépôt unique sous mon contrôle pour le code, le schéma de
+base et les migrations~; et une verticalisation par
+\emph{packs sectoriels} indépendants qui rend l'ajout ou le retrait
+d'un domaine fonctionnel borné plutôt qu'une refonte. La durabilité
+repose sur trois piliers : la \textbf{viabilité économique}
+(infrastructure sous 5~USD/locataire/mois face à un abonnement à
+50~TND), la \textbf{maintenabilité du code} (fonctions Edge
+spécialisées, migrations idempotentes, tests bout-en-bout) et
+l'\textbf{extensibilité} (chaque nouvelle fonctionnalité s'inscrit
+dans le modèle de pack déjà éprouvé).
+
+\section{Méthodologie de développement}
+
 \input{chapters/methodologie}
 
+\section{Méthodologie de conception}
+Parallèlement à la méthodologie Scrum qui rythme la réalisation,
+j'ai adopté une démarche de conception fondée sur le langage
+\textbf{UML} (Unified Modeling Language) pour discipliner l'analyse
+de chaque sprint. UML me fournit un vocabulaire visuel commun pour
+décrire à la fois les interactions entre les acteurs et le système
+(diagrammes de cas d'utilisation), les entités persistantes du
+domaine (diagrammes de classes) et le déroulement temporel des
+parcours utilisateurs (diagrammes de séquence).
+
+\begin{figure}[!htbp]\centering
+\IfFileExists{figures/uml_logo.png}{%
+  \includegraphics[width=.50\textwidth,keepaspectratio]{figures/uml_logo.png}%
+}{%
+  \fbox{\parbox[c][2.5cm][c]{0.18\textwidth}{\centering\itshape\small Logo UML}}%
+}
+\caption{Logo UML.}\label{fig:uml-logo}
+\end{figure}
+
+Trois familles de diagrammes structurent ma démarche. Le
+\textbf{diagramme de cas d'utilisation global}, présenté au
+chapitre suivant, identifie les acteurs et les fonctionnalités
+majeures qu'ils invoquent ; il sert de socle au backlog produit.
+Le \textbf{diagramme de classes global} modélise les entités
+persistantes du domaine et leurs associations ; il sert de contrat
+entre la couche métier et le schéma SQL effectivement appliqué
+via les migrations Supabase. Enfin, les \textbf{diagrammes de
+séquence} détaillent le parcours de chaque cas d'utilisation
+couvert par un sprint donné~; je les présente dans les chapitres de
+sprint correspondants plutôt que regroupés ici, afin que chaque
+parcours reste contigu à la discussion du code qui l'implémente.
+
 \section{Conclusion}
-Ce chapitre a pose le decor : nous a
+Ce premier chapitre a posé le décor du projet : l'organisme
+d'accueil (ISMAIK), l'étude de l'existant qui couvre à la fois le
+paysage des PME tunisiennes et les solutions concurrentes, la
+problématique précise qui en découle, la solution \nova{} que je
+propose à haut niveau, ainsi que les deux méthodologies (Scrum
+pour le développement, UML pour la conception) qui structurent la
+suite du rapport. Le chapitre suivant ouvre la phase Sprint~0 de
+préparation : spécification des besoins, conception globale,
+management du projet et environnement de développement.

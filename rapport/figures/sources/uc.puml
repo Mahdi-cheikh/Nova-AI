@@ -1,0 +1,87 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 13
+skinparam linetype ortho
+skinparam ArrowColor #555555
+skinparam ArrowFontSize 10
+
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontStyle bold
+}
+
+skinparam usecase {
+  BackgroundColor #C5D9F1
+  BorderColor #547CBD
+  BorderThickness 1.2
+  FontColor #0F172A
+}
+
+' ===== ACTEURS PRIMAIRES (gauche) =====
+actor "Admin"     as A
+actor "Praticien" as P
+actor "Patient"   as C
+
+' ===== FRONTIERE DU SYSTEME =====
+rectangle "Nova AI" {
+  usecase "Se connecter"                  as L
+  usecase "Creer un compte"               as CR
+  usecase "Configurer l'entreprise"       as CFG
+  usecase "Gerer l'equipe"                as TM
+  usecase "Gerer les clients"             as CL
+  usecase "Gerer les rendez-vous"         as RV
+  usecase "Consulter dossier medical"     as DM
+  usecase "Scanner QR patient"            as QR
+  usecase "Discuter via WhatsApp"         as CH
+  usecase "Envoyer un document"           as DC
+  usecase "Generer voucher anniversaire"  as VC
+  usecase "Envoyer rappels 24h/1h"        as RM
+  usecase "Remplir creneaux vides"        as FL
+}
+
+' ===== ACTEURS SECONDAIRES (droite) =====
+actor "Systeme\n(externe)"  as S
+actor "WhatsApp\n(externe)" as W
+
+' ===== LIAISONS ADMIN =====
+A -- L
+A -- CR
+A -- CFG
+A -- TM
+A -- CL
+A -- RV
+A -- DM
+A -- QR
+
+' ===== LIAISONS PRATICIEN =====
+P -- L
+P -- RV
+P -- DM
+P -- QR
+
+' ===== LIAISONS PATIENT =====
+C -- CH
+C -- DC
+
+' ===== LIAISONS UC -> ACTEURS SECONDAIRES =====
+CH -- W
+DC -- W
+RM -- W
+VC -- W
+
+S -- VC
+S -- RM
+S -- FL
+
+' ===== RELATIONS <<include>> =====
+CFG ..> L : <<include>>
+TM  ..> L : <<include>>
+CL  ..> L : <<include>>
+RV  ..> L : <<include>>
+DM  ..> L : <<include>>
+QR  ..> L : <<include>>
+
+@enduml

@@ -1,0 +1,56 @@
+@startuml seq-sprint3
+title Sprint 3 — Check-in QR, file d'attente et couche d'intelligence
+
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam sequence {
+  ArrowColor #0891B2
+  LifeLineBorderColor #06B6D4
+  ParticipantBorderColor #0891B2
+  ParticipantBackgroundColor #E0F2FE
+  ActorBorderColor #0891B2
+  ActorBackgroundColor #BAE6FD
+}
+
+actor Patient
+actor Médecin as Doctor
+participant "PWA\ncheck.html" as PWA
+participant "Dashboard\nScanner QR" as SCAN
+database "Postgres" as DB
+participant "Crons pg_cron\n(reminders, review,\ndemand-fill, thanks)" as CRON
+participant "WhatsApp" as WA
+
+== Arrivée et check-in ==
+Patient -> PWA : Ouvrir check.html?a=token
+PWA --> Patient : Afficher le QR code
+Patient -> Doctor : Présenter le téléphone
+Doctor -> SCAN : Ouvrir scanner sur dashboard
+SCAN -> SCAN : Décodage html5-qrcode
+SCAN -> DB : RPC apt_start_consultation(token)
+DB --> SCAN : appointment_id + arrived_at
+SCAN -> Doctor : Minuteur de consultation lancé
+
+== Fin de consultation ==
+Doctor -> SCAN : Tap "Terminer"
+SCAN -> DB : UPDATE appointments\n(completed_at, status=completed)
+SCAN -> SCAN : duration_min auto-calculée
+
+== Remerciement et avis ==
+SCAN -> CRON : invoke send-thanks (immédiat)
+CRON -> WA : Message court de remerciement
+WA -> Patient : "Merci d'avoir choisi..."
+note right : 2 heures plus tard
+CRON -> DB : SELECT apts complétées récemment
+CRON -> WA : Boutons interactifs ⭐ 5/3/1
+WA -> Patient : Demande d'avis
+Patient -> WA : Tap rating
+WA -> CRON : Button callback (review reply)
+CRON -> DB : INSERT appointment_reviews
+
+== Demand-fill (créneaux vides) ==
+CRON -> DB : Scan créneaux libres demain
+CRON -> WA : Ping patients éligibles
+Patient -> WA : "Oui je prends"
+WA -> DB : Booking auto via classify-message
+
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+skinparam defaultFontName Sans-Serif
+skinparam defaultFontSize 12
+skinparam ParticipantBackgroundColor #E0E7FF
+skinparam ParticipantBorderColor #6366f1
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorBorderColor #6366f1
+skinparam ArrowColor #475569
+
+actor "Patient" as P
+participant "Camera (PWA)" as CAM
+participant "html5-qrcode" as QR
+participant "PWA Nova" as PWA
+participant "PostgREST" as API
+database "Postgres + RLS" as DB
+participant "Realtime\n(WebSocket)" as RT
+
+P -> CAM : scanne le QR de reception\n(affiche au laboratoire)
+CAM -> QR : decode
+QR -> PWA : business_id + token
+PWA -> API : POST /queue_entries\n{ business_id, client_id }
+API -> DB : INSERT queue_entries\n(position calcule auto)
+DB -> RT : trigger postgres_changes
+RT --> PWA : position courante + ETA
+PWA --> P : "Vous etes en position 3, ETA 25 min"
+
+loop file qui avance
+    note over DB,RT: lorsqu'un patient est traite,\nDB UPDATE queue_entries\n-> Realtime push aux patients restants
+    RT --> PWA : nouvelle position + ETA
+    PWA --> P : affichage live mis a jour
+end
+
+@enduml
