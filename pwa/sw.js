@@ -1,8 +1,14 @@
-/* Nova AI service worker — cache-first shell, network-first data */
-const VERSION = 'nova-pwa-v15';
-const SHELL = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
+/* Nova AI service worker — network-first for HTML, cache-first for static assets.
+   v16+: index.html is fetched from the network on every load so deploys take
+   effect immediately. Old caches are wiped on activate, the new SW takes over
+   without waiting (skipWaiting + clients.claim). */
+const VERSION = 'nova-pwa-v16';
+const ASSETS  = ['./manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL).catch(()=>{}))); self.skipWaiting(); });
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS).catch(()=>{})));
+  self.skipWaiting();
+});
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))));
   self.clients.claim();
@@ -13,11 +19,19 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.hostname.includes('supabase.co') || url.hostname.includes('supabase.io')) return;
   if (url.origin !== location.origin) return;
-  if (SHELL.some(p => url.pathname.endsWith(p.replace('./', '/')))) {
+  const isAsset = ASSETS.some(p => url.pathname.endsWith(p.replace('./', '/')));
+  if (isAsset) {
+    // Cache-first for icons / manifest — these change rarely.
     e.respondWith(caches.match(req).then(c => c || fetch(req).then(r => { caches.open(VERSION).then(cc => cc.put(req, r.clone())); return r; })));
     return;
   }
-  e.respondWith(fetch(req).then(r => { caches.open(VERSION).then(cc => cc.put(req, r.clone())); return r; }).catch(() => caches.match(req).then(c => c || caches.match('./index.html'))));
+  // Network-first for everything else (index.html, queue.html, check.html, JS).
+  // Falls back to a cached copy only if the network call fails.
+  e.respondWith(
+    fetch(req)
+      .then(r => { caches.open(VERSION).then(cc => cc.put(req, r.clone())); return r; })
+      .catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
+  );
 });
 self.addEventListener('push', (e) => {
   let data = {}; try { data = e.data ? e.data.json() : {}; } catch (_e) {}
@@ -25,14 +39,4 @@ self.addEventListener('push', (e) => {
     body: data.body || 'You have a new update.',
     icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
     data: { url: data.url || './' }, tag: data.tag || 'nova',
-    requireInteraction: !!data.urgent, vibrate: data.urgent ? [200,100,200] : [120],
-  }));
-});
-self.addEventListener('notificationclick', (e) => {
-  e.notification.close();
-  const target = e.notification?.data?.url || './';
-  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-    for (const c of list) { if ('focus' in c) { c.navigate(target); return c.focus(); } }
-    if (self.clients.openWindow) return self.clients.openWindow(target);
-  }));
-});
+    requireInteraction: !!da
