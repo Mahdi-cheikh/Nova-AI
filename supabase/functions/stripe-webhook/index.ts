@@ -49,6 +49,4 @@ serve(async (req) => {
  await sb.from("businesses").update({ subscription_status: "past_due" }).eq("stripe_customer_id", inv.customer as string);
  break;
  }
- }
- return new Response("ok", { status: 200 });
-});
+ // Successful charge → enqueue a receipt email to
