@@ -2713,7 +2713,36 @@ function bindClientPortal(){
 }
 
 /* ---------- 9c. ADMIN DASHBOARD (platform-admin only) ---------- */
-let ADMIN_STATE = { filter:{ type:'', search:'', status:'' }, businesses:[], snapshot:null };
+let ADMIN_STATE = { filter:{ type:'', search:'', status:'' }, businesses:[], snapshot:null, notifs:[], unread:0 };
+let ADMIN_NOTIF_POLL = null;
+
+async function adminLoadNotifs(onlyUnread = false){
+  const [list, count] = await Promise.all([
+    sb.rpc('admin_list_notifications', { p_only_unread: onlyUnread, p_limit: 30 }),
+    sb.rpc('admin_unread_notification_count'),
+  ]);
+  if (!list.error) ADMIN_STATE.notifs = list.data || [];
+  if (!count.error) ADMIN_STATE.unread = count.data || 0;
+}
+
+function adminNotifIcon(t){
+  return {
+    created:        '🏢',
+    plan_changed:   '💳',
+    status_changed: '🔄',
+    phone_changed:  '📱',
+    profile_edited: '✏️',
+  }[t] || '🔔';
+}
+
+function adminTimeAgo(iso){
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  if (s < 604800) return Math.floor(s/86400) + 'd ago';
+  return new Date(iso).toLocaleDateString(undefined,{day:'2-digit',month:'short'});
+}
 
 const BTP_TYPES = [
   { value:'',            label:'All types' },
@@ -2727,14 +2756,16 @@ const BTP_TYPES = [
 const PLAN_PRICE = { starter:0, pro:29, business:79 };
 
 async function adminReload(){
-  const [snap, list] = await Promise.all([
+  const [snap, list, notifCount] = await Promise.all([
     sb.rpc('admin_revenue_snapshot'),
     sb.rpc('admin_list_businesses', { p_type: ADMIN_STATE.filter.type||null, p_search: ADMIN_STATE.filter.search||null, p_status: ADMIN_STATE.filter.status||null, p_limit: 500 }),
+    sb.rpc('admin_unread_notification_count'),
   ]);
   if (snap.error) throw new Error(snap.error.message);
   if (list.error) throw new Error(list.error.message);
   ADMIN_STATE.snapshot   = snap.data || null;
   ADMIN_STATE.businesses = list.data || [];
+  ADMIN_STATE.unread     = notifCount.data || 0;
 }
 
 async function renderAdminDashboard(){
@@ -2780,10 +2811,23 @@ async function renderAdminDashboard(){
 
   const typePill = (t) => `<button class="adm-type-pill" data-type="${t.value}" style="padding:6px 12px;border-radius:999px;border:1px solid ${ADMIN_STATE.filter.type===t.value?'#6366f1':'var(--border)'};background:${ADMIN_STATE.filter.type===t.value?'rgba(99,102,241,.15)':'transparent'};color:${ADMIN_STATE.filter.type===t.value?'#6366f1':'var(--text-dim)'};font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">${escapeHtml(t.label)}</button>`;
 
+  const unread = ADMIN_STATE.unread || 0;
   return `<div style="max-width:1180px;margin:0 auto;padding:24px 18px 60px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:10px">
       <div class="logo" style="margin:0"><div class="logo-mark">N</div> Nova AI · Admin</div>
-      <button class="btn btn-ghost btn-sm" id="adm-signout">Sign out</button>
+      <div style="display:flex;align-items:center;gap:8px;position:relative">
+        <button class="btn btn-ghost btn-sm" id="adm-bell" title="Notifications" style="position:relative;font-size:18px;padding:7px 12px">
+          🔔${unread>0?`<span id="adm-bell-badge" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 5px">${unread>99?'99+':unread}</span>`:''}
+        </button>
+        <div id="adm-bell-pop" style="display:none;position:absolute;right:0;top:calc(100% + 8px);width:380px;max-height:520px;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.35);z-index:40">
+          <div style="position:sticky;top:0;background:var(--card);padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;z-index:1">
+            <div style="font-size:13.5px;font-weight:700">Notifications</div>
+            <button class="btn btn-ghost btn-sm" id="adm-bell-mark-all" style="font-size:11.5px;padding:4px 8px">Mark all read</button>
+          </div>
+          <div id="adm-bell-list" style="padding:6px"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="adm-signout">Sign out</button>
+      </div>
     </div>
 
     <!-- KPI hero -->
@@ -2845,7 +2889,88 @@ async function renderAdminDashboard(){
 }
 
 function bindAdminDashboard(){
-  $('#adm-signout').onclick = async ()=>{ await sb.auth.signOut(); SESSION = null; navigate('#/'); };
+  $('#adm-signout').onclick = async ()=>{
+    if (ADMIN_NOTIF_POLL) { clearInterval(ADMIN_NOTIF_POLL); ADMIN_NOTIF_POLL = null; }
+    await sb.auth.signOut(); SESSION = null; navigate('#/');
+  };
+
+  // Notifications bell
+  const bell = $('#adm-bell');
+  const pop  = $('#adm-bell-pop');
+  const renderBellList = () => {
+    const items = ADMIN_STATE.notifs;
+    if (!items || !items.length) {
+      $('#adm-bell-list').innerHTML = `<div style="padding:30px 16px;text-align:center;color:var(--text-dim);font-size:13.5px">No notifications yet.</div>`;
+      return;
+    }
+    $('#adm-bell-list').innerHTML = items.map(n => `
+      <div class="adm-notif" data-id="${n.id}" style="display:flex;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;align-items:flex-start;${n.read_at?'opacity:.6;':'background:rgba(99,102,241,.06);'}transition:background .12s">
+        <span style="font-size:20px;flex-shrink:0">${adminNotifIcon(n.event_type)}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13.5px;font-weight:600;line-height:1.3">${escapeHtml(n.title||'')}</div>
+          ${n.body?`<div style="font-size:12.5px;color:var(--text-dim);margin-top:2px;line-height:1.4">${escapeHtml(n.body)}</div>`:''}
+          <div style="font-size:11px;color:var(--text-faint);margin-top:4px">${adminTimeAgo(n.created_at)}${n.read_at?'':'  ·  <span style="color:#ef4444;font-weight:600">NEW</span>'}</div>
+        </div>
+      </div>`).join('');
+    $$('.adm-notif').forEach(el => el.onclick = async () => {
+      const id = el.dataset.id;
+      const n = ADMIN_STATE.notifs.find(x => x.id === id);
+      if (n && !n.read_at) {
+        await sb.rpc('admin_mark_notification_read', { p_id: id });
+        n.read_at = new Date().toISOString();
+        ADMIN_STATE.unread = Math.max(0, (ADMIN_STATE.unread || 0) - 1);
+        renderBellList();
+        updateBellBadge();
+      }
+      // If clicked notif has a business_id, jump to that business in the list (open edit modal)
+      if (n && n.business_id) {
+        pop.style.display = 'none';
+        const b = ADMIN_STATE.businesses.find(x => x.id === n.business_id);
+        if (b) openAdminEditModal(b.id);
+      }
+    });
+  };
+  const updateBellBadge = () => {
+    const u = ADMIN_STATE.unread || 0;
+    const badge = $('#adm-bell-badge');
+    if (u > 0) {
+      if (badge) badge.textContent = u > 99 ? '99+' : u;
+      else if (bell) bell.insertAdjacentHTML('beforeend', `<span id="adm-bell-badge" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 5px">${u>99?'99+':u}</span>`);
+    } else if (badge) {
+      badge.remove();
+    }
+  };
+
+  if (bell && pop) {
+    bell.onclick = async (e) => {
+      e.stopPropagation();
+      if (pop.style.display === 'block') { pop.style.display = 'none'; return; }
+      await adminLoadNotifs(false);
+      pop.style.display = 'block';
+      renderBellList();
+    };
+    document.addEventListener('click', (e) => {
+      if (!pop.contains(e.target) && e.target !== bell) pop.style.display = 'none';
+    });
+    const mall = $('#adm-bell-mark-all');
+    if (mall) mall.onclick = async (e) => {
+      e.stopPropagation();
+      await sb.rpc('admin_mark_all_notifications_read');
+      ADMIN_STATE.notifs.forEach(n => n.read_at = n.read_at || new Date().toISOString());
+      ADMIN_STATE.unread = 0;
+      renderBellList();
+      updateBellBadge();
+    };
+  }
+
+  // Auto-refresh unread count every 30 seconds
+  if (ADMIN_NOTIF_POLL) clearInterval(ADMIN_NOTIF_POLL);
+  ADMIN_NOTIF_POLL = setInterval(async () => {
+    try {
+      const r = await sb.rpc('admin_unread_notification_count');
+      if (!r.error) { ADMIN_STATE.unread = r.data || 0; updateBellBadge(); }
+    } catch {}
+  }, 30000);
 
   // Type filter pills
   $$('.adm-type-pill').forEach(b => b.onclick = async () => {
