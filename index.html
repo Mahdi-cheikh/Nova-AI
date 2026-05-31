@@ -2539,16 +2539,15 @@ function renderCreateBusiness(){
  <h2>Set up your business</h2>
  <p class="lede">A few details so Nova can route messages and book appointments. You can change everything later in Settings.</p>
  <form id="cb-form">
- <div class="field"><label>Business name *</label><input name="name" placeholder="e.g. Sunrise Medical Clinic" required /></div>
- <div class="field"><label>Type *</label>
- <select name="type" required>
- <option value="clinic">Clinic</option>
- <option value="laboratoire">Laboratoire</option>
- <option value="doctor">Independent doctor</option>
- <option value="company">Company</option>
- <option value="salon">Salon / Spa</option>
- <option value="garage">Garage / Mécanique</option>
- </select>
+ <div class="field"><label>Business name *</label><input id="cb-name" name="name" placeholder="e.g. Sunrise Medical Clinic" required /></div>
+ <div class="field"><label>What kind of business? *</label>
+   <div class="btp-wrap" id="btp-wrap" style="position:relative">
+     <input type="text" id="btp-search" autocomplete="off" placeholder=" Search: dental clinic, hair salon, garage, lawyer..." />
+     <input type="hidden" name="type" id="btp-type" value="clinic" />
+     <div id="btp-selected" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(99,102,241,.10);border:1px solid rgba(99,102,241,.25);border-radius:10px;align-items:center;gap:10px;justify-content:space-between"></div>
+     <div id="btp-results" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:6px;max-height:300px;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:12px;z-index:20;box-shadow:0 12px 32px rgba(0,0,0,.25);padding:6px"></div>
+   </div>
+   <div class="sub" style="font-size:.78em;margin-top:6px;color:var(--text-faint)">Tap the box to see all options, or type to filter. Nova will configure itself for the category you pick.</div>
  </div>
 
  <div class="field">
@@ -2570,6 +2569,169 @@ function renderCreateBusiness(){
  </form>
  </div></div>`;
 }
+/* Catalog of common business types. Each entry maps to one of the 6 backend
+   categories (clinic, laboratoire, doctor, salon, garage, company) so Nova
+   can pick the right vocabulary, calendar behaviour and dashboard layout. */
+const BUSINESS_TYPES = [
+ // --- Medical clinics / centres (multi-doctor) → clinic ---
+ { label:'Polyclinic', type:'clinic', ic:'🏥', kw:['polyclinique','multi'] },
+ { label:'Medical clinic', type:'clinic', ic:'🏥', kw:['clinique','medicale','clinical','centre medical'] },
+ { label:'Dental clinic', type:'clinic', ic:'🦷', kw:['dental','dentaire','dentist','orthodontic'] },
+ { label:'Dermatology clinic', type:'clinic', ic:'🧴', kw:['skin','peau'] },
+ { label:'Pediatric clinic', type:'clinic', ic:'🧒', kw:['pediatrie','enfants','kids'] },
+ { label:'Cardiology clinic', type:'clinic', ic:'❤️', kw:['heart','coeur'] },
+ { label:'Gynecology clinic', type:'clinic', ic:'👶', kw:['femmes','women','obgyn'] },
+ { label:'Ophthalmology clinic', type:'clinic', ic:'👁️', kw:['eye','yeux','vision'] },
+ { label:'ENT clinic', type:'clinic', ic:'👂', kw:['orl','ear','nose','throat'] },
+ { label:'Orthopedic clinic', type:'clinic', ic:'🦴', kw:['ortho','bones'] },
+ { label:'Aesthetic / cosmetic clinic', type:'clinic', ic:'💉', kw:['aesthetic','esthetique','cosmetic','botox','filler'] },
+ { label:'IVF / fertility clinic', type:'clinic', ic:'🤰', kw:['fertility','pma','ivf'] },
+ { label:'Veterinary clinic', type:'clinic', ic:'🐶', kw:['vet','animal','pet'] },
+ { label:'Physiotherapy / kine center', type:'clinic', ic:'💆', kw:['kine','physio','rehabilitation','reeducation'] },
+ { label:'Radiology / imaging center', type:'clinic', ic:'🩻', kw:['radio','imaging','mri','irm','scan'] },
+ { label:'Dialysis center', type:'clinic', ic:'🩸', kw:['kidney','renal'] },
+ { label:'Mental health clinic', type:'clinic', ic:'🧠', kw:['psychiatry','psychology','therapy'] },
+
+ // --- Laboratories → laboratoire ---
+ { label:'Medical analysis lab', type:'laboratoire', ic:'🧪', kw:['labo','laboratoire','analyse','blood','sang','prelevement'] },
+ { label:'Pathology lab', type:'laboratoire', ic:'🧬', kw:['biopsy','histology'] },
+ { label:'Genetic testing lab', type:'laboratoire', ic:'🧬', kw:['adn','dna','genetic'] },
+ { label:'COVID / PCR testing', type:'laboratoire', ic:'🦠', kw:['covid','pcr','antigen'] },
+
+ // --- Independent practitioners (solo) → doctor ---
+ { label:'General practitioner', type:'doctor', ic:'👨‍⚕️', kw:['gp','generaliste','family doctor','medecin generaliste'] },
+ { label:'Dentist (solo)', type:'doctor', ic:'🦷', kw:['dentiste'] },
+ { label:'Pediatrician', type:'doctor', ic:'🧒', kw:['pediatre'] },
+ { label:'Gynecologist', type:'doctor', ic:'🩺', kw:['gyneco','gynecologue'] },
+ { label:'Cardiologist', type:'doctor', ic:'❤️', kw:['cardiologue'] },
+ { label:'Dermatologist', type:'doctor', ic:'🧴', kw:['dermatologue'] },
+ { label:'Psychologist', type:'doctor', ic:'🧠', kw:['psy','therapist','therapy'] },
+ { label:'Psychiatrist', type:'doctor', ic:'🧠', kw:['psychiatre'] },
+ { label:'Ophthalmologist', type:'doctor', ic:'👁️', kw:['ophtalmo'] },
+ { label:'ENT specialist', type:'doctor', ic:'👂', kw:['orl'] },
+ { label:'Orthodontist', type:'doctor', ic:'😬', kw:['braces','orthodontiste'] },
+ { label:'Physiotherapist / kine', type:'doctor', ic:'💆', kw:['kine','physio','masseur'] },
+ { label:'Nutritionist / dietician', type:'doctor', ic:'🥗', kw:['nutritionniste','dietetique'] },
+ { label:'Veterinarian (solo)', type:'doctor', ic:'🐶', kw:['veterinaire'] },
+ { label:'Osteopath', type:'doctor', ic:'🦴', kw:['osteopathe'] },
+ { label:'Acupuncturist', type:'doctor', ic:'📍', kw:['acupuncture'] },
+ { label:'Speech therapist', type:'doctor', ic:'🗣️', kw:['orthophoniste','speech'] },
+
+ // --- Beauty / wellness → salon ---
+ { label:'Hair salon', type:'salon', ic:'💇', kw:['coiffeur','coiffure','hair','barber'] },
+ { label:'Barbershop', type:'salon', ic:'💈', kw:['barbier','barber'] },
+ { label:'Beauty salon', type:'salon', ic:'💄', kw:['beaute','beauty'] },
+ { label:'Nail salon', type:'salon', ic:'💅', kw:['nails','manucure','onglerie'] },
+ { label:'Spa / wellness', type:'salon', ic:'🧖', kw:['spa','hammam','wellness','bien-etre'] },
+ { label:'Massage center', type:'salon', ic:'💆', kw:['massage'] },
+ { label:'Hair removal / epilation', type:'salon', ic:'✨', kw:['laser','epilation','wax'] },
+ { label:'Eyebrow / lash studio', type:'salon', ic:'👁️', kw:['lash','sourcils','eyelash','microblading'] },
+ { label:'Makeup studio', type:'salon', ic:'💋', kw:['makeup','maquillage'] },
+ { label:'Tattoo studio', type:'salon', ic:'🖋️', kw:['tatouage'] },
+ { label:'Tanning salon', type:'salon', ic:'☀️', kw:['uv','bronzage'] },
+
+ // --- Vehicle / mechanical → garage ---
+ { label:'Auto repair garage', type:'garage', ic:'🔧', kw:['mecanique','mecanicien','car repair','reparation auto'] },
+ { label:'Body shop / carrosserie', type:'garage', ic:'🚗', kw:['carrosserie','body','tolerie','peinture'] },
+ { label:'Tire shop', type:'garage', ic:'🛞', kw:['pneus','tires','wheels'] },
+ { label:'Oil change / vidange', type:'garage', ic:'🛢️', kw:['oil','vidange','lubrifiant'] },
+ { label:'Car wash / detailing', type:'garage', ic:'🚿', kw:['wash','lavage','detailing'] },
+ { label:'Motorcycle repair', type:'garage', ic:'🏍️', kw:['moto','bike'] },
+ { label:'Auto electrician', type:'garage', ic:'⚡', kw:['electricien auto','electrique'] },
+ { label:'Auto diagnostic center', type:'garage', ic:'💻', kw:['diagnostic','obd'] },
+ { label:'Truck / commercial vehicle repair', type:'garage', ic:'🚚', kw:['poids lourd','camion','truck'] },
+
+ // --- Professional services / agencies / other → company ---
+ { label:'Law firm / lawyer', type:'company', ic:'⚖️', kw:['avocat','law','attorney','juriste'] },
+ { label:'Notary', type:'company', ic:'📜', kw:['notaire'] },
+ { label:'Accountant / expert-comptable', type:'company', ic:'🧾', kw:['comptable','accountant','tax'] },
+ { label:'Insurance agency', type:'company', ic:'🛡️', kw:['assurance','insurance'] },
+ { label:'Real estate agency', type:'company', ic:'🏠', kw:['immobilier','real estate'] },
+ { label:'Architecture firm', type:'company', ic:'📐', kw:['architecte'] },
+ { label:'Marketing agency', type:'company', ic:'📣', kw:['communication','agency','digital'] },
+ { label:'Translation services', type:'company', ic:'🌐', kw:['translation','traduction'] },
+ { label:'Photographer / studio', type:'company', ic:'📷', kw:['photo','studio'] },
+ { label:'Event planner / wedding planner', type:'company', ic:'🎉', kw:['event','mariage','wedding','organisation'] },
+ { label:'Catering service', type:'company', ic:'🍽️', kw:['traiteur','catering'] },
+ { label:'Restaurant', type:'company', ic:'🍴', kw:['restaurant','cafe','dining'] },
+ { label:'Hotel / riad', type:'company', ic:'🏨', kw:['hotel','riad','hospitality'] },
+ { label:'Driving school', type:'company', ic:'🚙', kw:['auto-ecole','permis','driving'] },
+ { label:'Language school', type:'company', ic:'🗣️', kw:['langues','language','english','french'] },
+ { label:'Tutoring / coaching center', type:'company', ic:'📚', kw:['cours','tutor','coach','soutien scolaire'] },
+ { label:'Gym / fitness studio', type:'company', ic:'🏋️', kw:['gym','fitness','salle de sport','musculation'] },
+ { label:'Yoga / pilates studio', type:'company', ic:'🧘', kw:['yoga','pilates'] },
+ { label:'Dance studio', type:'company', ic:'💃', kw:['dance','danse'] },
+ { label:'Music school', type:'company', ic:'🎵', kw:['musique','music','piano','guitare'] },
+ { label:'Pet groomer', type:'company', ic:'🐕', kw:['groomer','toilettage'] },
+ { label:'Cleaning service', type:'company', ic:'🧹', kw:['nettoyage','menage','cleaning'] },
+ { label:'Plumber', type:'company', ic:'🚿', kw:['plombier','plumbing'] },
+ { label:'Electrician', type:'company', ic:'💡', kw:['electricien','electrical'] },
+ { label:'HVAC / AC technician', type:'company', ic:'❄️', kw:['climatisation','hvac','clim','chauffage'] },
+ { label:'Locksmith', type:'company', ic:'🔑', kw:['serrurier','locksmith'] },
+ { label:'IT / computer repair', type:'company', ic:'💻', kw:['informatique','computer','it'] },
+ { label:'Travel agency', type:'company', ic:'✈️', kw:['voyage','travel'] },
+ { label:'Boutique / retail', type:'company', ic:'🛍️', kw:['shop','boutique','magasin','retail'] },
+ { label:'Other business', type:'company', ic:'🏢', kw:['autre','other','custom'] },
+];
+
+function btpFindMatch(text){
+ const q = (text||'').toLowerCase().trim();
+ if (!q) return null;
+ for (const bt of BUSINESS_TYPES){
+   if (bt.label.toLowerCase().includes(q)) return bt;
+   if (bt.kw && bt.kw.some(k => q.includes(k.toLowerCase()) || k.toLowerCase().includes(q))) return bt;
+ }
+ return null;
+}
+
+function btpRenderResults(query){
+ const q = (query||'').toLowerCase().trim();
+ const list = q
+   ? BUSINESS_TYPES.filter(bt => bt.label.toLowerCase().includes(q) || (bt.kw||[]).some(k=>k.toLowerCase().includes(q)))
+   : BUSINESS_TYPES;
+ const results = $('#btp-results');
+ if (!results) return;
+ if (!list.length){
+   results.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text-dim);font-size:13px">No match — try a different word.<br><span style="font-size:12px;opacity:.7">Or pick "Other business" below.</span></div>`;
+ } else {
+   const seenCat = {clinic:'Clinic',laboratoire:'Lab',doctor:'Solo practitioner',salon:'Beauty / Wellness',garage:'Vehicle',company:'Service / Other'};
+   results.innerHTML = list.slice(0, 30).map((bt, i) => `
+     <button type="button" class="btp-item" data-i="${BUSINESS_TYPES.indexOf(bt)}" style="display:flex;width:100%;align-items:center;gap:10px;padding:10px 12px;border:0;background:transparent;color:var(--text);text-align:left;cursor:pointer;border-radius:8px;font-size:14px;transition:background .12s">
+       <span style="font-size:20px;flex-shrink:0">${bt.ic}</span>
+       <span style="flex:1;min-width:0">
+         <div style="font-weight:600">${escapeHtml(bt.label)}</div>
+         <div style="font-size:11.5px;color:var(--text-dim)">${seenCat[bt.type]||bt.type}</div>
+       </span>
+     </button>
+   `).join('');
+ }
+ results.style.display = 'block';
+}
+
+function btpSelect(idx){
+ const bt = BUSINESS_TYPES[idx]; if (!bt) return;
+ const seenCat = {clinic:'Clinic',laboratoire:'Lab',doctor:'Solo practitioner',salon:'Beauty / Wellness',garage:'Vehicle',company:'Service / Other'};
+ $('#btp-type').value = bt.type;
+ $('#btp-search').value = '';
+ $('#btp-search').placeholder = ' Change category…';
+ const sel = $('#btp-selected');
+ if (sel){
+   sel.style.display = 'flex';
+   sel.innerHTML = `<div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">
+     <span style="font-size:22px">${bt.ic}</span>
+     <div style="min-width:0">
+       <div style="font-weight:700;font-size:14.5px">${escapeHtml(bt.label)}</div>
+       <div style="font-size:11.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px">Configured as · ${seenCat[bt.type]||bt.type}</div>
+     </div>
+   </div>
+   <button type="button" id="btp-change" class="btn btn-ghost btn-sm" style="font-size:12px">Change</button>`;
+   const change = $('#btp-change');
+   if (change) change.onclick = ()=>{ sel.style.display='none'; $('#btp-search').focus(); btpRenderResults(''); };
+ }
+ const results = $('#btp-results');
+ if (results) results.style.display = 'none';
+}
+
 function bindCreateBusiness(){
  let chosenPlan='starter';
 
@@ -2577,6 +2739,40 @@ function bindCreateBusiness(){
  $$('#plans .plan').forEach(p=>p.onclick=()=>{chosenPlan=p.dataset.plan;$$('#plans .plan').forEach(x=>x.classList.remove('selected'));p.classList.add('selected');});
  // Phone-only: no OTP, submit button enabled by default
  const submit = $('#cb-submit'); if (submit) submit.disabled = false;
+
+ // ---- Business-type picker wiring ----
+ const search = $('#btp-search');
+ const results = $('#btp-results');
+ const wrap = $('#btp-wrap');
+ if (search && results) {
+   search.onfocus = () => btpRenderResults(search.value);
+   search.oninput = () => btpRenderResults(search.value);
+   // Click delegation on result items
+   results.onclick = (e) => {
+     const item = e.target.closest('.btp-item');
+     if (!item) return;
+     btpSelect(parseInt(item.dataset.i, 10));
+   };
+   results.onmouseover = (e) => {
+     const item = e.target.closest('.btp-item');
+     if (item) item.style.background = 'rgba(99,102,241,.10)';
+   };
+   results.onmouseout = (e) => {
+     const item = e.target.closest('.btp-item');
+     if (item) item.style.background = 'transparent';
+   };
+   // Click outside closes the dropdown
+   document.addEventListener('click', (e) => {
+     if (wrap && !wrap.contains(e.target)) results.style.display = 'none';
+   });
+ }
+ // Auto-detect from business name on blur
+ const name = $('#cb-name');
+ if (name) name.onblur = () => {
+   if ($('#btp-selected') && $('#btp-selected').style.display === 'flex') return;
+   const match = btpFindMatch(name.value);
+   if (match) btpSelect(BUSINESS_TYPES.indexOf(match));
+ };
  },0);
 
  const setStatus = (msg, color)=>{
