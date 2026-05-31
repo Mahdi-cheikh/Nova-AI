@@ -243,12 +243,12 @@ async function detectRoles() {
  ROLES = []; PATIENT = null; DOCTOR = null; OWNER_BIZ = null;
  if (!SESSION) return;
  const uid = SESSION.user.id;
- const [{data: pu}, {data: doc}, {data: bizList}] = await Promise.all([
- sb.from('patient_users').select('*').eq('auth_uid', uid).maybeSingle(),
+ const [{data: doc}, {data: bizList}] = await Promise.all([
  sb.from('users').select('id, name, business_id, role, businesses(name, type)').eq('auth_uid', uid).eq('role','doctor').maybeSingle(),
  sb.from('businesses').select('id, name, type').eq('owner_user_id', uid).order('created_at'),
  ]);
- if (pu) { PATIENT = pu; ROLES.push('patient'); }
+ // Patient role is no longer offered in the PWA — patients use WhatsApp.
+ // Even if an orphan row exists in patient_users from older builds, we ignore it.
  if (doc) { DOCTOR = doc; ROLES.push('doctor'); }
  // Owner of one or more businesses — pick the saved active business if known, else the first owned.
  const ownedList = (bizList || []);
@@ -260,6 +260,10 @@ async function detectRoles() {
  const stored = localStorage.getItem('nova_active_role');
  if (stored && ROLES.includes(stored)) ACTIVE_ROLE = stored;
  else if (ROLES.length === 1) ACTIVE_ROLE = ROLES[0];
+ // If the user is an owner, that wins. We never want to land an owner on
+ // the role picker — they always want their dashboard.
+ else if (ROLES.includes('owner')) ACTIVE_ROLE = 'owner';
+ else if (ROLES.includes('doctor')) ACTIVE_ROLE = 'doctor';
  else ACTIVE_ROLE = null;
 }
 
@@ -993,8 +997,13 @@ async function render() {
  // Multi-role with no choice persisted → ask once
  if (!ACTIVE_ROLE && ROLES.length > 1) { $('#app').innerHTML = renderRolePicker(); bindRolePicker(); return; }
 
- // Owner role: render an "Owner mode" landing page inside the PWA (no auto-redirect).
- if (ACTIVE_ROLE === 'owner') { $('#app').innerHTML = renderOwnerHome(); bindOwnerHome(); return; }
+ // Owner role: go straight to the full desktop dashboard. The PWA intermediate
+ // hub page was an extra tap with nothing on it that the dashboard doesn't already
+ // surface, so we skip it entirely.
+ if (ACTIVE_ROLE === 'owner') {
+   location.href = '/?from=pwa&forceWeb=1#/dashboard';
+   return;
+ }
 
  // Patient flows have been removed from the PWA.
  // If a user lands here with the patient role, redirect them to WhatsApp.
@@ -1096,15 +1105,4 @@ window.addEventListener('beforeinstallprompt', (ev) => {
  <span><button id="pwa-install" style="background:rgba(255,255,255,0.18);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600">Install</button>
  <button id="pwa-dismiss" style="opacity:.7;margin-left:6px">×</button></span></div>`);
  document.body.appendChild(banner);
- banner.querySelector('#pwa-install').onclick = async () => {
- banner.remove(); deferredInstall.prompt();
- const choice = await deferredInstall.userChoice;
- deferredInstall = null;
- if (choice.outcome === 'accepted') toast('Nova installed');
- };
- banner.querySelector('#pwa-dismiss').onclick = () => { sessionStorage.setItem('pwa_install_dismissed','1'); banner.remove(); };
- }, 5000);
-});
-</script>
-</body>
-</html>
+ banner.querySelector('#pwa
