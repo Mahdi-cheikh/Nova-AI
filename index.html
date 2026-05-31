@@ -1167,23 +1167,28 @@ function renderLanding(){
  @media (prefers-color-scheme: dark) { .lp { background:#0a0b10;color:#f3f4f6 } .lp .lp-card,.lp .lp-feature{background:#13151c;border-color:rgba(99,102,241,0.18) } .lp .lp-mockup{background:#13151c;border-color:rgba(99,102,241,0.2) } .lp-stat{background:#1a1d27 } }
  .lp-nav { position:sticky;top:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(15,23,42,0.06);z-index:100; }
  @media (prefers-color-scheme: dark) { .lp-nav{ background:rgba(10,11,16,0.85);border-color:rgba(255,255,255,0.06) } }
- .lp-nav-inner { max-width:1280px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px; }
- @media (max-width:560px) { .lp-nav-inner{ padding:12px 16px;gap:8px } }
+ .lp-nav-inner { max-width:1280px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap; }
+ @media (max-width:640px) { .lp-nav-inner{ padding:10px 14px;gap:10px;justify-content:center } }
  .lp-brand { display:flex;align-items:center;gap:10px;min-width:0; }
  .lp-logo-mark { width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);display:grid;place-items:center;color:white;font-weight:800;font-size:20px;box-shadow:0 4px 14px rgba(99,102,241,0.3);flex-shrink:0; }
  @media (max-width:560px) { .lp-logo-mark{ width:36px;height:36px;font-size:17px } }
  .lp-brand-name { font-weight:700;font-size:17px;letter-spacing:-0.3px;line-height:1;white-space:nowrap; }
  .lp-brand-tag { font-size:11.5px;color:#6b7280;margin-top:2px; }
  @media (max-width:560px) { .lp-brand-tag{ display:none } .lp-brand-name{ font-size:16px } }
- /* Mobile: drop "My appointments" pill (it lives in the footer), keep Login + Sign up compact */
- @media (max-width:640px) { .lp-nav-cta .lp-btn-client { display:none; } }
  .lp-nav-links { display:flex;gap:30px;font-size:14px;font-weight:500; }
  .lp-nav-links a { color:#475569;text-decoration:none;transition:color .15s; }
  .lp-nav-links a:hover { color:#6366f1; }
  @media (prefers-color-scheme:dark){ .lp-nav-links a{color:#cbd5e1} }
  @media (max-width:920px) { .lp-nav-links { display:none; } }
  .lp-nav-cta { display:flex;gap:10px;flex-shrink:0; }
- @media (max-width:560px) { .lp-nav-cta{ gap:6px } .lp-nav-cta .lp-btn{ padding:8px 14px;font-size:13.5px;white-space:nowrap; } }
+ /* Mobile: brand lands on row 1, all 3 CTAs on row 2 centered. Buttons stay readable but compact. */
+ @media (max-width:640px) {
+   .lp-nav-cta{ gap:6px;width:100%;justify-content:center;flex-wrap:wrap; }
+   .lp-nav-cta .lp-btn{ padding:8px 12px;font-size:13px;white-space:nowrap; }
+ }
+ @media (max-width:380px) {
+   .lp-nav-cta .lp-btn{ padding:7px 10px;font-size:12.5px; }
+ }
  .lp-btn { display:inline-flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:0;cursor:pointer;transition:transform .12s, box-shadow .15s, opacity .15s;gap:8px;white-space:nowrap; }
  .lp-btn-lg { padding:14px 28px;font-size:15px;border-radius:12px; }
  .lp-btn:active { transform:scale(0.97); }
@@ -1916,7 +1921,6 @@ function renderLanding(){
  </section>
 
  <footer class="lp-footer">
- <div style="margin-bottom:10px"><a href="#/client" style="color:#6366f1;text-decoration:none;font-weight:600">→ Look up my appointments</a></div>
  <div>Nova AI · 24/7 multilingual receptionist for appointment-driven businesses</div>
  <div style="margin-top:6px">Designed and built by <a href="https://www.linkedin.com/in/mehdi-cheikh-b000a2294/" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;border-bottom:1px dashed currentColor" title="Mehdi Cheikh on LinkedIn"><b>Mehdi Cheikh</b></a> · © ${new Date().getFullYear()}</div>
  </footer>
@@ -2275,7 +2279,7 @@ function bindAuth(){
 }
 
 /* ---------- 9b. CLIENT PORTAL (anonymous, phone-only access) ---------- */
-let CLIENT_PORTAL_STATE = { phone:null, name:null, data:null };
+let CLIENT_PORTAL_STATE = { phone:null, name:null, data:null, tab:'upcoming' };
 
 function renderClientPortal(){
  const s = CLIENT_PORTAL_STATE;
@@ -2308,58 +2312,129 @@ function renderClientPortal(){
  const { name, phone, businesses, appointments } = s.data;
  const bizMap = Object.fromEntries((businesses||[]).map(b=>[b.id, b]));
  const today = new Date().toISOString().slice(0,10);
- const upcoming = appointments.filter(a => (a.date > today || (a.date === today && a.status !== 'completed')) && a.status !== 'cancelled');
- const past = appointments.filter(a => !(a.date > today || (a.date === today && a.status !== 'completed')) || a.status === 'cancelled');
+ const isUpcoming = (a) => (a.date > today || (a.date === today && a.status !== 'completed' && a.status !== 'cancelled')) && a.status !== 'cancelled';
+ const isPast = (a) => !isUpcoming(a) && a.status !== 'cancelled';
+ const isCancelled = (a) => a.status === 'cancelled';
 
- const renderAppt = (a, isUpcoming) => {
+ const counts = {
+   upcoming: appointments.filter(isUpcoming).length,
+   history:  appointments.filter(isPast).length,
+   cancelled: appointments.filter(isCancelled).length,
+   all: appointments.length,
+ };
+ const tab = (s.tab && counts[s.tab] !== undefined) ? s.tab : 'upcoming';
+ const filtered = tab === 'upcoming' ? appointments.filter(isUpcoming)
+                : tab === 'history'  ? appointments.filter(isPast)
+                : tab === 'cancelled' ? appointments.filter(isCancelled)
+                : appointments;
+
+ // Business "avatar": colored circle with initial
+ const bizAvatar = (b) => {
+   const colors = ['#6366f1','#22d3ee','#f97316','#a855f7','#22c55e','#ec4899','#3b82f6','#eab308'];
+   const idx = (b.id||'').split('').reduce((s,c)=>s+c.charCodeAt(0),0) % colors.length;
+   const initial = (b.name||'?').trim()[0]?.toUpperCase() || '?';
+   return `<div style="flex-shrink:0;width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${colors[idx]},${colors[(idx+2)%colors.length]});display:grid;place-items:center;color:white;font-weight:700;font-size:18px;box-shadow:0 4px 14px ${colors[idx]}55">${escapeHtml(initial)}</div>`;
+ };
+
+ const renderAppt = (a) => {
    const b = bizMap[a.business_id] || { name:'—', type:'' };
-   const cur = b.currency || 'TND';
-   const dateStr = new Date(a.date+'T00:00:00').toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short', year:'numeric' });
-   const statusColor = a.status==='cancelled' ? '#ef4444' : (a.status==='completed' ? '#94a3b8' : '#22c55e');
-   return `<div class="cp-appt" data-id="${a.id}" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
-     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+   const editable = isUpcoming(a);
+   const dateObj = new Date(a.date+'T00:00:00');
+   const dateStr = dateObj.toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short' });
+   const yearStr = dateObj.getFullYear();
+   const isToday = a.date === today;
+   const statusColor = a.status==='cancelled' ? '#ef4444' : (a.status==='completed' ? '#94a3b8' : (a.status==='confirmed' ? '#22c55e' : '#f59e0b'));
+   const statusLabel = a.status==='confirmed' ? 'Confirmed' : (a.status==='completed' ? 'Completed' : (a.status==='cancelled' ? 'Cancelled' : (a.status==='no_show' ? 'No-show' : 'Pending')));
+   return `<div class="cp-appt" data-id="${a.id}" style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;transition:border-color .15s, box-shadow .15s">
+     <div style="display:flex;gap:14px;align-items:flex-start">
+       ${bizAvatar(b)}
        <div style="flex:1;min-width:0">
-         <div style="font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">${escapeHtml(b.name)} <span style="opacity:.7">· ${escapeHtml(b.type||'')}</span></div>
-         <div style="font-size:17px;font-weight:700">${escapeHtml(a.service_name||'Appointment')}</div>
-         <div style="font-size:13.5px;color:var(--text-dim);margin-top:4px">${dateStr} · ${escapeHtml((a.time||'').slice(0,5))}${a.doctor_name?` · ${escapeHtml(a.doctor_name)}`:''}${a.service_price?` · ${a.service_price} ${cur}`:''}</div>
+         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">
+           <div style="min-width:0;flex:1">
+             <div style="font-size:15.5px;font-weight:700;color:var(--text);line-height:1.25">${escapeHtml(b.name)}</div>
+             <div style="font-size:12.5px;color:var(--text-dim);text-transform:capitalize;margin-top:1px">${escapeHtml(b.type||'')}</div>
+           </div>
+           <span style="padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;background:${statusColor}22;color:${statusColor};text-transform:uppercase;letter-spacing:.4px;white-space:nowrap">${isToday && editable ? '● TODAY' : statusLabel}</span>
+         </div>
+         <div style="margin-top:10px;padding:10px 12px;background:rgba(99,102,241,.07);border-radius:10px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+           <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">📅</span><div><div style="font-size:14px;font-weight:600;color:var(--text)">${dateStr}</div><div style="font-size:11px;color:var(--text-dim)">${yearStr}</div></div></div>
+           <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">🕐</span><div style="font-size:14px;font-weight:600;color:var(--text)">${escapeHtml((a.time||'').slice(0,5))}</div></div>
+         </div>
+         <div style="margin-top:10px;font-size:13.5px;color:var(--text)">
+           <b>${escapeHtml(a.service_name||'Appointment')}</b>${a.doctor_name?` <span style="color:var(--text-dim)">with ${escapeHtml(a.doctor_name)}</span>`:''}${a.service_price?` <span style="color:var(--text-dim)">· ${a.service_price} TND</span>`:''}
+         </div>
+         ${editable ? `
+         <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+           <button class="btn btn-ghost btn-sm cp-reschedule" data-id="${a.id}" style="font-size:13px">↻ Reschedule</button>
+           <button class="btn btn-ghost btn-sm cp-cancel" data-id="${a.id}" style="color:#ef4444;border-color:rgba(239,68,68,.3);font-size:13px">✕ Cancel</button>
+         </div>
+         <div class="cp-resched-form hidden" data-id="${a.id}" style="margin-top:12px;padding:12px;background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.2);border-radius:10px">
+           <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Pick a new date & time</div>
+           <div class="row" style="gap:8px;flex-wrap:wrap">
+             <input type="date" class="cp-new-date" min="${today}" value="${a.date}" style="flex:1;min-width:140px" />
+             <input type="time" class="cp-new-time" value="${(a.time||'').slice(0,5)}" style="flex:1;min-width:120px" />
+           </div>
+           <div class="row" style="gap:8px;margin-top:8px;justify-content:flex-end">
+             <button class="btn btn-ghost btn-sm cp-resched-cancel" data-id="${a.id}">Cancel</button>
+             <button class="btn btn-primary btn-sm cp-resched-go" data-id="${a.id}">Save change</button>
+           </div>
+         </div>` : ''}
        </div>
-       <span style="padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:600;background:${statusColor}22;color:${statusColor};text-transform:uppercase;letter-spacing:.4px">${escapeHtml(a.status||'')}</span>
      </div>
-     ${isUpcoming ? `
-     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-       <button class="btn btn-ghost btn-sm cp-reschedule" data-id="${a.id}">↻ Reschedule</button>
-       <button class="btn btn-ghost btn-sm cp-cancel" data-id="${a.id}" style="color:#ef4444;border-color:rgba(239,68,68,.3)">✕ Cancel</button>
-     </div>
-     <div class="cp-resched-form hidden" data-id="${a.id}" style="margin-top:12px;padding:12px;background:rgba(99,102,241,.06);border-radius:10px">
-       <div class="row" style="gap:8px;flex-wrap:wrap">
-         <input type="date" class="cp-new-date" min="${today}" value="${a.date}" style="flex:1;min-width:140px" />
-         <input type="time" class="cp-new-time" value="${(a.time||'').slice(0,5)}" style="flex:1;min-width:120px" />
-         <button class="btn btn-primary btn-sm cp-resched-go" data-id="${a.id}">Save</button>
-         <button class="btn btn-ghost btn-sm cp-resched-cancel" data-id="${a.id}">×</button>
-       </div>
-     </div>` : ''}
    </div>`;
  };
 
- return `<div style="max-width:760px;margin:0 auto;padding:32px 18px 60px">
+ const tabBtn = (key, label, count, icon) => {
+   const active = tab === key;
+   return `<button class="cp-tab" data-tab="${key}" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px;border-radius:12px;border:0;cursor:pointer;background:${active?'linear-gradient(135deg,#6366f1,#22d3ee)':'transparent'};color:${active?'white':'var(--text-dim)'};font-weight:${active?'700':'500'};transition:all .15s;font-size:13px">
+     <span style="font-size:18px">${icon}</span>
+     <span style="white-space:nowrap">${label}</span>
+     <span style="font-size:11px;opacity:.85">${count}</span>
+   </button>`;
+ };
+
+ const emptyByTab = {
+   upcoming: { ic:'📭', t:'No upcoming appointments', d:'Send a WhatsApp message to one of your businesses to book a new appointment.' },
+   history:  { ic:'📜', t:'No past appointments yet', d:'Your completed visits will show up here.' },
+   cancelled:{ ic:'🚫', t:'No cancelled appointments', d:'Anything you cancel will show up here.' },
+   all:      { ic:'✨', t:'No appointments yet', d:'When you book with a Nova AI business via WhatsApp, your bookings will appear here.' },
+ };
+ const empty = emptyByTab[tab];
+
+ return `<div style="max-width:760px;margin:0 auto;padding:24px 16px 60px">
    <div class="logo" style="margin-bottom:18px"><div class="logo-mark">N</div> Nova AI</div>
-   <div style="background:linear-gradient(135deg,#6366f1 0%,#22d3ee 100%);color:white;padding:24px;border-radius:18px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-     <div>
-       <div style="font-size:12.5px;letter-spacing:.5px;opacity:.9;text-transform:uppercase">Signed in as</div>
-       <div style="font-size:22px;font-weight:700;margin-top:2px">${escapeHtml(name || phone)}</div>
-       <div style="font-size:13px;opacity:.9;margin-top:2px">${escapeHtml(phone)}</div>
+
+   <!-- Hero card -->
+   <div style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#22d3ee 100%);color:white;padding:22px 22px;border-radius:20px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 14px 36px -10px rgba(99,102,241,.45);position:relative;overflow:hidden">
+     <div style="position:absolute;top:-40%;right:-10%;width:220px;height:220px;background:rgba(255,255,255,.08);border-radius:50%;filter:blur(40px);pointer-events:none"></div>
+     <div style="position:relative;z-index:1">
+       <div style="font-size:12px;letter-spacing:.6px;opacity:.85;text-transform:uppercase;font-weight:600">Welcome back</div>
+       <div style="font-size:24px;font-weight:800;margin-top:2px;letter-spacing:-.3px">${escapeHtml(name || 'You')}</div>
+       <div style="font-size:13px;opacity:.9;margin-top:4px;font-family:'JetBrains Mono',Consolas,monospace">${escapeHtml(phone)}</div>
      </div>
-     <button class="btn" id="cp-logout" style="background:rgba(255,255,255,.18);color:white;border:1px solid rgba(255,255,255,.3)">Sign out</button>
+     <button class="btn" id="cp-logout" style="position:relative;z-index:1;background:rgba(255,255,255,.18);color:white;border:1px solid rgba(255,255,255,.3);padding:8px 14px;font-size:13px">Sign out</button>
    </div>
-   <div style="display:flex;gap:18px;margin-bottom:18px;flex-wrap:wrap">
-     <div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px"><div style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px">Upcoming</div><div style="font-size:26px;font-weight:700;margin-top:2px">${upcoming.length}</div></div>
-     <div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px"><div style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px">History</div><div style="font-size:26px;font-weight:700;margin-top:2px">${past.length}</div></div>
-     <div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px"><div style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px">Businesses</div><div style="font-size:26px;font-weight:700;margin-top:2px">${(businesses||[]).length}</div></div>
+
+   <!-- Mini KPIs -->
+   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center"><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;font-weight:600">Upcoming</div><div style="font-size:24px;font-weight:800;margin-top:4px;color:#22c55e">${counts.upcoming}</div></div>
+     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center"><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;font-weight:600">History</div><div style="font-size:24px;font-weight:800;margin-top:4px;color:var(--text)">${counts.history}</div></div>
+     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center"><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;font-weight:600">Businesses</div><div style="font-size:24px;font-weight:800;margin-top:4px;color:#6366f1">${(businesses||[]).length}</div></div>
    </div>
-   <h3 style="margin:24px 0 12px;font-size:16px;letter-spacing:-.2px">Upcoming</h3>
-   ${upcoming.length === 0 ? `<div style="background:var(--card);border:1px dashed var(--border);border-radius:14px;padding:24px;text-align:center;color:var(--text-dim)">No upcoming appointments. Reach out on WhatsApp to book a new one.</div>` : upcoming.map(a=>renderAppt(a,true)).join('')}
-   <h3 style="margin:28px 0 12px;font-size:16px;letter-spacing:-.2px">History</h3>
-   ${past.length === 0 ? `<div style="background:var(--card);border:1px dashed var(--border);border-radius:14px;padding:24px;text-align:center;color:var(--text-dim)">No past appointments yet.</div>` : past.slice(0,30).map(a=>renderAppt(a,false)).join('')}
+
+   <!-- Tabs -->
+   <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:6px;display:flex;gap:4px;margin-bottom:18px">
+     ${tabBtn('upcoming','Upcoming',counts.upcoming,'⏱️')}
+     ${tabBtn('history','History',counts.history,'📜')}
+     ${tabBtn('cancelled','Cancelled',counts.cancelled,'🚫')}
+     ${tabBtn('all','All',counts.all,'📋')}
+   </div>
+
+   <!-- Appointments -->
+   ${filtered.length === 0
+     ? `<div style="background:var(--card);border:1px dashed var(--border);border-radius:16px;padding:42px 24px;text-align:center"><div style="font-size:42px;margin-bottom:10px;opacity:.6">${empty.ic}</div><div style="font-size:16px;font-weight:700;margin-bottom:6px">${empty.t}</div><div style="font-size:13.5px;color:var(--text-dim);max-width:340px;margin:0 auto;line-height:1.5">${empty.d}</div></div>`
+     : filtered.map(renderAppt).join('')}
+
    <div style="margin-top:30px;text-align:center;font-size:12.5px;color:var(--text-faint)"><a href="#/">← Back to home</a></div>
  </div>`;
 }
@@ -2415,7 +2490,12 @@ function bindClientPortal(){
    return;
  }
 
- $('#cp-logout').onclick = ()=>{ CLIENT_PORTAL_STATE = { phone:null, name:null, data:null }; render(); };
+ $('#cp-logout').onclick = ()=>{ CLIENT_PORTAL_STATE = { phone:null, name:null, data:null, tab:'upcoming' }; render(); };
+
+ $$('.cp-tab').forEach(b => b.onclick = () => {
+   CLIENT_PORTAL_STATE.tab = b.dataset.tab;
+   render();
+ });
 
  $$('.cp-reschedule').forEach(b => b.onclick = () => {
    const id = b.dataset.id;
