@@ -2651,7 +2651,7 @@ function bindClientPortal(){
    return;
  }
 
- $('#cp-logout').onclick = ()=>{ CLIENT_PORTAL_STATE = { phone:null, name:null, data:null, tab:'upcoming' }; render(); };
+ $('#cp-logout').onclick = ()=>{ CLIENT_PORTAL_STATE = { phone:null, name:null, data:null, tab:'upcoming' }; navigate('#/'); };
 
  $$('.cp-tab').forEach(b => b.onclick = () => {
    CLIENT_PORTAL_STATE.tab = b.dataset.tab;
