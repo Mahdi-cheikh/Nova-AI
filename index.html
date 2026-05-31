@@ -1172,17 +1172,19 @@ function renderLanding(){
  .lp-brand { display:flex;align-items:center;gap:10px;min-width:0; }
  .lp-logo-mark { width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#22d3ee);display:grid;place-items:center;color:white;font-weight:800;font-size:20px;box-shadow:0 4px 14px rgba(99,102,241,0.3);flex-shrink:0; }
  @media (max-width:560px) { .lp-logo-mark{ width:36px;height:36px;font-size:17px } }
- .lp-brand-name { font-weight:700;font-size:17px;letter-spacing:-0.3px;line-height:1; }
+ .lp-brand-name { font-weight:700;font-size:17px;letter-spacing:-0.3px;line-height:1;white-space:nowrap; }
  .lp-brand-tag { font-size:11.5px;color:#6b7280;margin-top:2px; }
- @media (max-width:480px) { .lp-brand-tag{ display:none } .lp-brand-name{ font-size:15px } }
- @media (max-width:380px) { .lp-nav-cta .lp-btn-outline{ display:none } }
+ @media (max-width:560px) { .lp-brand-tag{ display:none } .lp-brand-name{ font-size:16px } }
+ /* Mobile: drop "My appointments" pill (it lives in the footer), keep Login + Sign up compact */
+ @media (max-width:640px) { .lp-nav-cta .lp-btn-client { display:none; } }
  .lp-nav-links { display:flex;gap:30px;font-size:14px;font-weight:500; }
  .lp-nav-links a { color:#475569;text-decoration:none;transition:color .15s; }
  .lp-nav-links a:hover { color:#6366f1; }
  @media (prefers-color-scheme:dark){ .lp-nav-links a{color:#cbd5e1} }
  @media (max-width:920px) { .lp-nav-links { display:none; } }
- .lp-nav-cta { display:flex;gap:10px; }
- .lp-btn { display:inline-flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:0;cursor:pointer;transition:transform .12s, box-shadow .15s, opacity .15s;gap:8px; }
+ .lp-nav-cta { display:flex;gap:10px;flex-shrink:0; }
+ @media (max-width:560px) { .lp-nav-cta{ gap:6px } .lp-nav-cta .lp-btn{ padding:8px 14px;font-size:13.5px;white-space:nowrap; } }
+ .lp-btn { display:inline-flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:0;cursor:pointer;transition:transform .12s, box-shadow .15s, opacity .15s;gap:8px;white-space:nowrap; }
  .lp-btn-lg { padding:14px 28px;font-size:15px;border-radius:12px; }
  .lp-btn:active { transform:scale(0.97); }
  .lp-btn-primary { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;box-shadow:0 4px 18px rgba(99,102,241,0.35); }
@@ -1624,7 +1626,7 @@ function renderLanding(){
  <a href="#install">Mobile app</a>
  </nav>
  <div class="lp-nav-cta">
- <a href="#/client" class="lp-btn lp-btn-outline" title="See your appointments by phone number">My appointments</a>
+ <a href="#/client" class="lp-btn lp-btn-outline lp-btn-client" title="See your appointments by phone number">My appointments</a>
  <a href="#/auth" class="lp-btn lp-btn-outline">Log in</a>
  <a href="#/auth?mode=signup" class="lp-btn lp-btn-primary">Sign up</a>
  </div>
@@ -1914,6 +1916,7 @@ function renderLanding(){
  </section>
 
  <footer class="lp-footer">
+ <div style="margin-bottom:10px"><a href="#/client" style="color:#6366f1;text-decoration:none;font-weight:600">→ Look up my appointments</a></div>
  <div>Nova AI · 24/7 multilingual receptionist for appointment-driven businesses</div>
  <div style="margin-top:6px">Designed and built by <a href="https://www.linkedin.com/in/mehdi-cheikh-b000a2294/" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;border-bottom:1px dashed currentColor" title="Mehdi Cheikh on LinkedIn"><b>Mehdi Cheikh</b></a> · © ${new Date().getFullYear()}</div>
  </footer>
