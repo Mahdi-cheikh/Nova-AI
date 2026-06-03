@@ -1,73 +1,55 @@
-Le tissu économique tunisien repose massivement sur des milliers de
-petites et moyennes entreprises (PME) de service : cliniques,
-cabinets médicaux, laboratoires d'analyses, salons de coiffure,
-garages automobiles, cabinets juridiques et professionnels
-indépendants. Toutes ces structures partagent un mode de
-fonctionnement quotidien très uniforme : les rendez-vous sont
-notés dans un agenda papier, les communications avec la clientèle
-transitent par WhatsApp depuis le téléphone personnel du
-propriétaire ou d'un secrétaire, et la coordination entre les
-différents canaux d'information (agenda, conversations,
-facturation, dossier client) repose entièrement sur la mémoire et
-l'attention de l'opérateur humain.
+Le tissu economique tunisien repose massivement sur des milliers de petites
+et moyennes entreprises (PME) de service : cliniques, cabinets medicaux,
+laboratoires d'analyses, salons de coiffure, garages automobiles, cabinets
+juridiques et professionnels independants. Toutes ces structures partagent
+un mode de fonctionnement quotidien remarquablement uniforme : les rendez-vous
+sont notes dans un agenda papier, les communications avec la clientele
+transitent par WhatsApp depuis le telephone personnel du proprietaire ou
+d'un secretaire, et la coordination entre les differents canaux d'information
+(agenda, conversations, facturation, dossier client) repose entierement sur
+la memoire et l'attention de l'operateur humain.
 
-Cette organisation, qui fonctionne tant que le volume reste
-modeste, devient rapidement le blocage de l'activité : les
-messages reçus en dehors des heures de travail restent sans
-réponse, le propriétaire est constamment interrompu par des
-questions répétitives, les langues utilisées par la clientèle
-(arabe dialectal tunisien, français, anglais, souvent mélangées
-dans une même phrase) imposent une charge cognitive
-supplémentaire, et aucune visibilité analytique n'est possible sur
-les flux de l'entreprise.
+Cette organisation, qui fonctionne tant que le volume reste modeste, devient
+rapidement le goulet d'etranglement de l'activite : les messages recus en
+dehors des heures de travail restent sans reponse, le proprietaire est
+constamment interrompu par des questions repetitives, les langues utilisees
+par la clientele (arabe dialectal tunisien, francais, anglais, souvent
+melangees dans une meme phrase) imposent une charge cognitive supplementaire,
+et aucune visibilite analytique n'est possible sur les flux de l'entreprise.
 
-L'évolution récente des technologies d'intelligence artificielle,
-en particulier la disponibilité de modèles de langage grand public
-(\emph{Large Language Models}, ou LLM) capables de comprendre
-l'arabe dialectal et de produire des réponses structurées, ouvre
-une opportunité : celle d'automatiser le travail de réceptionniste
-lui-même, en l'intégrant directement à l'intérieur du canal que la
-clientèle utilise déjà, c'est-à-dire WhatsApp.
+L'evolution recente des technologies d'intelligence artificielle, en
+particulier la disponibilite de modeles de langage grand public (Large
+Language Models, ou LLM) capables de comprendre l'arabe dialectal et de
+produire des reponses structurees, ouvre une opportunite : celle d'automatiser
+le travail de receptionniste lui-meme, en l'integrant directement a l'interieur
+du canal que la clientele utilise deja, c'est-a-dire WhatsApp.
 
-C'est dans ce contexte que j'ai conçu le projet \textbf{\nova}, une
-plateforme multi-tenant de \emph{Software-as-a-Service} (SaaS) qui
-réalise concrètement cette opportunité. \nova{} combine une
-intelligence artificielle conversationnelle basée sur Anthropic
-Claude, l'API Cloud officielle de WhatsApp Business, une base de
-données Postgres multi-locataire avec une sécurité au niveau des
-lignes (Row-Level Security), un tableau de bord temps réel pour
-l'administrateur, et une application web progressive (PWA)
-destinée aux clients finaux.
+Le present rapport presente le projet \textbf{Nova~AI}, une plateforme
+multi-tenant de Software-as-a-Service (SaaS) qui realise concretement cette
+opportunite. Nova~AI combine une intelligence artificielle conversationnelle
+basee sur Anthropic Claude, l'API Cloud officielle de WhatsApp Business, une
+base de donnees Postgres multi-locataire avec une securite au niveau des
+lignes (Row-Level Security), un tableau de bord temps reel pour le
+proprietaire, et une application web progressive (PWA) destinee aux clients
+finaux.
 
-Ce rapport est organisé comme suit.
+Le projet a ete structure autour de la methodologie \textbf{Agile Scrum},
+adaptee aux contraintes d'une equipe d'une seule personne et aux iterations
+courtes imposees par le rythme du semestre. Quatre sprints successifs ont
+permis de produire un systeme complet, deploye en production, capable de
+recevoir et traiter des bookings reels via WhatsApp en arabe dialectal,
+francais et anglais.
 
-\begin{itemize}
-  \item Le \textbf{Chapitre 1} présente le cadre général du
-        projet : l'organisme d'accueil, l'étude de l'existant
-        (paysage des PME tunisiennes et solutions concurrentes),
-        la problématique précise qui en découle, la solution
-        \nova{} proposée à haut niveau ainsi que les
-        méthodologies de développement et de conception adoptées.
-
-  \item Le \textbf{Chapitre 2} couvre le \emph{sprint
-        préparatoire} : spécification des besoins (acteurs,
-        besoins fonctionnels et non fonctionnels), conception
-        globale, management du projet et environnement de
-        développement.
-
-  \item Le \textbf{Chapitre 3} couvre le \textbf{Sprint 1} dédié
-        aux \emph{fondations} : schéma de base de données
-        multi-locataire, Row-Level Security, authentification,
-        webhook WhatsApp et classifieur d'intention IA.
-
-  \item Le \textbf{Chapitre 4} couvre le \textbf{Sprint 2}
-        consacré aux \emph{surfaces opérationnelles} : tableau de
-        bord administrateur, gestion des rendez-vous et des
-        clients, OCR de documents et PWA patient.
-
-  \item Le \textbf{Chapitre 5} couvre le \textbf{Sprint 3} qui
-        apporte la \emph{couche d'intelligence} : remplissage de
-        créneaux à la demande, apprentissage des durées,
-        vouchers d'anniversaire, file d'attente temps réel,
-        packs sectoriels et assistant vocal.
-\end{itemize}
+\section*{Plan du rapport}
+Ce rapport est organise comme suit. Le \textbf{Chapitre I} presente le
+cadre general du projet : l'organisme d'accueil, l'analyse du contexte
+tunisien, l'etude de l'existant, la problematique et la solution proposee,
+ainsi que la methodologie Scrum adoptee. Le \textbf{Chapitre II} (Sprint 0)
+detaille la phase preparatoire : identification des acteurs, analyse des
+besoins fonctionnels et non fonctionnels, choix techniques, diagrammes de
+conception et planification des sprints. Les \textbf{Chapitres III, IV et V}
+documentent les trois sprints de realisation : le sprint des fondations, le
+sprint des surfaces operationnelles, et le sprint de la couche
+d'intelligence. Enfin, la \textbf{Conclusion generale} fait le bilan du
+travail accompli, identifie les limites du systeme actuel, et trace les
+perspectives d'evolution future.

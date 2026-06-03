@@ -7,6 +7,7 @@
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["fullscreen", "standalone"],
   "orientation": "portrait",
   "background_color": "#0a0b10",
   "theme_color": "#6366f1",

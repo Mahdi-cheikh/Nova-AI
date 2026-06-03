@@ -1,0 +1,269 @@
+\chapter{Sprint 0 : Preparation et analyse}
+
+\section{Introduction}
+Tout projet Scrum debute par ce que l'on appelle le Sprint 0 : une phase
+de preparation dont l'objectif n'est pas de livrer du code mais d'eliminer
+les incertitudes sur \emph{ce} qui va etre livre. Le Sprint 0 est, dans
+notre cas, l'etape ou nous avons identifie les acteurs interagissant avec
+la plateforme, redige les besoins fonctionnels et non fonctionnels qui
+allaient guider la priorisation, fixe l'environnement technique, et
+esquisse les diagrammes d'analyse et de conception sur lesquels la mise
+en oeuvre se referera ulterieurement.
+
+Ce chapitre est organise en cinq sections. Nous commencons par les acteurs.
+Nous decoupons ensuite les besoins en categories fonctionnelle et non
+fonctionnelle. Nous decrivons la pile technique --- back-end, front-end,
+fournisseurs d'IA, hebergement --- en explicitant le raisonnement derriere
+chaque choix majeur. Nous presentons ensuite les artefacts de conception
+(diagramme de cas d'utilisation, modele conceptuel des donnees, diagramme
+de sequence pour le parcours de prise de rendez-vous), et nous cloturons
+par une vue d'ensemble de la planification reliant chaque sprint suivant
+aux exigences qu'il satisfera.
+
+\section{Identification des acteurs}
+Quatre acteurs principaux interagissent avec Nova~AI. Chacun dispose d'un
+point d'entree distinct dans le systeme et d'attentes specifiques.
+
+\subsection{Le proprietaire d'entreprise}
+Le proprietaire est l'utilisateur payant. Dans une clinique mono-medecin,
+il est aussi le medecin. Dans une configuration multi-praticiens, il est
+typiquement un medecin senior ou un gestionnaire administratif. Dans un
+laboratoire, il est le biologiste responsable. Dans un garage, il est le
+chef mecanicien.
+
+Le proprietaire entre dans le systeme en s'inscrivant sur la page
+d'accueil marketing, en choisissant un type d'entreprise dans la liste
+deroulante (clinique / laboratoire / cabinet medical / salon / garage /
+entreprise), puis en completant le flux de creation d'entreprise. Une
+fois entre, il configure les services, les membres de l'equipe, les
+heures de travail, les forfaits et les diverses fonctionnalites IA. Il
+consulte les tableaux de bord, approuve les campagnes de remplissage de
+creneaux, valide les surcharges de securite des prescriptions, examine
+les suggestions d'apprentissage de duree de consultation, scanne les
+codes QR des patients pour demarrer les consultations.
+
+\subsection{Le praticien (membre de l'equipe)}
+Le praticien est un membre de l'equipe : un medecin dans une clinique,
+un biologiste dans un laboratoire, un mecanicien dans un garage, un
+coiffeur dans un salon. Il est distinct du proprietaire car ses
+permissions sont plus restreintes : il devrait voir sa journee, ses
+patients, son historique de rendez-vous, mais pas les tableaux de bord
+financiers, les surfaces de gestion d'equipe ou les analyses globales.
+
+Le praticien entre soit par la sous-route \emph{Vue medecin} du tableau
+de bord (lorsque le proprietaire clique sur \og Voir comme \fg{} sur un
+membre d'equipe) soit par la PWA patient (lorsque le membre d'equipe a
+ete lie a un \texttt{auth\_uid} et se connecte directement). Cette
+deuxieme voie est plus courante dans les configurations multi-praticiens
+ou chaque medecin dispose de ses propres identifiants.
+
+\subsection{Le patient ou client}
+Le patient (ou client, dans les verticaux non medicaux) est l'utilisateur
+final. Il interagit avec Nova principalement via WhatsApp : il envoie des
+demandes de rendez-vous, pose des questions FAQ, envoie des photos de
+prescriptions ou de pieces de voiture endommagees, repond aux rappels.
+Certains patients vont plus loin et installent la PWA sur leur telephone,
+ce qui leur donne acces a une experience plus riche : position dans la
+file d'attente avec ETA en temps reel, check-in QR a la clinique,
+chronologie de fichiers, profil.
+
+Crucialement, le patient n'a jamais besoin de s'inscrire pour utiliser
+le cote WhatsApp de la plateforme. La premiere fois qu'il envoie un
+message a une entreprise pilotee par Nova, une ligne est automatiquement
+creee dans la table \texttt{clients} et il devient une entite suivie a
+partir de ce moment.
+
+\subsection{Le systeme (agents automatises)}
+Le quatrieme acteur est le systeme lui-meme. Un nombre croissant de
+fonctionnalites s'executent selon une planification plutot qu'en reponse
+a une action utilisateur : les rappels 24~heures et 1~heure declenches
+par \texttt{send-reminders}, le scan quotidien de remplissage de
+creneaux, le lot quotidien d'anniversaire qui frappe les vouchers, la
+revue hebdomadaire d'apprentissage de duree qui ajuste les durees de
+service en fonction de la realite observee, et la campagne hebdomadaire
+de reactivation pour les clients dormants.
+
+Ces agents automatises sont des citoyens de premiere classe dans le
+diagramme de cas d'utilisation, car leur comportement fait partie de la
+proposition de valeur : un proprietaire de clinique achete Nova en
+partie parce que Nova fait des choses \emph{pendant que le proprietaire
+dort}.
+
+\section{Specification des besoins}
+
+\subsection{Besoins fonctionnels}
+Nous avons catalogue les besoins fonctionnels dans un tableau unique
+organise par acteur (Tableau \ref{tab:fr}). Le tableau a evolue
+progressivement au fil des sprints --- le Sprint 1 a couvert les vingt
+premieres lignes, le Sprint 2 en a ajoute quinze, le Sprint 3 a cloture
+la liste avec les elements pilotes par IA.
+
+\begin{table}[H]
+  \centering\footnotesize
+  \begin{tabular}{p{2.4cm}p{1.2cm}p{9.8cm}}
+    \toprule
+    \textbf{Acteur} & \textbf{ID} & \textbf{Besoin} \\
+    \midrule
+    Proprietaire & BF01 & S'inscrire avec email et lien magique, puis creer son profil d'entreprise. \\
+    Proprietaire & BF02 & Choisir un type d'entreprise dans la liste supportee, avec valeurs par defaut sectorielles pre-chargees. \\
+    Proprietaire & BF03 & Ajouter et gerer des services (nom, duree, prix, categorie). \\
+    Proprietaire & BF04 & Ajouter et gerer les membres de l'equipe (medecins, mecaniciens, coiffeurs). \\
+    Proprietaire & BF05 & Configurer le receptionniste IA : activation, heures d'ouverture, FAQ, jours travailles. \\
+    Proprietaire & BF06 & Visualiser le calendrier journalier, hebdomadaire et mensuel, filtrable par membre d'equipe. \\
+    Proprietaire & BF07 & Creer, modifier et annuler manuellement des rendez-vous. \\
+    Proprietaire & BF08 & Consulter l'historique complet de chaque client (rendez-vous, messages, fichiers, resultats). \\
+    Proprietaire & BF09 & Recevoir des notifications navigateur en temps reel pour nouvelles reservations, triages urgents, no-shows. \\
+    Proprietaire & BF10 & Configurer les campagnes de vouchers d'anniversaire et consulter l'historique. \\
+    Proprietaire & BF11 & Approuver les campagnes de remplissage de creneaux proposees par le scanner quotidien. \\
+    Proprietaire & BF12 & Activer l'auto-ajustement de duree par service et examiner les suggestions de derive. \\
+    Proprietaire & BF13 & Scanner les codes QR patients depuis la barre du tableau de bord pour demarrer les consultations. \\
+    Proprietaire & BF14 & Lancer des verifications IA de securite des prescriptions contre l'historique du patient. \\
+    Proprietaire & BF15 & Gerer les vehicules (entreprises de type garage) : VIN, plaque, kilometrage, photos, journal de service. \\
+    Proprietaire & BF16 & Generer et imprimer le code QR de reception (laboratoires) pour la file d'attente en temps reel. \\
+    Praticien & BF17 & Se connecter a la PWA et voir les rendez-vous de la journee. \\
+    Praticien & BF18 & Marquer un patient comme Arrive et Termine (horodatage debut/fin consultation). \\
+    Praticien & BF19 & Scanner un QR patient avec la camera du telephone pour ouvrir le minuteur de consultation. \\
+    Praticien & BF20 & Cliquer sur Terminer Consultation a la fin de la visite, enregistrant la duree reelle. \\
+    Patient & BF21 & Envoyer un message WhatsApp dans l'une des trois langues et recevoir une reponse pertinente. \\
+    Patient & BF22 & Reserver un rendez-vous via une conversation multi-tour (nom, age, service, date, heure). \\
+    Patient & BF23 & Confirmer ou annuler un rendez-vous rappele via les boutons interactifs WhatsApp. \\
+    Patient & BF24 & Envoyer une photo d'une prescription manuscrite et recevoir une liste extraite et corrigee des analyses. \\
+    Patient & BF25 & Envoyer une photo de degats voiture et la voir auto-attachee a son fichier vehicule. \\
+    Patient & BF26 & Scanner le QR de reception (laboratoire) et rejoindre la file d'attente en temps reel. \\
+    Patient & BF27 & Voir sa position dans la file et le temps d'attente estime, mis a jour en direct. \\
+    Patient & BF28 & Recevoir un WhatsApp personnalise le jour de son anniversaire avec un code voucher. \\
+    Patient & BF29 & Installer la PWA Nova sur son telephone et la consulter hors ligne. \\
+    Patient & BF30 & Verifier son numero de telephone via un OTP a six chiffres. \\
+    Systeme & BF31 & Envoyer les rappels 24h pour rendez-vous confirmes, avec boutons Confirmer/Annuler. \\
+    Systeme & BF32 & Envoyer les rappels 1h pour rendez-vous confirmes. \\
+    Systeme & BF33 & Detecter chaque matin les opportunites de creneaux vides et creer des brouillons de campagne. \\
+    Systeme & BF34 & Executer le batch d'anniversaire chaque matin, frapper les codes, envoyer les WhatsApp. \\
+    Systeme & BF35 & Recalculer les moyennes de duree de service hebdomadairement et produire suggestions de derive. \\
+    Systeme & BF36 & Reactiver les clients dormants (derniere visite > 6 mois) avec une campagne hebdomadaire. \\
+    Systeme & BF37 & Auto-redemption d'un voucher d'anniversaire lorsque le client envoie le code. \\
+    Systeme & BF38 & Auto-attacher les photos garage au vehicule correspondant en analysant le message. \\
+    \bottomrule
+  \end{tabular}
+  \caption{Catalogue des besoins fonctionnels}
+  \label{tab:fr}
+\end{table}
+
+\subsection{Besoins non fonctionnels}
+Les besoins non fonctionnels sont tout aussi importants. Certains, comme
+l'isolation multi-locataire, n'etaient pas negociables car leur defaillance
+serait catastrophique. D'autres, comme la cible des cinq secondes de
+reponse, etaient plus souples mais ont neanmoins guide les choix
+architecturaux.
+
+\begin{itemize}
+  \item \textbf{Multi-tenancy avec isolation stricte.} Chaque entreprise
+        ne voit que ses propres donnees, applique au niveau de la base
+        via les politiques Row-Level Security de Postgres.
+  \item \textbf{Mises a jour en temps reel.} Les tuiles du tableau de
+        bord, les positions de file d'attente et les minuteurs de
+        consultation se mettent a jour en moins de deux secondes via
+        Supabase Realtime.
+  \item \textbf{Support multilingue.} Le systeme gere l'arabe dialectal,
+        le francais et l'anglais en messages entrants, reponses
+        sortantes, gabarits de vouchers et textes de rappel.
+  \item \textbf{Mobile-first.} La PWA est entierement fonctionnelle sur
+        telephones jusqu'a 360 pixels de largeur ; le tableau de bord
+        redirige automatiquement les proprietaires mobiles connectes
+        vers la PWA.
+  \item \textbf{Fenetre de reponse de cinq secondes.} L'IA doit repondre
+        en moins de cinq secondes pour 95\% des cas. Pour atteindre cet
+        objectif, la fonction Edge utilise Claude Haiku (plus rapide
+        que Sonnet) et applique un timeout strict de six secondes via
+        \texttt{Promise.race}.
+  \item \textbf{Tolerance aux pannes.} Un appel IA defaillant ne doit
+        jamais bloquer le flux de prise de rendez-vous. Le message
+        entrant est insere d'abord, puis l'appel IA est tente.
+  \item \textbf{Conformite RGPD.} Les numeros de telephone et
+        conversations sont attaches a l'entreprise concernee et
+        supprimables sur demande.
+  \item \textbf{Maitrise des couts.} Le cout total d'infrastructure par
+        locataire et par mois doit rester sous 5~USD au regime de
+        croisiere, pour qu'un abonnement mensuel a 50~TND soit rentable.
+\end{itemize}
+
+\section{Environnement technique}
+\subsection{Pile back-end}
+Le back-end est presque entierement construit sur Supabase, avec quelques
+fournisseurs d'IA externes attaches. Le tableau \ref{tab:back} resume les
+choix.
+
+\begin{table}[H]
+  \centering\footnotesize
+  \begin{tabular}{p{3.5cm}p{4cm}p{6cm}}
+    \toprule
+    \textbf{Composant} & \textbf{Choix} & \textbf{Justification} \\
+    \midrule
+    Base de donnees & Postgres 15 (Supabase) & Mature, JSONB pour colonnes flexibles, RLS pour multi-tenancy. \\
+    Auth & Supabase Auth (lien magique, OAuth) & Integre nativement avec RLS via \texttt{auth.uid()}. \\
+    Fonctions & Supabase Edge Functions (Deno) & Distribuees globalement, V8 isolates, faible cold-start. \\
+    Realtime & Supabase Realtime & Pousse les changements Postgres aux clients via WebSockets. \\
+    Storage & Supabase Storage & Compatible S3, RLS, URLs signees. \\
+    Cron & pg\_cron + pg\_net & Planification dans la base sans worker externe. \\
+    Classifieur d'intention & Anthropic Claude Haiku 4.5 & Meilleur ratio vitesse/cout pour JSON structure court. \\
+    Vision OCR & Anthropic Claude Sonnet 4.6 & Robuste sur ecriture francaise et abreviations medicales. \\
+    Speech-to-text & OpenAI Whisper & Robuste aux notes vocales bruyantes. \\
+    Canal conversationnel & WhatsApp Business Cloud API & Direct depuis Meta, sans agregateur. \\
+    \bottomrule
+  \end{tabular}
+  \caption{Pile back-end}
+  \label{tab:back}
+\end{table}
+
+\subsection{Pile front-end}
+Le front-end fait des choix tout aussi opinionnes : JavaScript ES Modules
+vanille (sans framework) pour le tableau de bord et la PWA, CSS fait main
+avec un theme \emph{anti-gravite} personnalise (orbes flottantes, cartes
+qui levitent, gradient violet-cyan), et hebergement statique sur Vercel
+avec deploiement automatique a chaque push GitHub.
+
+\subsection{Pourquoi pas de framework}
+Le tableau de bord est riche en fonctionnalites mais sa complexite est
+bornee. Un framework moderne aurait impose une etape de build, un bundler,
+un pipeline de deploiement, et un cout de base non trivial de JavaScript
+livre a l'utilisateur. En restant sur des modules ES vanille servis depuis
+un seul fichier HTML, nous gardons l'ensemble du projet sous 350~Ko
+gzippes, deployons en moins de trente secondes, et evitons toute une
+classe de problemes lies aux dependances.
+
+\section{Diagramme de cas d'utilisation}
+\input{figures/uc}
+
+\section{Modele conceptuel des donnees}
+\input{figures/erd}
+
+\section{Diagramme de sequence du parcours de prise de rendez-vous}
+\input{figures/seq}
+
+\section{Planification des sprints}
+Les quatre sprints ont ete planifies comme suit. Chaque sprint a un objectif
+clair, une duree fixe de deux a trois semaines, et un backlog tire du
+tableau des besoins.
+
+\begin{table}[H]
+  \centering\footnotesize
+  \begin{tabular}{p{1.6cm}p{2.6cm}p{9cm}}
+    \toprule
+    \textbf{Sprint} & \textbf{Objectif} & \textbf{Faits saillants du backlog} \\
+    \midrule
+    Sprint 0 & Preparation & Acteurs, besoins, pile technique, diagrammes de conception. \\
+    Sprint 1 & Fondations & Schema, auth, RLS, webhook WhatsApp, classifieur IA, prise de rendez-vous multi-tour. \\
+    Sprint 2 & Operations & Tableau de bord, calendrier, rendez-vous, pipeline labo, OCR de prescriptions, PWA, OTP telephone. \\
+    Sprint 3 & Intelligence & Demand-fill, apprentissage des durees, securite des medicaments, profils vehicules, anniversaires, check-in QR, file d'attente. \\
+    \bottomrule
+  \end{tabular}
+  \caption{Vue d'ensemble de la planification des sprints}
+  \label{tab:plan}
+\end{table}
+
+\section{Conclusion}
+Le Sprint 0 a pose le decor. Nous avons identifie les quatre acteurs,
+catalogue trente-huit besoins fonctionnels et neuf besoins non
+fonctionnels, justifie les choix techniques majeurs, et esquisse les
+artefacts d'analyse et de conception qui guideront la mise en oeuvre.
+Avec ces fondations en place, le chapitre suivant entre dans le Sprint 1,
+ou la colonne vertebrale multi-locataire de la plateforme a ete construite.

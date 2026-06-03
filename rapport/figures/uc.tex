@@ -1,20 +1,81 @@
-% =======================================================================
-% Diagramme de cas d'utilisation global Nova AI
-% =======================================================================
-% Source : figures/sources/uc.puml (PlantUML)
-% Genere via https://www.plantuml.com/plantuml/uml -> export PNG -> figures/uc.png
-% =======================================================================
-\begin{figure}[!htbp]\centering
-\IfFileExists{figures/uc.png}{%
-  \includegraphics[width=.98\textwidth,height=.85\textheight,keepaspectratio]{figures/uc.png}%
-}{%
-  \fbox{\parbox[c][8cm][c]{0.85\textwidth}{\centering\itshape\small
-    [Diagramme de cas d'utilisation global -- a generer depuis\\
-    \texttt{figures/sources/uc.puml} via\\
-    \url{https://www.plantuml.com/plantuml/uml}\\
-    puis sauvegarder en \texttt{figures/uc.png}]
-  }}%
-}
-\caption{Diagramme de cas d'utilisation global de \nova{}.}
+% ===========================================================================
+% Diagramme de cas d'utilisation global — Nova AI
+% ===========================================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  every node/.style={align=center},
+  actor/.style ={font=\footnotesize\bfseries},
+  uc/.style    ={ellipse, draw=black!75, fill=cyan!8,
+                 minimum width=32mm, minimum height=8mm,
+                 font=\scriptsize, inner sep=2pt},
+  inc/.style   ={->, thick, draw=black!70, dashed, >=Stealth},
+  rel/.style   ={-, thick, draw=black!75},
+  sys/.style   ={rectangle, draw=black!60, fill=white,
+                 minimum width=88mm, minimum height=110mm,
+                 line width=1pt}
+]
+
+% System box (Nova AI)
+\node[sys] (sys) at (0,0) {};
+\node[font=\bfseries, anchor=north] at (sys.north) {\bfseries Système Nova~AI};
+
+% Use-case nodes inside the system, arranged in two columns
+% Left column — patient flow
+\node[uc] (book)     at (-2.0, 4.2) {Réserver un\\rendez-vous};
+\node[uc] (cancel)   at (-2.0, 3.0) {Annuler un\\rendez-vous};
+\node[uc] (resched)  at (-2.0, 1.8) {Reprogrammer\\un rendez-vous};
+\node[uc] (uploadrx) at (-2.0, 0.6) {Envoyer une\\ordonnance};
+\node[uc] (askinfo)  at (-2.0,-0.6) {Demander des\\informations};
+\node[uc] (urgent)   at (-2.0,-1.8) {Signaler une\\urgence};
+
+% Right column — staff flow
+\node[uc] (viewcal)  at ( 2.0, 4.2) {Consulter le\\calendrier};
+\node[uc] (mngsvc)   at ( 2.0, 3.0) {Gérer les\\services};
+\node[uc] (mngteam)  at ( 2.0, 1.8) {Gérer l'équipe};
+\node[uc] (revenue)  at ( 2.0, 0.6) {Voir les\\indicateurs};
+\node[uc] (asknova)  at ( 2.0,-0.6) {Interroger Nova\\(vocal)};
+\node[uc] (settings) at ( 2.0,-1.8) {Configurer\\horaires \& IA};
+
+% Shared
+\node[uc] (auto-ai)  at ( 0.0,-3.4) {Classifier l'intention\\(IA)};
+
+% Actors outside the system
+\node[actor]                                 (patient) at (-7.5, 1.5) {\faUser\ Patient};
+\node[actor, font=\footnotesize\bfseries]    (owner)   at ( 7.5, 2.5) {Propriétaire\\(médecin / gérant)};
+\node[actor, font=\footnotesize\bfseries]    (recept)  at ( 7.5,-0.5) {Réceptionniste\\/ assistant};
+\node[actor, font=\footnotesize\bfseries]    (system)  at ( 0.0,-5.0) {\textit{<<système IA>>}\\Anthropic Claude};
+
+% Patient relationships
+\draw[rel] (patient) -- (book);
+\draw[rel] (patient) -- (cancel);
+\draw[rel] (patient) -- (resched);
+\draw[rel] (patient) -- (uploadrx);
+\draw[rel] (patient) -- (askinfo);
+\draw[rel] (patient) -- (urgent);
+
+% Owner relationships
+\draw[rel] (owner) -- (viewcal);
+\draw[rel] (owner) -- (mngsvc);
+\draw[rel] (owner) -- (mngteam);
+\draw[rel] (owner) -- (revenue);
+\draw[rel] (owner) -- (asknova);
+\draw[rel] (owner) -- (settings);
+
+% Receptionist subset
+\draw[rel] (recept) -- (book);
+\draw[rel] (recept) -- (resched);
+\draw[rel] (recept) -- (viewcal);
+
+% AI inclusion
+\draw[inc] (book)    -- node[midway, sloped, above=-1pt, font=\tiny]{<<include>>} (auto-ai);
+\draw[inc] (askinfo) -- node[midway, sloped, above=-1pt, font=\tiny]{<<include>>} (auto-ai);
+\draw[inc] (urgent)  -- node[midway, sloped, above=-1pt, font=\tiny]{<<include>>} (auto-ai);
+\draw[inc] (asknova) -- node[midway, sloped, above=-1pt, font=\tiny]{<<include>>} (auto-ai);
+\draw[rel] (system)  -- (auto-ai);
+
+\end{tikzpicture}
+\caption{Diagramme de cas d'utilisation global : trois acteurs humains (patient, propriétaire, réceptionniste) interagissent avec le système, qui s'appuie sur l'acteur secondaire \textit{<<système IA>>} Anthropic Claude pour classifier les intentions et conduire les conversations multi-tours.}
 \label{fig:uc}
 \end{figure}

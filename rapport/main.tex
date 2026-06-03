@@ -1,72 +1,52 @@
 % =============================================================================
-%  Rapport de Projet de Fin d'Études - Nova AI
+%  Rapport de Projet de Fin d'Etudes — Nova AI
 %  Auteur : MEHDI CHEIKH
-%  Annee : 2025-2026
-%  Établissement : ISMAIK Kairouan - Université de Kairouan
-%  Format : modèle PFE standard (Times New Roman 12pt, interligne 1,5,
-%           marges 2,5/2,5/3/2,5 cm, chapitres numérotés en chiffres arabes,
-%           titre "Chapitre X" sur la première ligne et titre du chapitre
-%           en dessous, sections 1.1 / 1.1.1)
+%  Annee  : 2025-2026
+%  Etablissement : ISIM Kairouan — Universite de Kairouan
+%  Format : conforme au modele de rapport ISIMK (Times New Roman 12pt,
+%           interligne 1,5, marges 2,5/2,5/3/2, numerotation romaine)
 % =============================================================================
 \documentclass[12pt,a4paper,oneside]{report}
 
-% ----- Encodage et langue ------------------------------------------------
+% ----- Encodage et langue -------------------------------------------------
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[french]{babel}
+\frenchsetup{ItemLabeli=\textbullet, ItemLabelii=\textendash}
 
-% ----- Times New Roman ---------------------------------------------------
+% ----- Times New Roman --------------------------------------------------
 \usepackage{newtxtext,newtxmath}
 
-% ----- Mise en page -------------------------------------------------------
-\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=2.5cm,headheight=15pt]{geometry}
+% ----- Mise en page (marges du modele ISIMK) ----------------------------
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=2cm,headheight=15pt]{geometry}
 \usepackage{setspace}
 \onehalfspacing
 \setlength{\parindent}{1.25cm}
 \setlength{\parskip}{6pt}
 
-% ----- En-tête et pied de page (style modèle standard) -------------------
+% ----- Entete et pied de page -------------------------------------------
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\renewcommand{\chaptermark}[1]{\markboth{\chaptername\ \thechapter.\ #1}{}}
-\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
-\fancyhead[L]{\nouppercase{\small\leftmark}}
-\fancyhead[R]{\small\thepage}
+\fancyhead[L]{\nouppercase{\small\textsc{\leftmark}}}
+\fancyfoot[C]{\textbf{\thepage}}
 \renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\footrulewidth}{0pt}
 
-\fancypagestyle{plain}{%
-  \fancyhf{}
-  \fancyfoot[C]{\small\thepage}
-  \renewcommand{\headrulewidth}{0pt}
-}
+% ----- Numerotation romaine des chapitres (I, II, III...) ---------------
+\renewcommand{\thechapter}{\Roman{chapter}}
+\renewcommand{\thesection}{\thechapter.\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
 
-% ----- Numérotation des chapitres et sections (chiffres arabes) ----------
-% Chapitres : 1, 2, 3, ... ; sections : 1.1 ; sous-sections : 1.1.1 ; etc.
-% (valeurs par défaut de report.cls)
-
-% ----- Style des titres : "Chapitre X : Titre" centre sur une ligne -----
-% Format demande : "Chapitre 1 : Présentation du cadre général", centre,
-% sur la meme ligne. S'applique aussi aux \chapter* (intro, conclusion,
-% listes, dedicaces, remerciements) qui sont centres sans numero.
+% ----- Style des titres de chapitres ------------------------------------
 \usepackage{titlesec}
-\titleformat{\chapter}[hang]
-  {\normalfont\huge\bfseries\centering}
-  {\chaptertitlename\ \thechapter~:}
-  {0.5em}
-  {}
-\titlespacing*{\chapter}{0pt}{10pt}{20pt}
-
-\titleformat{\section}
-  {\normalfont\Large\bfseries}{\thesection}{1em}{}
-\titlespacing*{\section}{0pt}{10pt plus 2pt minus 2pt}{6pt plus 1pt}
-\titleformat{\subsection}
-  {\normalfont\large\bfseries}{\thesubsection}{1em}{}
-\titlespacing*{\subsection}{0pt}{8pt plus 2pt minus 2pt}{4pt plus 1pt}
-\titleformat{\subsubsection}
-  {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
-\titlespacing*{\subsubsection}{0pt}{6pt plus 1pt minus 1pt}{3pt plus 1pt}
+\titleformat{\chapter}[block]
+  {\normalfont\Large\bfseries\centering}
+  {Chapitre \thechapter.}
+  {1ex}
+  {\Large}
+  [\vspace{2pt}\hrule]
+\titlespacing*{\chapter}{0pt}{-30pt}{20pt}
 
 % ----- Listes, tableaux, figures, code -----------------------------------
 \usepackage{graphicx}
@@ -74,14 +54,12 @@
 \usepackage{xcolor}
 \usepackage{tabularx}
 \usepackage{booktabs}
-\usepackage{multirow}
 \usepackage{longtable}
 \usepackage{array}
 \usepackage{enumitem}
-\let\Bbbk\relax  % avoid clash between newtxmath and amssymb
 \usepackage{amsmath,amssymb}
 \usepackage{tikz}
-\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,shapes.symbols,calc,fit,backgrounds}
 \usepackage{listings}
 \definecolor{codebg}{RGB}{245,247,251}
 \lstset{
@@ -93,52 +71,11 @@
   showstringspaces=false,
   tabsize=2,
 }
-% Dialecte JavaScript minimal
-\lstdefinelanguage{JavaScript}{morekeywords={const,let,var,function,return,if,else,for,while,try,catch,async,await,new,this,typeof,class,import,export,from},sensitive=true,comment=[l]{//},morecomment=[s]{/*}{*/},morestring=[b]',morestring=[b]"}
 
 \usepackage[colorlinks=false,hidelinks]{hyperref}
-\usepackage{pdfpages}
-\usepackage{pdflscape}    % pour les pages en orientation paysage (Gantt, archi)
-\usepackage{needspace}    % evite d'orphan-iser un titre de section
-
-% ----- Captions : tableau au-dessus, figure en dessous -------------------
-\usepackage{caption}
-\captionsetup[table]{position=top,skip=4pt,labelfont=bf,font=small}
-\captionsetup[figure]{position=bottom,skip=4pt,labelfont=bf,font=small}
-\usepackage{subcaption}
-
-% ----- Profondeur de la table des matieres -------------------------------
-% Chapitres + sections + sous-sections dans la TOC.
-% Pour cacher une entree specifique, utiliser \subsection*{...} (starred).
-\setcounter{tocdepth}{2}
-\setcounter{secnumdepth}{3}
 
 \usepackage{xspace}
 \newcommand{\nova}{Nova~AI\xspace}
-
-\sloppy
-\setlength{\emergencystretch}{3em}
-
-% ----- Gestion des espaces verticaux -------------------------------------
-% \raggedbottom : les pages courtes ne sont PAS etirees pour atteindre
-% la marge basse. L'espace residuel reste tout en bas de la page (pas
-% etale au milieu en gros trous). Combine avec [!htbp] sur les flotteurs
-% (figures, tableaux) qui peuvent se repositionner pour combler les vides.
-\raggedbottom
-\widowpenalty=10000
-\clubpenalty=10000
-\setlength{\floatsep}{6pt plus 2pt minus 2pt}
-\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
-\setlength{\intextsep}{6pt plus 2pt minus 2pt}
-\setlength{\parskip}{3pt plus 1pt minus 1pt}
-% Permet a LaTeX de placer plus de flotteurs par page (au lieu de 2 par defaut)
-\setcounter{topnumber}{4}
-\setcounter{bottomnumber}{3}
-\setcounter{totalnumber}{6}
-\renewcommand{\topfraction}{0.95}
-\renewcommand{\bottomfraction}{0.85}
-\renewcommand{\textfraction}{0.05}
-\renewcommand{\floatpagefraction}{0.7}
 
 \begin{document}
 
@@ -149,14 +86,13 @@
 \input{front/dedicaces}
 \input{front/remerciements}
 
-% ===== Sommaire et listes ================================================
+% ===== Table des matieres et listes ======================================
+\renewcommand{\contentsname}{Table des matieres}
+\renewcommand{\listfigurename}{Liste des figures}
+\renewcommand{\listtablename}{Liste des tableaux}
 \pagenumbering{roman}
 \tableofcontents
-\cleardoublepage
-\addcontentsline{toc}{chapter}{Liste des figures}
 \listoffigures
-\cleardoublepage
-\addcontentsline{toc}{chapter}{Liste des tableaux}
 \listoftables
 \input{front/abreviations}
 \cleardoublepage
@@ -164,27 +100,24 @@
 \setcounter{page}{1}
 
 % ===== Introduction generale =============================================
-\chapter*{Introduction générale}
-\addcontentsline{toc}{chapter}{Introduction générale}
+\chapter*{Introduction generale}
+\addcontentsline{toc}{chapter}{Introduction generale}
 \markboth{INTRODUCTION GENERALE}{}
 \input{chapters/intro-generale}
 
 % ===== Chapitres =========================================================
 \input{chapters/chap1-cadre}
-\input{chapters/chap2-sprint0}
-\input{chapters/chap3-release1}
-\input{chapters/chap4-release2}
-\input{chapters/chap5-release3}
+\input{chapters/chap2-analyse}
+\input{chapters/chap3-sprint1}
+\input{chapters/chap4-sprint2}
+\input{chapters/chap5-sprint3}
 
-% ===== Conclusion générale ===============================================
-\chapter*{Conclusion générale}
-\addcontentsline{toc}{chapter}{Conclusion générale}
-\markboth{CONCLUSION GÉNÉRALE}{}
+% ===== Conclusion generale ===============================================
+\chapter*{Conclusion generale}
+\addcontentsline{toc}{chapter}{Conclusion generale}
+\markboth{CONCLUSION GENERALE}{}
 \input{chapters/conclusion}
 
 % ===== Bibliographie =====================================================
 \bibliographystyle{ieeetr}
-\renewcommand{\bibname}{Bibliographie}
-\nocite{*}
-\bibliography{references}
-\end{document}
+\renewcommand{\

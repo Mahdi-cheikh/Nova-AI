@@ -2,7 +2,7 @@
    v16+: index.html is fetched from the network on every load so deploys take
    effect immediately. Old caches are wiped on activate, the new SW takes over
    without waiting (skipWaiting + clients.claim). */
-const VERSION = 'nova-pwa-v16';
+const VERSION = 'nova-pwa-v17';
 const ASSETS  = ['./manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -39,4 +39,14 @@ self.addEventListener('push', (e) => {
     body: data.body || 'You have a new update.',
     icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
     data: { url: data.url || './' }, tag: data.tag || 'nova',
-    requireInteraction: !!da
+    requireInteraction: !!data.urgent, vibrate: data.urgent ? [200,100,200] : [120],
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const target = e.notification?.data?.url || './';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    for (const c of list) { if ('focus' in c) { c.navigate(target); return c.focus(); } }
+    if (self.clients.openWindow) return self.clients.openWindow(target);
+  }));
+});
