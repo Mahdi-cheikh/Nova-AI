@@ -2,7 +2,7 @@
    v16+: index.html is fetched from the network on every load so deploys take
    effect immediately. Old caches are wiped on activate, the new SW takes over
    without waiting (skipWaiting + clients.claim). */
-const VERSION = 'nova-pwa-v17';
+const VERSION = 'nova-pwa-v18';
 const ASSETS  = ['./manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

@@ -672,6 +672,31 @@ async function renderPatientHome() {
  .gte('date', today).neq('status','cancelled').order('date').order('time').limit(8);
  const mine = (apts||[]).filter(a => a.clients?.patient_user_id === PATIENT?.id);
 
+ // Slot offers: a slot just freed up + the patient is on a waitlist that matched
+ let offers = [];
+ if (PATIENT?.phone) {
+   try {
+     const { data: o = [] } = await sb.rpc('pwa_pending_slot_offers', { p_phone: PATIENT.phone });
+     offers = o || [];
+   } catch (_e) { /* RPC missing — silent fallback */ }
+ }
+ const offerCard = (o) => {
+   const when  = (o.slot_date === today ? 'Today' : friendlyDate(o.slot_date)) + ' · ' + (o.slot_time||'').slice(0,5);
+   const where = escapeHtml(o.business_name || '') + (o.service_name ? ' · ' + escapeHtml(o.service_name) : '');
+   const doc   = o.doctor_name ? `<div style="font-size:12px;opacity:.7;margin-top:2px">with ${escapeHtml(o.doctor_name)}</div>` : '';
+   return `<div class="apt-row" style="border-left:3px solid #10b981;background:linear-gradient(135deg,rgba(16,185,129,.10),transparent)">
+     <div class="apt-when" style="color:#10b981"> Slot just opened — ${when}</div>
+     <div class="apt-where">${where}</div>${doc}
+     <div style="margin-top:8px;display:flex;gap:8px">
+       <button class="btn btn-primary btn-sm offer-claim" data-id="${o.offer_id}" style="flex:1">Claim it</button>
+       <button class="btn btn-secondary btn-sm offer-decline" data-id="${o.offer_id}" style="flex:1">No thanks</button>
+     </div>
+   </div>`;
+ };
+ const offersBlock = offers.length === 0 ? '' :
+   `<div class="section-h"><span> Available slots near you</span></div>` +
+   offers.map(offerCard).join('');
+
  const aptCard = (a) => `<div class="apt-row">
  <div class="apt-when">${friendlyDate(a.date)} · ${(a.time||'').slice(0,5)}</div>
  <div class="apt-where">${escapeHtml(a.businesses?.name||'')}${a.services?.name?` · ${escapeHtml(a.services.name)}`:''}</div>
@@ -688,6 +713,7 @@ async function renderPatientHome() {
  <h1>${escapeHtml(name)} </h1>
  <div style="font-size:13px;opacity:.85;margin-top:4px">${mine.length===0?'You have no upcoming appointments.':`You have ${mine.length} upcoming appointment${mine.length===1?'':'s'}.`}</div>
  </div>
+ ${offersBlock}
  <div class="section-h"><span>Upcoming</span></div>
  ${mine.length===0?`<div class="card"><div class="empty"><div class="ic"></div>Nothing scheduled yet.<br><a href="#/discover">Find a business →</a></div></div>`:mine.slice(0,3).map(aptCard).join('')}
  <div class="section-h"><span>Quick actions</span></div>
@@ -700,6 +726,41 @@ async function renderPatientHome() {
 function bindPatientHome() {
  $('#signout-btn').onclick = () => hardReset();
  bindNav();
+
+ // Claim / decline waitlist slot offers
+ document.querySelectorAll('.offer-claim').forEach(btn => {
+   btn.addEventListener('click', async () => {
+     btn.disabled = true; btn.textContent = 'Claiming…';
+     try {
+       const { data, error } = await sb.rpc('pwa_claim_slot_offer', { p_phone: PATIENT?.phone, p_offer_id: btn.dataset.id });
+       if (error) throw new Error(error.message || 'Claim failed');
+       if (!data?.ok) throw new Error(data?.error || 'Claim failed');
+       toast('Slot booked!');
+       render();
+     } catch (e) {
+       toast(e.message || 'Could not claim slot');
+       btn.disabled = false; btn.textContent = 'Claim it';
+     }
+   });
+ });
+ document.querySelectorAll('.offer-decline').forEach(btn => {
+   btn.addEventListener('click', async () => {
+     btn.disabled = true;
+     try {
+       await sb.rpc('pwa_decline_slot_offer', { p_phone: PATIENT?.phone, p_offer_id: btn.dataset.id });
+       render();
+     } catch (_e) { btn.disabled = false; }
+   });
+ });
+
+ // Realtime: refresh the view when a new offer for this phone arrives
+ if (PATIENT?.id && !window.__novaOffersSub) {
+   window.__novaOffersSub = sb.channel('waitlist_offers:pwa')
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'waitlist_offers' }, () => {
+       if (location.hash === '#/' || location.hash === '#/home' || location.hash === '') render();
+     })
+     .subscribe();
+ }
 }
 
 function renderDiscover() {
@@ -1105,4 +1166,15 @@ window.addEventListener('beforeinstallprompt', (ev) => {
  <span><button id="pwa-install" style="background:rgba(255,255,255,0.18);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600">Install</button>
  <button id="pwa-dismiss" style="opacity:.7;margin-left:6px">×</button></span></div>`);
  document.body.appendChild(banner);
- banner.querySelector('#pwa
+ banner.querySelector('#pwa-install').onclick = async () => {
+ banner.remove(); deferredInstall.prompt();
+ const choice = await deferredInstall.userChoice;
+ deferredInstall = null;
+ if (choice.outcome === 'accepted') toast('Nova installed');
+ };
+ banner.querySelector('#pwa-dismiss').onclick = () => { sessionStorage.setItem('pwa_install_dismissed','1'); banner.remove(); };
+ }, 5000);
+});
+</script>
+</body>
+</html>
