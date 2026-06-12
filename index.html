@@ -534,7 +534,6 @@
  .obs-cam-advanced summary:hover { color:var(--text); }
  .obs-cam-advanced .obs-cam-select { margin-top:8px; width:100%; box-sizing:border-box; }
 
-
  /* Live-reactive toggle — visual state is driven by :checked, no JS re-render */
  .nv-tg { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; cursor:pointer; }
  .nv-tg input { opacity:0; width:0; height:0; position:absolute; }
@@ -546,7 +545,6 @@
  .nv-tg.nv-tg-sm { width:40px; height:22px; }
  .nv-tg.nv-tg-sm .nv-tg-slider::before { height:16px; width:16px; }
  .nv-tg.nv-tg-sm input:checked + .nv-tg-slider::before { left:21px; }
-
 
  /* Observation — pro polish */
  .obs-spark { width:100%; height:48px; display:block; margin-top:8px; border-radius:6px; background:rgba(255,255,255,0.03); }
@@ -565,7 +563,6 @@
  .obs-posture-legend { display:flex; flex-wrap:wrap; gap:8px; font-size:11.5px; margin-top:6px; }
  .obs-posture-legend > span { display:inline-flex; align-items:center; gap:5px; color:var(--text-dim); }
  .obs-posture-legend > span::before { content:''; width:8px; height:8px; border-radius:2px; background:var(--c, var(--primary)); }
-
 
  /* WhatsApp claim toggle in the sidebar */
  .nv-claim-wa { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; margin:10px 0 14px; background:var(--card); border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:background .15s; font-size:12.5px; }
@@ -1933,97 +1930,6 @@ function renderLanding(){
    <div id="lp-disc-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
  </section>
 
- <section class="lp-features-row">
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple"></div><h3>AI chat &amp; voice</h3><p>WhatsApp + voice calls in Arabic, French, English. Auto-detects language.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic green"></div><h3>Smart scheduling</h3><p>Books, reschedules, cancels with calendar sync &amp; conflict checks.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic orange"></div><h3>Instant alerts</h3><p>Real-time push to your team for new bookings, urgent triage, no-shows.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue"></div><h3>Multi-user access</h3><p>Owner dashboard, doctor mobile app, lab technician kanban — one platform.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink"></div><h3>Analytics</h3><p>Bookings, revenue, no-shows, popular services — beautiful weekly reports.</p></div>
- </section>
-
- <section id="how" class="lp-section">
- <div class="lp-section-h">
- <h2>How Nova works for your business</h2>
- <p>From sign-up to your first WhatsApp booking in under 10 minutes — no app to install for you or your customers.</p>
- </div>
-
- <div class="lp-steps">
- <div class="lp-step lp-fadein">
- <div class="lp-step-num">1</div>
- <div class="lp-step-ic"></div>
- <h3>Sign up &amp; create your business</h3>
- <p>Pick your type — clinic, lab, salon, garage, lawyer — and Nova pre-loads the right services, reminder templates and forms for your industry. Free 14-day trial, no card required.</p>
- </div>
-
- <div class="lp-step lp-fadein">
- <div class="lp-step-num">2</div>
- <div class="lp-step-ic"></div>
- <h3>Get your WhatsApp number</h3>
- <p>This is the address customers text Nova at. Three ways to do it — we handle the Meta verification &amp; the green-tick paperwork either way.</p>
- </div>
-
- <div class="lp-step lp-fadein">
- <div class="lp-step-num">3</div>
- <div class="lp-step-ic">⚙</div>
- <h3>Configure services &amp; team</h3>
- <p>Add your doctors / stylists / mechanics with their hours and specialties. Add your services, prices, durations. Nova adapts the booking conversation to what you sell.</p>
- </div>
-
- <div class="lp-step lp-fadein">
- <div class="lp-step-num">4</div>
- <div class="lp-step-ic"></div>
- <h3>Share with customers</h3>
- <p>Print the QR code stickers we generate for your door, mirrors, business cards, receipts. Add the WhatsApp link to your Instagram bio. That's your channel, open 24/7.</p>
- </div>
-
- <div class="lp-step lp-fadein">
- <div class="lp-step-num">5</div>
- <div class="lp-step-ic"></div>
- <h3>Nova handles every conversation</h3>
- <p>Customers say <i>"Nheb maw3ed ghodwa"</i> in darija, French or English. Nova greets them by name, books their appointment, sends reminders, even reads handwritten prescriptions if you're a lab.</p>
- </div>
-
- <div class="lp-step lp-fadein">
- <div class="lp-step-num">6</div>
- <div class="lp-step-ic"></div>
- <h3>You see everything live</h3>
- <p>Real-time alerts on your dashboard the moment a booking comes in or a triage flag fires. Sound + popup + native push — even when the tab is hidden. Calendar, history, revenue, all in one place.</p>
- </div>
- </div>
-
- <!-- WhatsApp number explainer -->
- <div class="lp-number-card lp-fadein">
- <div class="lp-number-head">
- <div class="lp-number-icon"></div>
- <div>
- <h3 style="margin:0;font-size:20px">About your WhatsApp business number</h3>
- <p style="margin:4px 0 0;color:#64748b;font-size:13.5px">This is the single most important question — here's exactly how it works.</p>
- </div>
- </div>
- <div class="lp-number-grid">
- <div class="lp-num-opt">
- <div class="lp-num-tag" style="background:rgba(99,102,241,0.15);color:#6366f1">RECOMMENDED</div>
- <h4>We give you a brand-new number</h4>
- <p>Nova requests a Meta-verified WhatsApp Business number on your behalf, gets the green tick, configures the webhook. You receive your number ready to share. Costs ~5–15 TND/month for the line itself, included in Pro plan.</p>
- </div>
- <div class="lp-num-opt">
- <div class="lp-num-tag" style="background:rgba(34,197,94,0.15);color:#16a34a">EXISTING NUMBER</div>
- <h4>Connect your current WhatsApp Business</h4>
- <p>Already running a WhatsApp Business number? We migrate it to the WhatsApp Cloud API in 48h with no service interruption. Customers see no change. Your old chat history stays archived.</p>
- </div>
- <div class="lp-num-opt">
- <div class="lp-num-tag" style="background:rgba(234,179,8,0.18);color:#b45309">TRY FREE</div>
- <h4>Use our shared sandbox first</h4>
- <p>Want to try Nova before committing to a number? Use our shared test number — your trial customers message it and the conversation routes to your business. Switch to a dedicated number any time.</p>
- </div>
- </div>
- <div class="lp-number-foot">
- <span style="font-weight:600"> Whichever option you pick, customers do not need to install anything.</span>
- They open WhatsApp like they always do, type a message, get an instant reply.
- </div>
- </div>
- </section>
-
  <section id="who" class="lp-section">
  <div class="lp-section-h">
  <h2>Built for any business that books appointments</h2>
@@ -2035,22 +1941,6 @@ function renderLanding(){
  <div class="lp-who lp-fadein"><div class="lp-who-ic"></div><h4>Independent doctors</h4><p>Solo practice automation</p></div>
  <div class="lp-who lp-fadein"><div class="lp-who-ic"></div><h4>Companies</h4><p>Sales meetings, support intake</p></div>
  <div class="lp-who lp-fadein"><div class="lp-who-ic"></div><h4>Salons &amp; spas</h4><p>Stylist &amp; treatment booking</p></div>
- </div>
- </section>
-
-
- <section id="features" class="lp-section">
- <div class="lp-section-h">
- <h2>Everything Nova does</h2>
- <p>A WhatsApp-first AI receptionist with the depth of a full ops platform.</p>
- </div>
- <div class="lp-who-grid" style="grid-template-columns:repeat(3,1fr)">
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple"></div><h3>Trilingual AI</h3><p>Claude understands Arabic (incl. darija), French, English. Fluent code-switching.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic green"></div><h3>Voice + text</h3><p>Same number for calls and chat. Whisper transcribes voice notes.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic orange"></div><h3>Built-in calendar</h3><p>30-min buffer between visits, remembers preferences across visits.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic blue"></div><h3>Prescription OCR</h3><p>Patient sends a photo, Claude Vision reads it &amp; pre-fills the booking.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic pink">⚗</div><h3>Lab pipeline</h3><p>Sample → analysis → results delivery on a kanban grouped per patient.</p></div>
- <div class="lp-feature lp-fadein"><div class="lp-feat-ic purple"></div><h3>Real-time alerts</h3><p>Instant notifications when bookings, cancels or urgent flags arrive.</p></div>
  </div>
  </section>
 
@@ -3651,7 +3541,6 @@ function bindOnboarding(){
  };
  }
 }
-
 
 // Adaptive labels based on the business type set during signup.
 function bizLabels(type){
@@ -8505,8 +8394,6 @@ async function addAppointmentModal(){
  <div class="field grow"><label>Time</label><input name="time" type="time" value="10:00" required /></div></div>`);
  openModal(html);
 }
-
-
 
 /* ===========================================================================
    PATIENT OBSERVATION — side-view posture & movement assistant
