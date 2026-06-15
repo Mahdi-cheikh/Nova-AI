@@ -9050,12 +9050,12 @@ async function refreshPrescriptionBadge(){
 }
 
 const RX_PILL = {
-  pending_validation: { bg:'rgba(245,158,11,.18)', fg:'#b45309', label:'Pending validation' },
-  validated:          { bg:'rgba(34,197,94,.18)',  fg:'#15803d', label:'Validated' },
+  parsed:             { bg:'rgba(245,158,11,.18)', fg:'#b45309', label:'Pending validation' },
+  reviewed:           { bg:'rgba(34,197,94,.18)',  fg:'#15803d', label:'Validated' },
   rejected:           { bg:'rgba(239,68,68,.18)',  fg:'#b91c1c', label:'Rejected' },
 };
 
-let LAB_RX_STATE = { filter: 'pending_validation', rows: [] };
+let LAB_RX_STATE = { filter: 'parsed', rows: [] };
 
 async function loadPrescriptionsForBiz(status){
   const { data, error } = await sb.rpc('prescription_uploads_for_business', {
@@ -9078,8 +9078,8 @@ async function loadPrescriptionsForBiz(status){
 function renderRxFilter(active){
   const tab = (key, label) => `<button class="rx-tab" data-st="${key}" style="padding:8px 14px;border-radius:10px;border:0;cursor:pointer;background:${active===key?'linear-gradient(135deg,#6366f1,#22d3ee)':'transparent'};color:${active===key?'white':'var(--text-dim)'};font-weight:${active===key?'700':'500'};font-size:13px">${label}</button>`;
   return `<div class="row" style="gap:6px;margin-bottom:14px;flex-wrap:wrap">
-    ${tab('pending_validation','To validate')}
-    ${tab('validated','Validated')}
+    ${tab('parsed','To validate')}
+    ${tab('reviewed','Validated')}
     ${tab('rejected','Rejected')}
     ${tab('all','All')}
   </div>`;
@@ -9096,13 +9096,13 @@ async function renderPrescriptions(){
     return `${renderRxFilter(LAB_RX_STATE.filter)}
       <div class="panel"><div class="panel-body" style="text-align:center;padding:48px 16px;color:var(--text-dim)">
         <div style="font-size:32px;margin-bottom:10px">&#8478;</div>
-        No prescription ${LAB_RX_STATE.filter==='pending_validation'?'awaiting validation':'matches this filter'} yet.<br>
+        No prescription ${LAB_RX_STATE.filter==='parsed'?'awaiting validation':'matches this filter'} yet.<br>
         Photos sent by patients via WhatsApp appear here automatically.
       </div></div>`;
   }
 
   const card = (r) => {
-    const pill = RX_PILL[r.status] || RX_PILL.pending_validation;
+    const pill = RX_PILL[r.status] || RX_PILL.parsed;
     const tests = Array.isArray(r.parsed_tests) ? r.parsed_tests
                 : (r.parsed_tests && r.parsed_tests.tests) ? r.parsed_tests.tests : [];
     const testsHtml = tests.length === 0
@@ -9121,7 +9121,7 @@ async function renderPrescriptions(){
       ? `RDV: ${friendlyDate(String(r.appointment_date||'').slice(0,10))} ${String(r.appointment_time||'').slice(0,5)} - <span class="pill pill-${r.appointment_status==='cancelled'?'gray':r.appointment_status==='confirmed'?'green':'orange'}">${r.appointment_status||'--'}</span>`
       : `<span style="opacity:.6">No appointment linked</span>`;
 
-    const actions = r.status === 'pending_validation'
+    const actions = r.status === 'parsed'
       ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:14px">
           <button class="btn btn-primary btn-sm rx-validate" data-id="${r.upload_id}">&#10003; Validate</button>
           <button class="btn btn-secondary btn-sm rx-edit"   data-id="${r.upload_id}">&#9998; Edit tests</button>
