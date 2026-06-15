@@ -9160,7 +9160,6 @@ async function renderPrescriptions(){
           </div>
           <div style="font-size:13px;margin-bottom:6px;color:var(--text-dim)">Prescriber: <b style="color:var(--text)">${escapeHtml(r.prescriber_name || '--')}</b> - Date: <b style="color:var(--text)">${escapeHtml(rxDate)}</b></div>
           <div style="margin-top:8px"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim)">Tests detected by OCR</b><br>${testsHtml}</div>
-          ${r.ocr_text ? `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;color:var(--text-dim)">View raw OCR</summary><pre style="margin:8px 0 0;padding:10px;background:#0f1535;border-radius:8px;font-size:11.5px;white-space:pre-wrap;max-height:160px;overflow:auto">${escapeHtml(r.ocr_text)}</pre></details>` : ''}
           ${actions}
         </div>
       </div>
