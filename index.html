@@ -2473,7 +2473,7 @@ function renderClientPortal(){
            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">🕐</span><div style="font-size:14px;font-weight:600;color:var(--text)">${escapeHtml((a.time||'').slice(0,5))}</div></div>
          </div>
          <div style="margin-top:10px;font-size:13.5px;color:var(--text)">
-           <b>${escapeHtml(a.service_name||'Appointment')}</b>${a.doctor_name?` <span style="color:var(--text-dim)">with ${escapeHtml(a.doctor_name)}</span>`:''}${a.service_price?` <span style="color:var(--text-dim)">· ${a.service_price} TND</span>`:''}
+           <b>${escapeHtml(a.service_name||'Appointment')}</b>${(a.doctor_name && SESSION?.business?.type !== 'laboratoire')?` <span style="color:var(--text-dim)">with ${escapeHtml(a.doctor_name)}</span>`:''}${a.service_price?` <span style="color:var(--text-dim)">· ${a.service_price} TND</span>`:''}
          </div>
          ${editable ? `
          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
@@ -3545,8 +3545,9 @@ function bindOnboarding(){
 // Adaptive labels based on the business type set during signup.
 function bizLabels(type){
  switch (type) {
- case 'clinic':
  case 'laboratoire':
+ return { team: null, single: 'technician', viewSelf: false };
+ case 'clinic':
  return { team: 'Doctors', single: 'doctor', viewSelf: true };
  case 'doctor':
  return { team: null, single: 'doctor', viewSelf: false };
@@ -4918,10 +4919,10 @@ async function renderInsights(){
    <div class="panel-head"><h3>Suggestions (${suggestions.length})</h3></div>
    <div class="panel-body no-pad">
      <table class="responsive-stack">
-       <thead><tr><th>Service</th><th>Doctor</th><th>Scheduled</th><th>Actual avg</th><th>Sample</th><th>Suggested</th><th></th></tr></thead>
+       <thead><tr><th>Service</th><th>${SESSION.business.type==='laboratoire'?'Technician':'Doctor'}</th><th>Scheduled</th><th>Actual avg</th><th>Sample</th><th>Suggested</th><th></th></tr></thead>
        <tbody>${suggestions.map(s => `<tr>
          <td data-l="Service"><b>${escapeHtml(s.service_name || '—')}</b></td>
-         <td data-l="Doctor">${escapeHtml(s.doctor_name || 'Any')}</td>
+         <td data-l="${SESSION.business.type==='laboratoire'?'Technician':'Doctor'}">${escapeHtml(s.doctor_name || 'Any')}</td>
          <td data-l="Scheduled">${s.current_duration} min</td>
          <td data-l="Actual avg" style="color:${s.drift_pct > 0 ? 'var(--warn)' : 'var(--accent)'};font-weight:600">${s.observed_avg} min</td>
          <td data-l="Sample">${s.sample_size} visits</td>
@@ -4936,10 +4937,10 @@ async function renderInsights(){
    <div class="panel-head"><h3>All services (${services.length})</h3></div>
    <div class="panel-body no-pad">
      <table class="responsive-stack">
-       <thead><tr><th>Service</th><th>Doctor</th><th>Scheduled</th><th>Drift vs actual</th><th>Auto-adjust</th><th>Last reviewed</th></tr></thead>
+       <thead><tr><th>Service</th><th>${SESSION.business.type==='laboratoire'?'Technician':'Doctor'}</th><th>Scheduled</th><th>Drift vs actual</th><th>Auto-adjust</th><th>Last reviewed</th></tr></thead>
        <tbody>${services.map(s => `<tr>
          <td data-l="Service"><b>${escapeHtml(s.name)}</b></td>
-         <td data-l="Doctor">${escapeHtml(s.users?.name || 'Any')}</td>
+         <td data-l="${SESSION.business.type==='laboratoire'?'Technician':'Doctor'}">${escapeHtml(s.users?.name || 'Any')}</td>
          <td data-l="Scheduled">${s.duration_min} min</td>
          <td data-l="Drift">${driftPill(driftMap[s.id])}</td>
          <td data-l="Auto-adjust"><label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
@@ -5252,7 +5253,7 @@ async function renderAppointments(){
  <tbody>${apts.map(a=>`<tr data-apt="${a.id}" style="cursor:pointer">
  <td data-l="Date">${a.date}</td><td data-l="Time">${a.time}</td>
  <td data-l="Client">${escapeHtml(a.clients?.name||'—')}</td>
- <td data-l="Doctor">${escapeHtml(a.users?.name||'—')}</td>
+ <td data-l="${SESSION.business.type==='laboratoire'?'Technician':'Doctor'}">${escapeHtml(a.users?.name||'—')}</td>
  <td data-l="Service">${escapeHtml(a.services?.name||'—')}</td>
  <td data-l="Status"><span class="pill ${a.status==='confirmed'?'green':a.status==='pending'?'amber':'red'}">${a.status}</span></td>
  <td data-l="Source"><span class="pill ${a.source==='whatsapp_ai'?'blue':a.source==='whatsapp_voice'?'green':'gray'}">${a.source||'manual'}</span></td>
@@ -5425,7 +5426,7 @@ async function renderCalendar(){
  <div class="panel-head">
  <h3>${escapeHtml(monthLabel)}</h3>
  <div class="row" style="gap:8px">
- ${(doctorList.length > 1 && SESSION.business.type !== 'doctor') ? `<select id="cal-doctor-filter" style="padding:7px 10px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:13px">
+ ${(doctorList.length > 1 && SESSION.business.type !== 'doctor' && SESSION.business.type !== 'laboratoire') ? `<select id="cal-doctor-filter" style="padding:7px 10px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:13px">
  <option value="">All doctors</option>
  ${doctorList.map(d=>`<option value="${d.id}" ${filterDoc===d.id?'selected':''}>${escapeHtml(d.name)}</option>`).join('')}
  </select>` : ''}
@@ -5718,6 +5719,7 @@ async function openPatientHistory(clientId){
 }
 
 async function renderDoctors(){
+ if (SESSION?.business?.type === 'laboratoire') { navigate('#/dashboard'); return ''; }
  const {data:team=[]} = await sb.from('users').select('*').eq('business_id', SESSION.business.id).order('created_at');
  return `<div class="panel"><div class="panel-head"><h3>Team (${team.length})</h3><button class="btn btn-primary btn-sm" id="add-doc">+ Add member</button></div>
  <div class="panel-body no-pad"><table><thead><tr><th>Name</th><th>Role</th><th>Specialty</th><th>Phone</th><th>Email</th></tr></thead>
@@ -8389,7 +8391,7 @@ async function addAppointmentModal(){
  /* Trick: addAppointmentModal is async, but openModal expects sync html. We'll just openModal here. */
  const doctorField = (isSoloDoctor && soloDoctorId)
    ? `<input type="hidden" name="doctor_id" value="${soloDoctorId}" />`
-   : `<div class="field"><label>Doctor</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}</select></div>`;
+   : (SESSION.business.type === 'laboratoire' ? '' : `<div class="field"><label>Doctor</label><select name="doctor_id" required>${(docs.data||[]).map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}</select></div>`);
  const html = modalShell('New appointment',
  `<div class="field"><label>Client</label><select name="client_id" required>${(cls.data||[]).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select></div>
  ${doctorField}
