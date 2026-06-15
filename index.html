@@ -6843,13 +6843,6 @@ function renderSettings(){
  </div>
  </div>
 
- <div class="panel" style="grid-column:1/-1">
- <div class="panel-head"><h3>Danger zone</h3></div>
- <div class="panel-body">
- <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px">Disconnect this dashboard from Supabase and return to setup. Your data stays safe in the database.</div>
- <button class="btn btn-danger btn-sm" id="reset-cfg">Disconnect & re-configure</button>
- </div>
- </div>
  </div>`;
 }
 // Tiny helper: per-business settings stored in localStorage so they persist
@@ -6878,10 +6871,6 @@ function bindSettings(){
  });
 
  $$('[data-theme-pref]').forEach(b=>b.onclick = ()=>{ setThemePref(b.dataset.themePref); render(); });
- $('#reset-cfg').onclick = ()=>{
- if (!confirm('Disconnect from Supabase and return to setup screen?')) return;
- localStorage.removeItem(CFG_KEY); CFG=null; sb=null; SESSION=null; location.reload();
- };
 
  /* Notification settings */
  const soundT = $('#sound-toggle');
