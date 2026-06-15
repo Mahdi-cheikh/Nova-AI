@@ -3570,6 +3570,7 @@ async function renderDashboard(route){
  return `<button class="nav-item ${active}" data-go="/dashboard${key==='overview'?'':'/'+key}"><span class="ic">${icon}</span>${label}${badge?`<span class="b">${badge}</span>`:''}</button>`;
  };
  await updateBellBadge();
+ await refreshPrescriptionBadge();
  const planName = biz.subscription_plan ? PLANS[biz.subscription_plan]?.name : 'Trial';
  const L = bizLabels(biz.type);
 
@@ -3607,6 +3608,7 @@ async function renderDashboard(route){
  ${L.team ? navItem('doctors', L.team, '◊') : ''}
  ${biz.type==='laboratoire' ? navItem('lab','Lab pipeline','⚗') : ''}
  ${biz.type==='laboratoire' ? navItem('tests','Test catalog','') : ''}
+ ${(biz.type==='laboratoire' || biz.type==='clinic') ? navItem('prescriptions','Prescriptions','℞', PRESCRIPTION_BADGE>0?String(PRESCRIPTION_BADGE):'') : ''}
  ${navItem('services','Services','★')}
  ${navItem('packages','Packages','')}
  ${navItem('demandfill','Demand Fill','◐')}
@@ -3643,14 +3645,14 @@ async function renderDashboard(route){
  </main>
  </div>`;
 }
-function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',observation:'Patient observation',vehicles:'Vehicles',vehicle:'Vehicle profile',birthdays:'Birthdays',voice:'Voice avatar',messages:'Messages',notifications:'Notifications',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
+function pageTitle(s){return ({overview:'Overview',appointments:'Appointments',calendar:'Calendar',clients:'Clients',doctors:'Team',lab:'Lab pipeline',prescriptions:'Prescriptions',tests:'Test catalog',services:'Services',packages:'Packages & memberships',demandfill:'Demand Fill',insights:'Schedule Insights',rxcheck:'Prescribe',observation:'Patient observation',vehicles:'Vehicles',vehicle:'Vehicle profile',birthdays:'Birthdays',voice:'Voice avatar',messages:'Messages',notifications:'Notifications',activity:'Activity log',settings:'Settings'})[s]||'Overview'}
 function pageSub(s){return ({
  overview:"Today's snapshot of your business",
  appointments:'List view of every booking',
  calendar:'Month view of all your appointments',
  clients:'Everyone who has contacted your business',
  doctors:'Team members and providers',
- lab:'Sample-collection and analysis pipeline',
+ lab:'Sample-collection and analysis pipeline',prescriptions:'Review patient-uploaded prescriptions — validate or reject the OCR',
  tests:'Curate the tests you offer with prices, fasting and turnaround',
  services:'Services or products you offer',
  demandfill:'Auto-pinging — turn empty slots into bookings',
@@ -3753,6 +3755,7 @@ async function bindDashboard(route){
  if (sub==='clients') await bindClients();
  if (sub==='doctors') await bindDoctors();
  if (sub==='lab') await bindLabPipeline();
+ if (sub==='prescriptions') bindPrescriptions();
  if (sub==='tests') await bindTestCatalog();
  if (sub==='services') await bindServices();
  if (sub==='packages') await bindPackages();
@@ -3796,6 +3799,7 @@ async function renderPage(sub){
  if (sub==='vehicle') return await renderVehicleDetail();
  if (sub==='doctors') return await renderDoctors();
  if (sub==='lab') return await renderLabPipeline();
+ if (sub==='prescriptions') return await renderPrescriptions();
  if (sub==='tests') return await renderTestCatalog();
  if (sub==='services') return await renderServices();
  if (sub==='packages') return await renderPackages();
@@ -9031,6 +9035,213 @@ window.NOVA = {
  cfg: ()=>CFG,
  session: ()=>SESSION
 };
+
+// ============================================================
+// PRESCRIPTIONS - review, validate, reject patient-uploaded OCR
+// ============================================================
+let PRESCRIPTION_BADGE = 0;
+async function refreshPrescriptionBadge(){
+  if (!SESSION || !SESSION.business || !SESSION.business.id) return;
+  if (!['laboratoire','clinic'].includes(SESSION.business.type)) return;
+  try {
+    const { data } = await sb.rpc('prescription_pending_count', { p_business_id: SESSION.business.id });
+    PRESCRIPTION_BADGE = Number(data || 0);
+  } catch(_e) { PRESCRIPTION_BADGE = 0; }
+}
+
+const RX_PILL = {
+  pending_validation: { bg:'rgba(245,158,11,.18)', fg:'#b45309', label:'Pending validation' },
+  validated:          { bg:'rgba(34,197,94,.18)',  fg:'#15803d', label:'Validated' },
+  rejected:           { bg:'rgba(239,68,68,.18)',  fg:'#b91c1c', label:'Rejected' },
+};
+
+let RX_STATE = { filter: 'pending_validation', rows: [] };
+
+async function loadPrescriptionsForBiz(status){
+  const { data, error } = await sb.rpc('prescription_uploads_for_business', {
+    p_business_id: SESSION.business.id, p_status: status || null, p_limit: 50,
+  });
+  if (error) { console.error('[rx] list error', error); return []; }
+  const rows = await Promise.all((data||[]).map(async row => {
+    let signed = '';
+    if (row.storage_path){
+      try {
+        const { data: s } = await sb.storage.from('prescriptions').createSignedUrl(row.storage_path, 300);
+        signed = (s && s.signedUrl) || '';
+      } catch(_e) {}
+    }
+    return Object.assign({}, row, { signed_url: signed });
+  }));
+  return rows;
+}
+
+function renderRxFilter(active){
+  const tab = (key, label) => `<button class="rx-tab" data-st="${key}" style="padding:8px 14px;border-radius:10px;border:0;cursor:pointer;background:${active===key?'linear-gradient(135deg,#6366f1,#22d3ee)':'transparent'};color:${active===key?'white':'var(--text-dim)'};font-weight:${active===key?'700':'500'};font-size:13px">${label}</button>`;
+  return `<div class="row" style="gap:6px;margin-bottom:14px;flex-wrap:wrap">
+    ${tab('pending_validation','To validate')}
+    ${tab('validated','Validated')}
+    ${tab('rejected','Rejected')}
+    ${tab('all','All')}
+  </div>`;
+}
+
+async function renderPrescriptions(){
+  if (!['laboratoire','clinic'].includes(SESSION.business.type)){
+    return `<div class="panel"><div class="panel-body">This module is reserved for laboratories and clinics.</div></div>`;
+  }
+  RX_STATE.rows = await loadPrescriptionsForBiz(RX_STATE.filter === 'all' ? null : RX_STATE.filter);
+  await refreshPrescriptionBadge();
+
+  if (RX_STATE.rows.length === 0){
+    return `${renderRxFilter(RX_STATE.filter)}
+      <div class="panel"><div class="panel-body" style="text-align:center;padding:48px 16px;color:var(--text-dim)">
+        <div style="font-size:32px;margin-bottom:10px">&#8478;</div>
+        No prescription ${RX_STATE.filter==='pending_validation'?'awaiting validation':'matches this filter'} yet.<br>
+        Photos sent by patients via WhatsApp appear here automatically.
+      </div></div>`;
+  }
+
+  const card = (r) => {
+    const pill = RX_PILL[r.status] || RX_PILL.pending_validation;
+    const tests = Array.isArray(r.parsed_tests) ? r.parsed_tests
+                : (r.parsed_tests && r.parsed_tests.tests) ? r.parsed_tests.tests : [];
+    const testsHtml = tests.length === 0
+      ? `<span style="opacity:.65;font-style:italic">No tests detected</span>`
+      : tests.slice(0, 8).map(t => {
+          const name = typeof t === 'string' ? t : (t && t.name) || JSON.stringify(t);
+          return `<span style="display:inline-block;background:rgba(99,102,241,.15);color:#a5b4fc;padding:4px 10px;border-radius:999px;font-size:12px;margin:2px 4px 2px 0">${escapeHtml(String(name))}</span>`;
+        }).join('') + (tests.length > 8 ? ` <span style="opacity:.7;font-size:12px">+${tests.length-8} more</span>` : '');
+
+    const photo = r.signed_url
+      ? `<a href="${r.signed_url}" target="_blank" rel="noopener" style="display:block;flex-shrink:0;width:130px;height:170px;border-radius:10px;overflow:hidden;background:#0f1535;border:1px solid var(--border)"><img src="${r.signed_url}" alt="Prescription" style="width:100%;height:100%;object-fit:cover;display:block"/></a>`
+      : `<div style="flex-shrink:0;width:130px;height:170px;border-radius:10px;background:#0f1535;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:11px;text-align:center;padding:8px">photo<br>unavailable</div>`;
+
+    const rxDate = r.prescription_date ? friendlyDate(String(r.prescription_date).slice(0,10)) : '--';
+    const aptLine = r.appointment_id
+      ? `RDV: ${friendlyDate(String(r.appointment_date||'').slice(0,10))} ${String(r.appointment_time||'').slice(0,5)} - <span class="pill pill-${r.appointment_status==='cancelled'?'gray':r.appointment_status==='confirmed'?'green':'orange'}">${r.appointment_status||'--'}</span>`
+      : `<span style="opacity:.6">No appointment linked</span>`;
+
+    const actions = r.status === 'pending_validation'
+      ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:14px">
+          <button class="btn btn-primary btn-sm rx-validate" data-id="${r.upload_id}">&#10003; Validate</button>
+          <button class="btn btn-secondary btn-sm rx-edit"   data-id="${r.upload_id}">&#9998; Edit tests</button>
+          <button class="btn btn-danger btn-sm rx-reject"    data-id="${r.upload_id}">&#10007; Reject</button>
+        </div>`
+      : (r.status === 'rejected' && r.rejection_reason
+          ? `<div style="margin-top:10px;font-size:13px;color:#fca5a5">Reason: ${escapeHtml(r.rejection_reason)}</div>`
+          : '');
+
+    return `<div class="panel" style="margin-bottom:14px">
+      <div class="panel-body" style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+        ${photo}
+        <div style="flex:1;min-width:240px">
+          <div class="row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+            <h3 style="margin:0;font-size:16px">${escapeHtml(r.client_name || 'Unknown patient')}</h3>
+            <span style="background:${pill.bg};color:${pill.fg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">${pill.label}</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:8px">
+            ${escapeHtml(r.client_phone||'--')} - uploaded ${friendlyDate(String(r.uploaded_at).slice(0,10))} - ${aptLine}
+          </div>
+          <div style="font-size:13px;margin-bottom:6px;color:var(--text-dim)">Prescriber: <b style="color:var(--text)">${escapeHtml(r.prescriber_name || '--')}</b> - Date: <b style="color:var(--text)">${escapeHtml(rxDate)}</b></div>
+          <div style="margin-top:8px"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim)">Tests detected by OCR</b><br>${testsHtml}</div>
+          ${r.ocr_text ? `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;color:var(--text-dim)">View raw OCR</summary><pre style="margin:8px 0 0;padding:10px;background:#0f1535;border-radius:8px;font-size:11.5px;white-space:pre-wrap;max-height:160px;overflow:auto">${escapeHtml(r.ocr_text)}</pre></details>` : ''}
+          ${actions}
+        </div>
+      </div>
+    </div>`;
+  };
+
+  return `${renderRxFilter(RX_STATE.filter)}
+    ${RX_STATE.rows.map(card).join('')}`;
+}
+
+function bindPrescriptions(){
+  document.querySelectorAll('.rx-tab').forEach(b => b.addEventListener('click', () => {
+    RX_STATE.filter = b.dataset.st;
+    render();
+  }));
+  document.querySelectorAll('.rx-validate').forEach(btn => btn.addEventListener('click', async () => {
+    btn.disabled = true; btn.textContent = 'Validating...';
+    const row = RX_STATE.rows.find(r => r.upload_id === btn.dataset.id);
+    const { data, error } = await sb.rpc('prescription_validate', {
+      p_upload_id: btn.dataset.id,
+      p_parsed_tests: (row && row.parsed_tests) || null,
+      p_prescriber_name: (row && row.prescriber_name) || null,
+      p_prescription_date: (row && row.prescription_date) || null,
+    });
+    if (error || !(data && data.ok)) {
+      toast({title:'Validation failed', message:(error && error.message) || (data && data.error) || '', type:'cancel'});
+      btn.disabled = false; btn.textContent = 'Validate'; return;
+    }
+    toast({title:'Validated', message:'Prescription confirmed.', type:'booking'});
+    render();
+  }));
+  document.querySelectorAll('.rx-edit').forEach(btn => btn.addEventListener('click', () => openRxEditModal(btn.dataset.id)));
+  document.querySelectorAll('.rx-reject').forEach(btn => btn.addEventListener('click', () => openRxRejectModal(btn.dataset.id)));
+}
+
+function openRxEditModal(uploadId){
+  const row = RX_STATE.rows.find(r => r.upload_id === uploadId); if (!row) return;
+  const tests = Array.isArray(row.parsed_tests) ? row.parsed_tests
+              : (row.parsed_tests && row.parsed_tests.tests) ? row.parsed_tests.tests : [];
+  const flat = tests.map(t => typeof t === 'string' ? t : ((t && t.name) || '')).filter(Boolean).join('\n');
+  openModal(`<div class="panel" style="max-width:560px">
+    <div class="panel-head"><h3>Edit prescription</h3></div>
+    <div class="panel-body">
+      <div class="field"><label>Tests (one per line)</label><textarea id="rx-edit-tests" rows="8" style="width:100%;font-family:monospace;font-size:13px">${escapeHtml(flat)}</textarea></div>
+      <div class="row" style="gap:10px"><div class="field" style="flex:1"><label>Prescriber name</label><input id="rx-edit-presc" value="${escapeHtml(row.prescriber_name||'')}"/></div>
+      <div class="field" style="flex:1"><label>Prescription date</label><input id="rx-edit-date" type="date" value="${(row.prescription_date||'').slice(0,10)}"/></div></div>
+      <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-secondary" id="rx-edit-cancel">Cancel</button><button class="btn btn-primary" id="rx-edit-save" style="flex:1">Save &amp; validate</button></div>
+    </div>
+  </div>`);
+  $('#rx-edit-cancel').onclick = closeModal;
+  $('#rx-edit-save').onclick = async () => {
+    const lines = $('#rx-edit-tests').value.split('\n').map(s => s.trim()).filter(Boolean);
+    const parsed = lines.map(name => ({ name }));
+    const presc = $('#rx-edit-presc').value.trim() || null;
+    const dt    = $('#rx-edit-date').value || null;
+    const btn = $('#rx-edit-save'); btn.disabled = true; btn.textContent = 'Saving...';
+    const { data, error } = await sb.rpc('prescription_validate', {
+      p_upload_id: uploadId, p_parsed_tests: parsed, p_prescriber_name: presc, p_prescription_date: dt,
+    });
+    if (error || !(data && data.ok)) {
+      toast({title:'Save failed', message:(error && error.message)||(data && data.error)||'', type:'cancel'});
+      btn.disabled=false; btn.textContent='Save & validate'; return;
+    }
+    closeModal(); toast({title:'Saved & validated', type:'booking'}); render();
+  };
+}
+
+function openRxRejectModal(uploadId){
+  const row = RX_STATE.rows.find(r => r.upload_id === uploadId); if (!row) return;
+  openModal(`<div class="panel" style="max-width:520px">
+    <div class="panel-head"><h3>Reject prescription</h3></div>
+    <div class="panel-body">
+      <div style="font-size:13.5px;color:var(--text-dim);margin-bottom:12px">The linked appointment will be cancelled - the slot will be offered to the waitlist automatically. The patient will receive a friendly WhatsApp message asking for a clearer photo.</div>
+      <div class="field"><label>Reason (visible to the patient)</label><textarea id="rx-rej-reason" rows="3" placeholder="e.g. The handwriting is too blurry to read.">${escapeHtml(row.rejection_reason||'')}</textarea></div>
+      <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-secondary" id="rx-rej-cancel">Cancel</button><button class="btn btn-danger" id="rx-rej-confirm" style="flex:1">Reject &amp; notify patient</button></div>
+    </div>
+  </div>`);
+  $('#rx-rej-cancel').onclick = closeModal;
+  $('#rx-rej-confirm').onclick = async () => {
+    const reason = ($('#rx-rej-reason').value || '').trim();
+    const btn = $('#rx-rej-confirm'); btn.disabled = true; btn.textContent = 'Rejecting...';
+    const { data, error } = await sb.rpc('prescription_reject', { p_upload_id: uploadId, p_reason: reason });
+    if (error || !(data && data.ok)) {
+      toast({title:'Reject failed', message:(error && error.message)||(data && data.error)||'', type:'cancel'});
+      btn.disabled=false; btn.textContent='Reject & notify patient'; return;
+    }
+    try {
+      const lang = (row.parsed_tests && row.parsed_tests.language) || 'fr';
+      await sb.functions.invoke('prescription-notify', { body: {
+        client_phone: data.client_phone || row.client_phone,
+        business_name: SESSION.business.name, language: lang, reason,
+      }});
+    } catch(e) { console.warn('notify failed', e); }
+    closeModal(); toast({title:'Rejected', message:'Patient was notified on WhatsApp.', type:'info'}); render();
+  };
+}
+
 </script>
 </body>
 </html>
