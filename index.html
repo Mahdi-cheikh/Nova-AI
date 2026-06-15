@@ -9040,6 +9040,20 @@ window.NOVA = {
 // PRESCRIPTIONS - review, validate, reject patient-uploaded OCR
 // ============================================================
 let PRESCRIPTION_BADGE = 0;
+function fmtRxDate(s){
+  if (!s) return '--';
+  try {
+    const d = new Date(String(s).slice(0,10) + 'T00:00:00');
+    if (isNaN(d.getTime())) return String(s).slice(0,10);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dz = new Date(d); dz.setHours(0,0,0,0);
+    const diff = Math.round((dz - today) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff === -1) return 'Yesterday';
+    return d.toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short' });
+  } catch(_e) { return String(s).slice(0,10); }
+}
 async function refreshPrescriptionBadge(){
   if (!SESSION || !SESSION.business || !SESSION.business.id) return;
   if (!['laboratoire','clinic'].includes(SESSION.business.type)) return;
@@ -9116,9 +9130,9 @@ async function renderPrescriptions(){
       ? `<a href="${r.signed_url}" target="_blank" rel="noopener" style="display:block;flex-shrink:0;width:130px;height:170px;border-radius:10px;overflow:hidden;background:#0f1535;border:1px solid var(--border)"><img src="${r.signed_url}" alt="Prescription" style="width:100%;height:100%;object-fit:cover;display:block"/></a>`
       : `<div style="flex-shrink:0;width:130px;height:170px;border-radius:10px;background:#0f1535;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:11px;text-align:center;padding:8px">photo<br>unavailable</div>`;
 
-    const rxDate = r.prescription_date ? friendlyDate(String(r.prescription_date).slice(0,10)) : '--';
+    const rxDate = r.prescription_date ? fmtRxDate(String(r.prescription_date).slice(0,10)) : '--';
     const aptLine = r.appointment_id
-      ? `RDV: ${friendlyDate(String(r.appointment_date||'').slice(0,10))} ${String(r.appointment_time||'').slice(0,5)} - <span class="pill pill-${r.appointment_status==='cancelled'?'gray':r.appointment_status==='confirmed'?'green':'orange'}">${r.appointment_status||'--'}</span>`
+      ? `RDV: ${fmtRxDate(String(r.appointment_date||'').slice(0,10))} ${String(r.appointment_time||'').slice(0,5)} - <span class="pill pill-${r.appointment_status==='cancelled'?'gray':r.appointment_status==='confirmed'?'green':'orange'}">${r.appointment_status||'--'}</span>`
       : `<span style="opacity:.6">No appointment linked</span>`;
 
     const actions = r.status === 'parsed'
@@ -9140,7 +9154,7 @@ async function renderPrescriptions(){
             <span style="background:${pill.bg};color:${pill.fg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">${pill.label}</span>
           </div>
           <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:8px">
-            ${escapeHtml(r.client_phone||'--')} - uploaded ${friendlyDate(String(r.uploaded_at).slice(0,10))} - ${aptLine}
+            ${escapeHtml(r.client_phone||'--')} - uploaded ${fmtRxDate(String(r.uploaded_at).slice(0,10))} - ${aptLine}
           </div>
           <div style="font-size:13px;margin-bottom:6px;color:var(--text-dim)">Prescriber: <b style="color:var(--text)">${escapeHtml(r.prescriber_name || '--')}</b> - Date: <b style="color:var(--text)">${escapeHtml(rxDate)}</b></div>
           <div style="margin-top:8px"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim)">Tests detected by OCR</b><br>${testsHtml}</div>
