@@ -9055,7 +9055,7 @@ const RX_PILL = {
   rejected:           { bg:'rgba(239,68,68,.18)',  fg:'#b91c1c', label:'Rejected' },
 };
 
-let RX_STATE = { filter: 'pending_validation', rows: [] };
+let LAB_RX_STATE = { filter: 'pending_validation', rows: [] };
 
 async function loadPrescriptionsForBiz(status){
   const { data, error } = await sb.rpc('prescription_uploads_for_business', {
@@ -9089,14 +9089,14 @@ async function renderPrescriptions(){
   if (!['laboratoire','clinic'].includes(SESSION.business.type)){
     return `<div class="panel"><div class="panel-body">This module is reserved for laboratories and clinics.</div></div>`;
   }
-  RX_STATE.rows = await loadPrescriptionsForBiz(RX_STATE.filter === 'all' ? null : RX_STATE.filter);
+  LAB_RX_STATE.rows = await loadPrescriptionsForBiz(LAB_RX_STATE.filter === 'all' ? null : LAB_RX_STATE.filter);
   await refreshPrescriptionBadge();
 
-  if (RX_STATE.rows.length === 0){
-    return `${renderRxFilter(RX_STATE.filter)}
+  if (LAB_RX_STATE.rows.length === 0){
+    return `${renderRxFilter(LAB_RX_STATE.filter)}
       <div class="panel"><div class="panel-body" style="text-align:center;padding:48px 16px;color:var(--text-dim)">
         <div style="font-size:32px;margin-bottom:10px">&#8478;</div>
-        No prescription ${RX_STATE.filter==='pending_validation'?'awaiting validation':'matches this filter'} yet.<br>
+        No prescription ${LAB_RX_STATE.filter==='pending_validation'?'awaiting validation':'matches this filter'} yet.<br>
         Photos sent by patients via WhatsApp appear here automatically.
       </div></div>`;
   }
@@ -9151,18 +9151,18 @@ async function renderPrescriptions(){
     </div>`;
   };
 
-  return `${renderRxFilter(RX_STATE.filter)}
-    ${RX_STATE.rows.map(card).join('')}`;
+  return `${renderRxFilter(LAB_RX_STATE.filter)}
+    ${LAB_RX_STATE.rows.map(card).join('')}`;
 }
 
 function bindPrescriptions(){
   document.querySelectorAll('.rx-tab').forEach(b => b.addEventListener('click', () => {
-    RX_STATE.filter = b.dataset.st;
+    LAB_RX_STATE.filter = b.dataset.st;
     render();
   }));
   document.querySelectorAll('.rx-validate').forEach(btn => btn.addEventListener('click', async () => {
     btn.disabled = true; btn.textContent = 'Validating...';
-    const row = RX_STATE.rows.find(r => r.upload_id === btn.dataset.id);
+    const row = LAB_RX_STATE.rows.find(r => r.upload_id === btn.dataset.id);
     const { data, error } = await sb.rpc('prescription_validate', {
       p_upload_id: btn.dataset.id,
       p_parsed_tests: (row && row.parsed_tests) || null,
@@ -9181,7 +9181,7 @@ function bindPrescriptions(){
 }
 
 function openRxEditModal(uploadId){
-  const row = RX_STATE.rows.find(r => r.upload_id === uploadId); if (!row) return;
+  const row = LAB_RX_STATE.rows.find(r => r.upload_id === uploadId); if (!row) return;
   const tests = Array.isArray(row.parsed_tests) ? row.parsed_tests
               : (row.parsed_tests && row.parsed_tests.tests) ? row.parsed_tests.tests : [];
   const flat = tests.map(t => typeof t === 'string' ? t : ((t && t.name) || '')).filter(Boolean).join('\n');
@@ -9213,7 +9213,7 @@ function openRxEditModal(uploadId){
 }
 
 function openRxRejectModal(uploadId){
-  const row = RX_STATE.rows.find(r => r.upload_id === uploadId); if (!row) return;
+  const row = LAB_RX_STATE.rows.find(r => r.upload_id === uploadId); if (!row) return;
   openModal(`<div class="panel" style="max-width:520px">
     <div class="panel-head"><h3>Reject prescription</h3></div>
     <div class="panel-body">
