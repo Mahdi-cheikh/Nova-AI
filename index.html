@@ -3725,7 +3725,7 @@ async function bindDashboard(route){
  if (askBtn) askBtn.onclick = () => openAskNova();
  // Deep-link from native camera scan: ?qr=<token>
  const qrTok = new URLSearchParams(location.search).get('qr');
- if (qrTok) { history.replaceState({}, '', location.pathname + location.hash); startDashConsultation(qrTok); }
+ if (qrTok && SESSION?.business?.type !== 'laboratoire') { history.replaceState({}, '', location.pathname + location.hash); startDashConsultation(qrTok); }
  // Restore in-progress consultation panel after re-render (tick keeps running across renders)
  if (DASH_CT_STATE) renderDashConsultation();
  $$('.nav-item[data-go]').forEach(b=>b.onclick=()=>navigate('#'+b.dataset.go));
@@ -7138,7 +7138,7 @@ function bindDoctorView(){
  if (scanBtn) scanBtn.onclick = () => openDashScanner();
  // If the page was opened with ?qr=<token> (deep-link from native camera scan), auto-start
  const qrTok = new URLSearchParams(location.search).get('qr');
- if (qrTok) { history.replaceState({}, '', location.pathname + location.hash); startDashConsultation(qrTok); }
+ if (qrTok && SESSION?.business?.type !== 'laboratoire') { history.replaceState({}, '', location.pathname + location.hash); startDashConsultation(qrTok); }
 }
 
 // =============== DASHBOARD QR SCANNER + CONSULTATION TIMER ===============
